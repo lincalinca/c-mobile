@@ -1,74 +1,198 @@
-import { View, Text, TouchableOpacity, FlatList, SafeAreaView } from 'react-native';
+import { View, Text, Platform, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { ReceiptRepository } from '../lib/repository';
+import { reshapeToResults, ResultItem, ResultType } from '../lib/results';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CameraBar } from '../components/header/CameraBar';
+import { FilterBar, FilterType } from '../components/filters/FilterBar';
+import { CardGrid } from '../components/results/CardGrid';
+import { PersistentHeader } from '../components/header/PersistentHeader';
 import { Feather } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
-export default function Dashboard() {
+export default function HomeScreen() {
   const router = useRouter();
-  const [items, setItems] = useState<any[]>([]);
+  const insets = useSafeAreaInsets();
+  const [loading, setLoading] = useState(true);
+  const [allResults, setAllResults] = useState<ResultItem[]>([]);
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [refreshing, setRefreshing] = useState(false);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  
+  const gridRef = useRef<FlatList>(null);
+
+  const loadData = async () => {
+    try {
+      const receiptsWithItems = await ReceiptRepository.getAllWithItems();
+      const results = reshapeToResults(receiptsWithItems as any);
+      setAllResults(results);
+    } catch (e) {
+      console.error('Failed to load results', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
-      const loadData = async () => {
-        try {
-          const result = await ReceiptRepository.getAll();
-          setItems(result);
-        } catch (e) {
-          console.error('Failed to load items', e);
-        }
-      };
       loadData();
     }, [])
   );
 
-  return (
-    <SafeAreaView className='flex-1 bg-gray-950'>
-      <View className='p-6 flex-1'>
-        <View className='flex-row justify-between items-center mb-6'>
-            <Text className='text-white text-3xl font-bold'>My Gear</Text>
-            <TouchableOpacity className='bg-gray-800 p-2 rounded-full'>
-                <Feather name='settings' size={20} color='white' />
-            </TouchableOpacity>
-        </View>
+  const filteredResults = useMemo(() => {
+    let filtered = allResults;
+    
+    // Filter by type
+    if (activeFilter !== 'all') {
+      filtered = filtered.filter(item => item.type === activeFilter);
+    }
+    
+    // Filter by date
+    if (selectedDate) {
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      filtered = filtered.filter(item => item.date.startsWith(dateStr));
+    }
+    
+    return filtered;
+  }, [allResults, activeFilter, selectedDate]);
+
+  const handleItemPress = (item: ResultItem) => {
+    // Clear highlight on manual touch
+    if (highlightedId === item.id) {
+      setHighlightedId(null);
+    }
+
+    if (item.type === 'gear') {
+      router.push(`/gear/${item.id}` as any);
+    } else if (item.type === 'transaction') {
+      router.push(`/history` as any);
+    }
+  };
+
+  const handleLinkPress = (targetId: string, targetType: ResultType) => {
+    // 1. Ensure the item is visible in current filter
+    if (activeFilter !== 'all' && activeFilter !== targetType) {
+      setActiveFilter('all');
+    }
+    
+    // 2. Clear date filter if target might be on a different date 
+    // (In our case items on same receipt always share same date, but clearing is safer)
+    // Actually, chips link items on SAME receipt, so they share date.
+
+    // 3. Scroll to and Highlight
+    setTimeout(() => {
+      const index = filteredResults.findIndex(r => r.id === targetId);
+      if (index !== -1) {
+        gridRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+        setHighlightedId(targetId);
         
-        {items.length === 0 ? (
-          <View className='bg-gray-900 rounded-xl p-8 items-center border border-gray-800 border-dashed'>
-            <Feather name='music' size={48} color='#4b5563' className='mb-4' />
-            <Text className='text-gray-400 text-center mb-2 font-semibold text-lg'>Locker is Empty</Text>
-            <Text className='text-gray-500 text-center text-sm'>
-                Scan receipts to automatically extract gear, events, and services.
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={items}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View className='bg-gray-900 mb-3 p-4 rounded-lg flex-row justify-between items-center border border-gray-800'>
-                <View className='flex-row items-center gap-3'>
-                    <View className='w-10 h-10 bg-gray-800 rounded-full justify-center items-center'>
-                        <Feather name='shopping-bag' size={18} color='#9ca3af' />
-                    </View>
-                    <View>
-                        <Text className='text-white font-bold text-base'>{item.merchant}</Text>
-                        <Text className='text-gray-400 text-xs'>{new Date(item.date).toLocaleDateString()}</Text>
-                    </View>
-                </View>
-                <Text className='text-green-400 font-bold text-lg'>${(item.total / 100).toFixed(2)}</Text>
-              </View>
-            )}
-            contentContainerStyle={{ paddingBottom: 100 }}
-          />
+        // Auto-clear highlight after 3 seconds
+        setTimeout(() => setHighlightedId(prev => prev === targetId ? null : prev), 3000);
+      }
+    }, 100);
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadData();
+  };
+
+  const onDateChange = (event: any, date?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (date) {
+      setSelectedDate(date);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View className="flex-1 bg-crescender-950">
+        <PersistentHeader />
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#f5c518" />
+        </View>
+      </View>
+    );
+  }
+
+  // --- EMPTY STATE ---
+  if (allResults.length === 0) {
+    return (
+      <View className="flex-1 bg-crescender-950">
+        <PersistentHeader />
+        <View className="flex-1 justify-center items-center px-10">
+          <TouchableOpacity 
+            onPress={() => router.push('/scan')}
+            className="w-64 h-64 rounded-full bg-gold/10 border-4 border-gold/30 items-center justify-center shadow-2xl shadow-gold/20"
+          >
+            <View className="w-48 h-48 rounded-full bg-gold items-center justify-center">
+              <Feather name="camera" size={64} color="#2e1065" />
+            </View>
+          </TouchableOpacity>
+          <Text className="text-white text-2xl font-bold mt-10 tracking-tight" style={{ fontFamily: (Platform.OS as any) === 'web' ? 'Bebas Neue, system-ui' : 'System' }}>
+            START YOUR COLLECTION
+          </Text>
+          <Text className="text-crescender-400 text-center mt-4 leading-relaxed">
+            Snap your first receipt to automatically track gear, events and transactions.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View className="flex-1 bg-crescender-950">
+      <PersistentHeader />
+
+      {/* Date Filter Bar */}
+      <View className="px-6 py-2 flex-row justify-between items-center bg-crescender-900/20">
+        <TouchableOpacity 
+          onPress={() => setShowDatePicker(true)}
+          className="flex-row items-center gap-2 bg-crescender-800/40 px-3 py-1.5 rounded-full border border-crescender-700/50"
+        >
+          <Feather name="calendar" size={14} color="#f5c518" />
+          <Text className="text-crescender-200 text-xs font-bold uppercase tracking-widest">
+            {selectedDate ? selectedDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : 'Filter by Date'}
+          </Text>
+        </TouchableOpacity>
+
+        {selectedDate && (
+          <TouchableOpacity onPress={() => setSelectedDate(null)} className="p-1">
+            <Text className="text-gold text-[10px] font-bold uppercase tracking-tighter">Clear</Text>
+          </TouchableOpacity>
         )}
       </View>
 
-      <TouchableOpacity 
-        className='absolute bottom-10 right-6 bg-blue-600 w-16 h-16 rounded-full justify-center items-center shadow-lg shadow-blue-900/50'
-        onPress={() => router.push('/scan')}
-      >
-        <Feather name='camera' size={28} color='white' />
-      </TouchableOpacity>
-    </SafeAreaView>
+      {showDatePicker && (
+        <DateTimePicker
+          value={selectedDate || new Date()}
+          mode="date"
+          display="default"
+          onChange={onDateChange}
+          accentColor="#f5c518"
+        />
+      )}
+
+      {/* Camera Capture Bar */}
+      <CameraBar />
+
+      {/* Filter Bar */}
+      <FilterBar activeFilter={activeFilter} onFilterChange={setActiveFilter} />
+
+      {/* Results Grid */}
+      <CardGrid 
+        ref={gridRef}
+        items={filteredResults} 
+        onItemPress={handleItemPress}
+        onLinkPress={handleLinkPress}
+        highlightedId={highlightedId}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+      />
+    </View>
   );
 }

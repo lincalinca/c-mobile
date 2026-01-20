@@ -1,23 +1,22 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import "../global.css";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useEffect } from "react";
 import { initDatabase } from "../db/client";
+import "../global.css";
 
 export default function Layout() {
   useEffect(() => {
-    try {
-      initDatabase();
-      console.log("Database initialized");
-    } catch (e) {
+    // Initialize DB in background, don't block render
+    initDatabase().catch((e) => {
       console.error("Failed to initialize database", e);
-    }
+    });
   }, []);
 
   return (
-    <>
+    <SafeAreaProvider>
       <Stack screenOptions={{ headerShown: false }} />
       <StatusBar style="light" />
-    </>
+    </SafeAreaProvider>
   );
 }

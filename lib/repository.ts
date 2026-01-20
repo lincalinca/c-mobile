@@ -12,6 +12,17 @@ export const ReceiptRepository = {
     return await db.select().from(receipts).orderBy(desc(receipts.createdAt));
   },
 
+  async getAllWithItems() {
+    const allReceipts = await db.select().from(receipts).orderBy(desc(receipts.createdAt));
+    const receiptsWithItems = await Promise.all(
+      allReceipts.map(async (receipt: Receipt) => {
+        const items = await db.select().from(receiptItems).where(eq(receiptItems.receiptId, receipt.id));
+        return { ...receipt, items: items as ReceiptItem[] };
+      })
+    );
+    return receiptsWithItems;
+  },
+
   async getById(id: string) {
     const result = await db.select().from(receipts).where(eq(receipts.id, id));
     return result[0] || null;
