@@ -9,11 +9,19 @@ export const transactions = sqliteTable('transactions', {
   id: text('id').primaryKey(),
   profileId: text('profile_id'),
 
+  // Transaction summary
+  summary: text('summary'), // 3-10 word description of transaction
+
   // Merchant details
   merchant: text('merchant').notNull(),
   merchantAbn: text('merchant_abn'),
   merchantAddress: text('merchant_address'),
   merchantPhone: text('merchant_phone'),
+  merchantEmail: text('merchant_email'),
+  merchantWebsite: text('merchant_website'),
+  merchantSuburb: text('merchant_suburb'),
+  merchantState: text('merchant_state'),
+  merchantPostcode: text('merchant_postcode'),
 
   // Document details
   documentType: text('document_type').notNull().default('receipt'), // 'receipt' | 'tax_invoice' | 'invoice' | 'quote' | 'layby' | 'credit_note' | 'refund'
@@ -72,8 +80,14 @@ export const lineItems = sqliteTable('line_items', {
   discountPercentage: real('discount_percentage'), // e.g., 10.0 for 10%
   totalPrice: integer('total_price').notNull(),
 
+  // For gear items - comprehensive details stored as JSON
+  gearDetails: text('gear_details'), // JSON: { manufacturer, brand, makeYear, modelName, modelNumber, serialNumber, colour, uniqueDetail, condition, notedDamage, size, tier, officialUrl, officialManual, warrantyContactDetails }
+
   // For education items - store as JSON
-  educationDetails: text('education_details'), // JSON: { studentName, frequency, duration, startDate, endDate, daysOfWeek, times }
+  educationDetails: text('education_details'), // JSON: { teacherName, studentName, frequency, duration, startDate, endDate, daysOfWeek, times }
+
+  // For warranty items - store as JSON
+  warrantyDetails: text('warranty_details'), // JSON: { coveragePeriod, coverageType, startDate }
 
   // Notes
   notes: text('notes'),

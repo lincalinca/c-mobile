@@ -5,15 +5,30 @@ let expoDb: any = null;
 let dbInstance: any = null;
 let isInitialized = false;
 
+// Migration SQL to add missing columns to existing tables
+const migrationSQL = `
+  -- Add summary column if it doesn't exist (Phase 1)
+  ALTER TABLE transactions ADD COLUMN summary text;
+
+  -- Add warranty_details column if it doesn't exist (Phase 2)
+  ALTER TABLE line_items ADD COLUMN warranty_details text;
+`;
+
 const initTablesSQL = `
   -- Transactions table (the receipt/invoice document)
   CREATE TABLE IF NOT EXISTS transactions (
     id text PRIMARY KEY NOT NULL,
     profile_id text,
+    summary text,
     merchant text NOT NULL,
     merchant_abn text,
     merchant_address text,
     merchant_phone text,
+    merchant_email text,
+    merchant_website text,
+    merchant_suburb text,
+    merchant_state text,
+    merchant_postcode text,
     document_type text NOT NULL DEFAULT 'receipt',
     invoice_number text,
     reference_number text,
@@ -52,7 +67,9 @@ const initTablesSQL = `
     discount_amount integer,
     discount_percentage real,
     total_price integer NOT NULL,
+    gear_details text,
     education_details text,
+    warranty_details text,
     notes text,
     confidence real,
     created_at text DEFAULT CURRENT_TIMESTAMP,
@@ -147,6 +164,37 @@ export async function initDatabase(): Promise<void> {
 
       expoDb = openDatabaseSync("crescender_geargrabber.db");
       expoDb.execSync(initTablesSQL);
+
+      // Run migrations - these will fail silently if columns already exist
+      // Phase 1: Merchant details columns
+      const phase1Migrations = [
+        'ALTER TABLE transactions ADD COLUMN summary text;',
+        'ALTER TABLE transactions ADD COLUMN merchant_phone text;',
+        'ALTER TABLE transactions ADD COLUMN merchant_email text;',
+        'ALTER TABLE transactions ADD COLUMN merchant_website text;',
+        'ALTER TABLE transactions ADD COLUMN merchant_address text;',
+        'ALTER TABLE transactions ADD COLUMN merchant_suburb text;',
+        'ALTER TABLE transactions ADD COLUMN merchant_state text;',
+        'ALTER TABLE transactions ADD COLUMN merchant_postcode text;',
+      ];
+
+      for (const migration of phase1Migrations) {
+        try {
+          expoDb.execSync(migration);
+          console.log('[DB] Migration:', migration.split('ADD COLUMN ')[1]);
+        } catch (e) {
+          // Column already exists, ignore
+        }
+      }
+
+      // Phase 2: Warranty details column
+      try {
+        expoDb.execSync('ALTER TABLE line_items ADD COLUMN warranty_details text;');
+        console.log('[DB] Migration: Added warranty_details to line_items');
+      } catch (e) {
+        // Column already exists, ignore
+      }
+
       dbInstance = drizzle(expoDb, { schema });
 
       isInitialized = true;

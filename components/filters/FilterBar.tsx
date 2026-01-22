@@ -25,18 +25,19 @@ export const FilterBar = ({ activeFilter, onFilterChange, useIcons = false }: Fi
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
+        contentContainerStyle={{ paddingHorizontal: 24 }}
       >
         <View className="flex-row gap-2">
           {filters.map((filter) => (
             <TouchableOpacity
               key={filter.value}
               onPress={() => onFilterChange(filter.value)}
-              className={`px-5 py-2 rounded-xl border flex-row items-center gap-2 ${
+              className={`px-5 py-2 rounded-xl border flex-row items-center justify-center gap-2 ${
                 activeFilter === filter.value
                   ? 'bg-gold border-gold'
                   : 'bg-crescender-900/40 border-crescender-800'
               }`}
+              style={useIcons && filter.icon ? { minWidth: 44 } : undefined}
             >
               {useIcons && filter.icon ? (
                 <Feather
@@ -44,14 +45,15 @@ export const FilterBar = ({ activeFilter, onFilterChange, useIcons = false }: Fi
                   size={14}
                   color={activeFilter === filter.value ? '#2e1065' : filter.color}
                 />
-              ) : null}
-              <Text
-                className={`font-bold text-[10px] tracking-widest ${
-                  activeFilter === filter.value ? 'text-crescender-950' : 'text-crescender-400'
-                }`}
-              >
-                {useIcons ? '' : filter.label}
-              </Text>
+              ) : (
+                <Text
+                  className={`font-bold text-xs tracking-widest ${
+                    activeFilter === filter.value ? 'text-crescender-950' : 'text-crescender-400'
+                  }`}
+                >
+                  {filter.label}
+                </Text>
+              )}
             </TouchableOpacity>
           ))}
         </View>

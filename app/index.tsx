@@ -8,8 +8,8 @@ import { CameraBar } from '../components/header/CameraBar';
 import { FilterBar, FilterType } from '../components/filters/FilterBar';
 import { CardGrid } from '../components/results/CardGrid';
 import { PersistentHeader } from '../components/header/PersistentHeader';
+import { DateRangeCalendarModal } from '../components/calendar/DateRangeCalendarModal';
 import { Feather } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen() {
@@ -20,10 +20,11 @@ export default function HomeScreen() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [refreshing, setRefreshing] = useState(false);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [showDateRangePicker, setShowDateRangePicker] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
-  const [useIconFilters, setUseIconFilters] = useState(false);
+  const [useIconFilters, setUseIconFilters] = useState(true);
 
   const gridRef = useRef<FlatList>(null);
 
@@ -44,13 +45,11 @@ export default function HomeScreen() {
     useCallback(() => {
       loadData();
 
-      // Load filter display setting
+      // Load filter display setting — default to icon filters when no saved value (#8)
       const loadSettings = async () => {
         try {
           const saved = await AsyncStorage.getItem('useIconFilters');
-          if (saved !== null) {
-            setUseIconFilters(JSON.parse(saved));
-          }
+          setUseIconFilters(saved !== null ? JSON.parse(saved) : true);
         } catch (e) {
           console.error('Failed to load settings', e);
         }
@@ -76,14 +75,20 @@ export default function HomeScreen() {
       filtered = filtered.filter(item => item.type === activeFilter);
     }
     
-    // Filter by date
-    if (selectedDate) {
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      filtered = filtered.filter(item => item.date.startsWith(dateStr));
+    // Filter by date range (item.date can be YYYY-MM-DD or ISO with time)
+    const startStr = startDate ? startDate.toISOString().split('T')[0] : null;
+    const endStr = endDate ? endDate.toISOString().split('T')[0] : null;
+    const itemDate = (d: string) => d.slice(0, 10);
+    if (startStr != null && endStr != null) {
+      filtered = filtered.filter(item => itemDate(item.date) >= startStr && itemDate(item.date) <= endStr);
+    } else if (startStr != null) {
+      filtered = filtered.filter(item => itemDate(item.date) >= startStr);
+    } else if (endStr != null) {
+      filtered = filtered.filter(item => itemDate(item.date) <= endStr);
     }
     
     return filtered;
-  }, [allResults, activeFilter, selectedDate]);
+  }, [allResults, activeFilter, startDate, endDate]);
 
   const handleItemPress = (item: ResultItem) => {
     // Clear highlight on manual touch
@@ -94,18 +99,14 @@ export default function HomeScreen() {
     if (item.type === 'gear') {
       router.push(`/gear/${item.id}` as any);
     } else if (item.type === 'transaction') {
-      router.push(`/history` as any);
+      // Navigate to the gear detail page which shows full receipt details
+      router.push(`/gear/${item.receiptId}` as any);
     } else if (item.type === 'service') {
-      // For now, navigate to history to show the transaction
-      // In future, could have a dedicated service detail screen
-      router.push(`/history` as any);
+      router.push(`/services/${item.id}` as any);
     } else if (item.type === 'education') {
-      // For now, navigate to history to show the transaction
-      // In future, could have a dedicated education detail screen
-      router.push(`/history` as any);
+      router.push(`/education/${item.id}` as any);
     } else if (item.type === 'event') {
-      // For now, navigate to history to show the transaction
-      router.push(`/history` as any);
+      router.push(`/events/${item.id}` as any);
     }
   };
 
@@ -137,11 +138,10 @@ export default function HomeScreen() {
     loadData();
   };
 
-  const onDateChange = (event: any, date?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (date) {
-      setSelectedDate(date);
-    }
+  const onDateRangeApply = (start: Date | null, end: Date | null) => {
+    setStartDate(start);
+    setEndDate(end);
+    setShowDateRangePicker(false);
   };
 
   if (loading) {
@@ -169,7 +169,7 @@ export default function HomeScreen() {
               <Feather name="camera" size={64} color="#2e1065" />
             </View>
           </TouchableOpacity>
-          <Text className="text-white text-2xl font-bold mt-10 tracking-tight text-center" style={{ fontFamily: (Platform.OS as any) === 'web' ? 'Bebas Neue, system-ui' : 'System' }}>
+          <Text className="text-white text-3xl font-bold mt-10 tracking-tight text-center" style={{ fontFamily: (Platform.OS as any) === 'web' ? 'Bebas Neue, system-ui' : 'System' }}>
             GOT A RECEIPT?{'\n'}SNAP TO GET STARTED
           </Text>
           <Text className="text-crescender-400 text-center mt-4 leading-relaxed">
@@ -184,21 +184,20 @@ export default function HomeScreen() {
     <View className="flex-1" style={{ backgroundColor: 'transparent' }}>
       <PersistentHeader />
 
-      {showDatePicker && (
-        <DateTimePicker
-          value={selectedDate || new Date()}
-          mode="date"
-          display="default"
-          onChange={onDateChange}
-          accentColor="#f5c518"
-        />
-      )}
+      <DateRangeCalendarModal
+        visible={showDateRangePicker}
+        onRequestClose={() => setShowDateRangePicker(false)}
+        startDate={startDate}
+        endDate={endDate}
+        onApply={onDateRangeApply}
+      />
 
       {/* Camera Capture Bar with Date Filter */}
       <CameraBar
-        selectedDate={selectedDate}
-        onShowDatePicker={() => setShowDatePicker(true)}
-        onClearDate={() => setSelectedDate(null)}
+        startDate={startDate}
+        endDate={endDate}
+        onShowDatePicker={() => setShowDateRangePicker(true)}
+        onClearDate={() => { setStartDate(null); setEndDate(null); }}
       />
 
       {/* Filter Bar */}
@@ -224,10 +223,10 @@ export default function HomeScreen() {
       >
         <View className="flex-1 bg-black/60 justify-center items-center px-8">
           <View className="bg-crescender-900/95 rounded-2xl p-6 w-full border border-crescender-700">
-            <Text className="text-white text-lg font-bold mb-2">
+            <Text className="text-white text-xl font-bold mb-2">
               Exit Crescender?
             </Text>
-            <Text className="text-crescender-300 text-sm mb-6">
+            <Text className="text-crescender-300 text-base mb-6">
               You’re on the home screen. Do you want to close the app?
             </Text>
             <View className="flex-row justify-end gap-3">

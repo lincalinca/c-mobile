@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { View, FlatList, Text } from 'react-native';
+import { View, FlatList, Text, useWindowDimensions } from 'react-native';
 import { ResultItem, ResultType } from '../../lib/results';
 import { GearCard } from './GearCard';
 import { ServiceCard } from './ServiceCard';
@@ -24,6 +24,9 @@ export const CardGrid = forwardRef<FlatList, CardGridProps>(({
   onRefresh, 
   refreshing 
 }, ref) => {
+  const { width } = useWindowDimensions();
+  const numColumns = width < 600 ? 1 : 2;
+
   const renderItem = ({ item }: { item: ResultItem }) => {
     const commonProps = {
       item,
@@ -51,7 +54,7 @@ export const CardGrid = forwardRef<FlatList, CardGridProps>(({
   if (items.length === 0) {
     return (
       <View className="flex-1 justify-center items-center p-10">
-        <Text className="text-crescender-400 text-center font-bold tracking-widest text-xs uppercase opacity-50">
+        <Text className="text-crescender-400 text-center font-bold tracking-widest text-sm uppercase opacity-50">
           No records found in this context.
         </Text>
       </View>
@@ -64,7 +67,7 @@ export const CardGrid = forwardRef<FlatList, CardGridProps>(({
       data={items}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
-      numColumns={2}
+      numColumns={numColumns}
       contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 100 }}
       onRefresh={onRefresh}
       refreshing={refreshing}

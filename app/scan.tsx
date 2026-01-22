@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Platform, Modal, Animated, PanResponder } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Platform, Modal, Animated, PanResponder, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions, CameraType, FlashMode } from 'expo-camera';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'expo-router';
@@ -8,11 +8,37 @@ import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { callSupabaseFunction } from '../lib/supabase';
 import { ProcessingView } from '../components/processing/ProcessingView';
+import { TransactionRepository } from '../lib/repository';
+
+const isAndroid = Platform.OS === 'android';
+
+// Cap capture at ~1080p to reduce memory, disk, and bandwidth. Receipt OCR is fine at 720p–1080p.
+const MAX_PIXELS = 1920 * 1080; // 2,073,600
+const MIN_PIXELS = 640 * 480;   // 307,200 — minimum usable for receipt text
+
+function choosePictureSize(sizes: string[]): string | null {
+  if (!sizes.length) return null;
+  const parsed = sizes
+    .map((s) => {
+      const m = s.match(/^(\d+)\s*[x×]\s*(\d+)$/i);
+      return m ? { s, w: parseInt(m[1], 10), h: parseInt(m[2], 10) } : null;
+    })
+    .filter((p): p is { s: string; w: number; h: number } => p != null);
+  if (!parsed.length) return null;
+  const under = parsed.filter((p) => p.w * p.h <= MAX_PIXELS && p.w * p.h >= MIN_PIXELS);
+  if (under.length) return under.reduce((a, b) => (a.w * a.h >= b.w * b.h ? a : b)).s;
+  const over = parsed.filter((p) => p.w * p.h > MAX_PIXELS);
+  if (over.length) return over.reduce((a, b) => (a.w * a.h <= b.w * b.h ? a : b)).s;
+  return parsed.reduce((a, b) => (a.w * a.h >= b.w * b.h ? a : b)).s;
+}
 
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>((Platform.OS as any) === 'web' ? 'front' : 'back' as any);
   const [flash, setFlash] = useState<FlashMode>('off');
+  const [cameraReady, setCameraReady] = useState(false);
+  const [pictureSize, setPictureSize] = useState<string | null>(null);
+  const pictureSizeChosenRef = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const cameraRef = useRef<any>(null);
@@ -59,6 +85,11 @@ export default function ScanScreen() {
     }
   }, [permission, showPermissionModal, hasWebPermission]);
 
+  // Reset cameraReady when facing or flash changes so we only capture after onCameraReady fires again
+  useEffect(() => {
+    setCameraReady(false);
+  }, [facing, flash]);
+
   const handleRequestPermission = async () => {
     if (Platform.OS === 'web') {
       try {
@@ -84,16 +115,37 @@ export default function ScanScreen() {
   };
 
   const handleCapture = async () => {
-    if (!cameraRef.current || isProcessing) return;
+    if (!cameraRef.current || !cameraReady || isProcessing) return;
+    setIsProcessing(true);
     try {
-      setIsProcessing(true);
+      // On Android: lower quality + resolution cap (pictureSize) to reduce memory, disk, and bandwidth.
+      // On iOS: quality 0.7; we fall back to readAsStringAsync if base64 missing.
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.7,
-        base64: true,
+        quality: isAndroid ? 0.4 : 0.7,
+        base64: !isAndroid,
       });
-      await processImage(photo.uri, photo.base64);
+      if (!photo?.uri) {
+        console.error('[Scan] takePictureAsync returned no uri');
+        Alert.alert('Error', 'Capture failed—no image was saved. Try again or use Upload.');
+        return;
+      }
+      let base64 = photo.base64;
+      if (!base64 && photo.uri) {
+        try {
+          base64 = await readAsStringAsync(photo.uri, { encoding: EncodingType.Base64 });
+        } catch (e) {
+          console.error('[Scan] Base64 fallback error:', e);
+        }
+      }
+      if (!base64) {
+        Alert.alert('Error', 'Could not get image data. Try again or use Upload.');
+        return;
+      }
+      await processImage(photo.uri, base64);
     } catch (e) {
-      Alert.alert('Error', 'Failed to capture image');
+      console.error('[Scan] Capture error:', e);
+      Alert.alert('Error', 'Failed to capture image. Try again or use Upload.');
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -126,8 +178,20 @@ export default function ScanScreen() {
     if (!base64) return;
     setIsProcessing(true);
     try {
+      // Fetch existing merchants for matching
+      const existingMerchants = await TransactionRepository.getUniqueMerchants();
+      console.log(`[Scan] Found ${existingMerchants.length} existing merchants for matching`);
+
       const receiptData = await callSupabaseFunction<any>('analyze-receipt', {
         imageBase64: base64,
+        existingMerchants: existingMerchants.map(m => ({
+          id: m.id,
+          name: m.name,
+          email: m.email,
+          phone: m.phone,
+          suburb: m.suburb,
+          abn: m.abn,
+        })),
       });
       if (!receiptData || !receiptData.financial) throw new Error('Incomplete data');
 
@@ -165,8 +229,8 @@ export default function ScanScreen() {
         <View className='flex-1 bg-black/80 justify-center items-center p-6' style={{ paddingTop: insets.top }}>
           <View className='bg-crescender-800/90 rounded-2xl p-8 items-center max-w-sm border border-crescender-700/50'>
             <Feather name='camera' size={64} color='#f5c518' className="mb-6" />
-            <Text className='text-white text-center mb-2 text-xl font-bold'>Camera Access Required</Text>
-            <Text className='text-crescender-200 text-center mb-6 text-base'>Grant camera access to scan receipts.</Text>
+            <Text className='text-white text-center mb-2 text-2xl font-bold'>Camera Access Required</Text>
+            <Text className='text-crescender-200 text-center mb-6 text-lg'>Grant camera access to scan receipts.</Text>
             <View className='flex-row gap-3 w-full'>
               <TouchableOpacity onPress={handleGoBack} className='flex-1 bg-crescender-800/50 px-6 py-4 rounded-full'><Text className='text-white font-semibold text-center'>Cancel</Text></TouchableOpacity>
               <TouchableOpacity onPress={handleRequestPermission} className='flex-1 bg-gold px-6 py-4 rounded-full'><Text className='text-crescender-950 font-bold text-center'>Grant</Text></TouchableOpacity>
@@ -177,14 +241,42 @@ export default function ScanScreen() {
 
       {shouldShowCamera ? (
         <View className='flex-1 bg-black' style={{ paddingTop: insets.top }}>
-          <CameraView style={{ flex: 1 }} facing={facing} flash={flash} ref={cameraRef}>
-            <View className='flex-1 bg-transparent'>
+          {/* CameraView must have no children: it can cause capture to fail on Android. Overlay is absolutely positioned on top. */}
+          <CameraView
+            style={{ flex: 1 }}
+            facing={facing}
+            flash={flash}
+            ref={cameraRef}
+            {...(isAndroid && pictureSize ? { pictureSize } : {})}
+            onCameraReady={async () => {
+              setCameraReady(true);
+              if (isAndroid && !pictureSizeChosenRef.current && cameraRef.current?.getAvailablePictureSizesAsync) {
+                pictureSizeChosenRef.current = true;
+                try {
+                  const sizes = await cameraRef.current.getAvailablePictureSizesAsync();
+                  if (Array.isArray(sizes) && sizes.length) {
+                    const chosen = choosePictureSize(sizes);
+                    if (chosen) setPictureSize(chosen);
+                  }
+                } catch (e) {
+                  console.warn('[Scan] getAvailablePictureSizesAsync failed:', e);
+                }
+              }
+            }}
+          />
+
+          {/* Overlay: header, aperture frame, controls — positioned on top of camera */}
+          <View
+            pointerEvents="box-none"
+            style={[StyleSheet.absoluteFill, { paddingTop: insets.top }]}
+          >
+            <View className="flex-1">
               {/* Header */}
-              <View className='flex-row justify-between p-6 items-center'>
+              <View className="flex-row justify-between p-6 items-center">
                 <TouchableOpacity onPress={handleGoBack} className='bg-black/40 p-3 rounded-full border border-white/20'>
                   <Feather name='x' size={24} color='white' />
                 </TouchableOpacity>
-                <Text className="text-white font-bold text-lg" style={{ fontFamily: (Platform.OS as any) === 'web' ? 'Bebas Neue, system-ui' : 'System' }}>SCAN RECEIPT</Text>
+                <Text className="text-white font-bold text-xl" style={{ fontFamily: (Platform.OS as any) === 'web' ? 'Bebas Neue, system-ui' : 'System' }}>SCAN RECEIPT</Text>
                 {Platform.OS !== 'web' && (
                   <TouchableOpacity onPress={() => setFlash(f => f === 'off' ? 'on' : 'off')} className='bg-black/40 p-3 rounded-full border border-white/20'>
                     <Feather name={flash === 'on' ? 'zap' : 'zap-off'} size={24} color={flash === 'on' ? '#f5c518' : 'white'} />
@@ -207,23 +299,28 @@ export default function ScanScreen() {
                   <View className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-gold m-4 rounded-bl-lg" />
                   <View className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-gold m-4 rounded-br-lg" />
                   <View className="absolute top-12 left-0 right-0 items-center">
-                    <Text className="text-gold font-bold text-[10px] uppercase tracking-widest bg-black/60 px-4 py-2 rounded-full">ADJUST FRAME</Text>
+                    <Text className="text-gold font-bold text-xs uppercase tracking-widest bg-black/60 px-4 py-2 rounded-full">ADJUST FRAME</Text>
                   </View>
                 </Animated.View>
               </View>
 
               {/* Controls */}
-              <View className='flex-1 justify-end items-center' style={{ paddingBottom: insets.bottom + 20 }}>
+              <View className='justify-end items-center' style={{ paddingBottom: insets.bottom + 20 }}>
                 <View className='flex-row items-center w-full justify-evenly px-10'>
                   <TouchableOpacity onPress={pickDocument} className='bg-black/40 p-4 rounded-full border border-white/20'><Feather name='upload' size={28} color='white' /></TouchableOpacity>
-                  <TouchableOpacity onPress={handleCapture} className='w-20 h-20 bg-white rounded-full border-4 border-gold shadow-lg shadow-gold/30' />
+                  <TouchableOpacity
+                    onPress={handleCapture}
+                    disabled={!cameraReady}
+                    style={{ opacity: cameraReady ? 1 : 0.5 }}
+                    className='w-20 h-20 bg-white rounded-full border-4 border-gold shadow-lg shadow-gold/30'
+                  />
                   {Platform.OS !== 'web' && (
                     <TouchableOpacity onPress={() => setFacing(f => f === 'back' ? 'front' : 'back')} className='bg-black/40 p-4 rounded-full border border-white/20'><Feather name='refresh-cw' size={28} color='white' /></TouchableOpacity>
                   )}
                 </View>
               </View>
             </View>
-          </CameraView>
+          </View>
         </View>
       ) : (
         <View className='flex-1 bg-crescender-950 justify-center items-center' style={{ paddingTop: insets.top }}>

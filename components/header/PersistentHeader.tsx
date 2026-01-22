@@ -35,18 +35,18 @@ export const PersistentHeader = () => {
           {/* Spacer to help center the logo */}
           <View className="w-10" />
 
-          {/* Centered Logo */}
-          <View className="flex-1 items-center justify-center">
+          {/* Centered Logo — fills centre area between spacer and menu, aspectRatio preserves proportions */}
+          <View className="flex-1 items-center justify-center min-w-0">
             {(Platform.OS as any) === 'web' ? (
               <Image
                 source={{ uri: '/crescender-logo.svg' }}
-                style={{ width: 234, height: 38 }}
+                style={{ width: '100%', aspectRatio: 234 / 38 }}
                 resizeMode="contain"
               />
             ) : (
               <Image
                 source={require('../../assets/crescender-logo.png')}
-                style={{ width: 200, height: 23 }}
+                style={{ width: '100%', aspectRatio: 200 / 23 }}
                 resizeMode="contain"
               />
             )}
@@ -84,7 +84,7 @@ export const PersistentHeader = () => {
                 className={`flex-row items-center gap-3 p-4 rounded-xl ${pathname === item.path ? 'bg-gold/10' : ''} ${index < menuItems.length - 1 ? 'border-b border-crescender-800/50' : ''}`}
               >
                 <Feather name={item.icon as any} size={20} color={pathname === item.path ? '#f5c518' : '#9ca3af'} />
-                <Text className={`font-bold tracking-widest text-sm ${pathname === item.path ? 'text-gold' : 'text-crescender-300'}`}>
+                <Text className={`font-bold tracking-widest text-base ${pathname === item.path ? 'text-gold' : 'text-crescender-300'}`}>
                   {item.label}
                 </Text>
               </TouchableOpacity>

@@ -1,11 +1,16 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator, Alert, TextInput, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
-import { ReceiptRepository, Receipt, ReceiptItem } from '../../lib/repository';
+import * as Crypto from 'expo-crypto';
+import { ReceiptRepository, Receipt, type LineItemWithDetails } from '../../lib/repository';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatABN } from '../../lib/formatUtils';
 import { ITEM_CATEGORIES } from '../../constants/categories';
+import * as DocumentPicker from 'expo-document-picker';
+import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
+import { callSupabaseFunction } from '../../lib/supabase';
+import { ProcessingView } from '../../components/processing/ProcessingView';
 
 // Document type options
 const DOCUMENT_TYPES = [
@@ -40,9 +45,10 @@ export default function GearDetailScreen() {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
-  const [items, setItems] = useState<ReceiptItem[]>([]);
+  const [items, setItems] = useState<LineItemWithDetails[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isReprocessing, setIsReprocessing] = useState(false);
 
   // Edit state
   const [editMerchant, setEditMerchant] = useState('');
@@ -55,37 +61,48 @@ export default function GearDetailScreen() {
   const [editTotal, setEditTotal] = useState('');
   const [editPaymentStatus, setEditPaymentStatus] = useState('paid');
   const [editPaymentMethod, setEditPaymentMethod] = useState('card');
+  const [editSummary, setEditSummary] = useState('');
+  const [editMerchantPhone, setEditMerchantPhone] = useState('');
+  const [editMerchantEmail, setEditMerchantEmail] = useState('');
+  const [editMerchantWebsite, setEditMerchantWebsite] = useState('');
+  const [editMerchantAddress, setEditMerchantAddress] = useState('');
+  const [editMerchantSuburb, setEditMerchantSuburb] = useState('');
+  const [editMerchantState, setEditMerchantState] = useState('');
+  const [editMerchantPostcode, setEditMerchantPostcode] = useState('');
+
+  const loadData = useCallback(async () => {
+    if (!id || typeof id !== 'string') return;
+    const r = await ReceiptRepository.getById(id);
+    if (r) {
+      const i = await ReceiptRepository.getLineItems(id);
+      setReceipt(r);
+      setItems(i);
+      setEditMerchant(r.merchant || '');
+      setEditDocumentType(r.documentType || 'receipt');
+      setEditDate(r.transactionDate || new Date().toISOString().split('T')[0]);
+      setEditInvoiceNumber(r.invoiceNumber || '');
+      setEditAbn(r.merchantAbn || '');
+      setEditSubtotal(r.subtotal ? (r.subtotal / 100).toString() : '');
+      setEditTax(r.tax ? (r.tax / 100).toString() : '');
+      setEditTotal(r.total ? (r.total / 100).toString() : '0');
+      setEditPaymentStatus(r.paymentStatus || 'paid');
+      setEditPaymentMethod(r.paymentMethod || 'card');
+      setEditSummary(r.summary || '');
+      setEditMerchantPhone(r.merchantPhone || '');
+      setEditMerchantEmail(r.merchantEmail || '');
+      setEditMerchantWebsite(r.merchantWebsite || '');
+      setEditMerchantAddress(r.merchantAddress || '');
+      setEditMerchantSuburb(r.merchantSuburb || '');
+      setEditMerchantState(r.merchantState || '');
+      setEditMerchantPostcode(r.merchantPostcode || '');
+    }
+  }, [id]);
 
   useEffect(() => {
-    const loadData = async () => {
-      if (!id) return;
-      try {
-        const r = await ReceiptRepository.getById(id);
-        if (r) {
-          const i = await ReceiptRepository.getLineItems(id);
-          setReceipt(r);
-          setItems(i);
-
-          // Initialize edit state
-          setEditMerchant(r.merchant || '');
-          setEditDocumentType(r.documentType || 'receipt');
-          setEditDate(r.transactionDate || new Date().toISOString().split('T')[0]);
-          setEditInvoiceNumber(r.invoiceNumber || '');
-          setEditAbn(r.merchantAbn || '');
-          setEditSubtotal(r.subtotal ? (r.subtotal / 100).toString() : '');
-          setEditTax(r.tax ? (r.tax / 100).toString() : '');
-          setEditTotal(r.total ? (r.total / 100).toString() : '0');
-          setEditPaymentStatus(r.paymentStatus || 'paid');
-          setEditPaymentMethod(r.paymentMethod || 'card');
-        }
-      } catch (e) {
-        console.error('Failed to load receipt details', e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, [id]);
+    if (!id) return;
+    setLoading(true);
+    loadData().catch((e) => console.error('Failed to load receipt details', e)).finally(() => setLoading(false));
+  }, [id, loadData]);
 
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {
@@ -119,9 +136,7 @@ export default function GearDetailScreen() {
     if (!receipt || !id) return;
     setIsSaving(true);
     try {
-      // Update the receipt with edited values
-      const updatedReceipt = {
-        ...receipt,
+      await ReceiptRepository.update(id, {
         merchant: editMerchant,
         documentType: editDocumentType,
         transactionDate: editDate,
@@ -132,11 +147,16 @@ export default function GearDetailScreen() {
         total: Math.round(parseFloat(editTotal) * 100),
         paymentStatus: editPaymentStatus,
         paymentMethod: editPaymentMethod,
-      };
-
-      // For now, we'll just update the local state
-      // In a real app, you'd call an update method on the repository
-      setReceipt(updatedReceipt);
+        summary: editSummary || null,
+        merchantPhone: editMerchantPhone || null,
+        merchantEmail: editMerchantEmail || null,
+        merchantWebsite: editMerchantWebsite || null,
+        merchantAddress: editMerchantAddress || null,
+        merchantSuburb: editMerchantSuburb || null,
+        merchantState: editMerchantState || null,
+        merchantPostcode: editMerchantPostcode || null,
+      });
+      await loadData();
       setIsEditing(false);
       Alert.alert('Saved!', 'Changes saved successfully');
     } catch (e) {
@@ -144,6 +164,107 @@ export default function GearDetailScreen() {
       Alert.alert('Error', 'Failed to save changes. Please try again.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleReplaceImage = async () => {
+    if (!id || typeof id !== 'string') return;
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: ['image/*'], copyToCacheDirectory: true });
+      if (result.canceled || !result.assets?.[0]) return;
+      const uri = result.assets[0].uri;
+      await ReceiptRepository.updateImageUrl(id, uri);
+      setReceipt((prev) => (prev ? { ...prev, imageUrl: uri } : null));
+      Alert.alert('Done', 'Image replaced. You can tap Reprocess to re-analyse it.');
+    } catch (e) {
+      console.error('Replace image error:', e);
+      Alert.alert('Error', 'Failed to replace image. Please try again.');
+    }
+  };
+
+  const handleReprocess = async () => {
+    if (!id || typeof id !== 'string' || !receipt?.imageUrl) {
+      Alert.alert('No image', 'Reprocess requires an image. Use Replace Image to add one first.');
+      return;
+    }
+    let base64: string;
+    try {
+      if (receipt.imageUrl.startsWith('data:')) {
+        base64 = receipt.imageUrl.split(',')[1] || '';
+      } else if (receipt.imageUrl.startsWith('file://') || !receipt.imageUrl.startsWith('http')) {
+        base64 = await readAsStringAsync(receipt.imageUrl, { encoding: EncodingType.Base64 });
+      } else {
+        Alert.alert('Unsupported', 'Reprocess is not available for remote images. Use Replace Image to use a local photo.');
+        return;
+      }
+      if (!base64) throw new Error('Could not read image');
+    } catch (e) {
+      console.error('Read image error:', e);
+      Alert.alert('Error', 'Could not read the receipt image. It may have been moved or deleted.');
+      return;
+    }
+    setIsReprocessing(true);
+    try {
+      const existingMerchants = await ReceiptRepository.getUniqueMerchants();
+      const receiptData = await callSupabaseFunction<any>('analyze-receipt', {
+        imageBase64: base64,
+        existingMerchants: existingMerchants.map((m) => ({ id: m.id, name: m.name, email: m.email, phone: m.phone, suburb: m.suburb, abn: m.abn })),
+      });
+      if (!receiptData?.financial) throw new Error('Incomplete data from analysis');
+
+      const f = receiptData.financial;
+      const md = f.merchantDetails || {};
+      await ReceiptRepository.update(id, {
+        merchant: md.name || f.merchant || receipt.merchant,
+        merchantAbn: md.abn ?? receipt.merchantAbn ?? null,
+        merchantPhone: md.phone ?? receipt.merchantPhone ?? null,
+        merchantEmail: md.email ?? receipt.merchantEmail ?? null,
+        merchantWebsite: md.website ?? receipt.merchantWebsite ?? null,
+        merchantAddress: md.address ?? receipt.merchantAddress ?? null,
+        merchantSuburb: md.suburb ?? receipt.merchantSuburb ?? null,
+        merchantState: md.state ?? receipt.merchantState ?? null,
+        merchantPostcode: md.postcode ?? receipt.merchantPostcode ?? null,
+        transactionDate: f.date || receipt.transactionDate,
+        invoiceNumber: f.invoiceNumber ?? receipt.invoiceNumber ?? null,
+        documentType: receiptData.documentType || receipt.documentType || 'receipt',
+        summary: receiptData.summary ?? receipt.summary ?? null,
+        subtotal: f.subtotal != null ? Math.round(parseFloat(String(f.subtotal)) * 100) : receipt.subtotal,
+        tax: f.tax != null ? Math.round(parseFloat(String(f.tax)) * 100) : receipt.tax,
+        total: f.total != null ? Math.round(parseFloat(String(f.total)) * 100) : receipt.total,
+        paymentStatus: f.paymentStatus || receipt.paymentStatus || 'paid',
+        paymentMethod: f.paymentMethod ?? receipt.paymentMethod ?? null,
+        rawOcrData: JSON.stringify(receiptData),
+      });
+
+      const newLineItems = (receiptData.items || []).map((item: any) => ({
+        id: Crypto.randomUUID(),
+        transactionId: id,
+        description: item.description || 'Unnamed',
+        category: item.category || 'other',
+        brand: item.brand ?? null,
+        model: item.model ?? null,
+        instrumentType: item.instrumentType ?? null,
+        gearCategory: item.gearCategory ?? null,
+        serialNumber: item.serialNumber ?? null,
+        quantity: item.quantity ?? 1,
+        originalUnitPrice: item.originalUnitPrice != null ? Math.round(parseFloat(String(item.originalUnitPrice)) * 100) : null,
+        unitPrice: Math.round(parseFloat(String(item.unitPrice || 0)) * 100),
+        discountAmount: item.discountAmount != null ? Math.round(parseFloat(String(item.discountAmount)) * 100) : null,
+        discountPercentage: item.discountPercentage != null ? parseFloat(String(item.discountPercentage)) : null,
+        totalPrice: Math.round(parseFloat(String(item.totalPrice || 0)) * 100),
+        gearDetails: item.gearDetails ? JSON.stringify(item.gearDetails) : null,
+        educationDetails: item.educationDetails ? JSON.stringify(item.educationDetails) : null,
+        notes: item.notes ?? null,
+        confidence: item.confidence != null ? parseFloat(String(item.confidence)) : null,
+      }));
+      await ReceiptRepository.replaceLineItems(id, newLineItems);
+      await loadData();
+      Alert.alert('Done', 'Receipt has been re-analysed and the record updated.');
+    } catch (e) {
+      console.error('Reprocess error:', e);
+      Alert.alert('Analysis Failed', 'We couldn\'t re-process this receipt. Please try again.');
+    } finally {
+      setIsReprocessing(false);
     }
   };
 
@@ -155,10 +276,12 @@ export default function GearDetailScreen() {
     );
   }
 
+  if (isReprocessing) return <ProcessingView />;
+
   if (!receipt) {
     return (
       <View className="flex-1 bg-crescender-950 justify-center items-center p-6">
-        <Text className="text-white text-xl font-bold mb-4">Receipt not found</Text>
+        <Text className="text-white text-2xl font-bold mb-4">Receipt not found</Text>
         <TouchableOpacity onPress={handleBack} className="bg-gold px-6 py-3 rounded-full">
           <Text className="text-crescender-950 font-bold">Go Back</Text>
         </TouchableOpacity>
@@ -177,7 +300,7 @@ export default function GearDetailScreen() {
         <TouchableOpacity onPress={isEditing ? () => setIsEditing(false) : handleBack} className="p-2 -ml-2">
           <Feather name={isEditing ? "x" : "arrow-left"} size={24} color="white" />
         </TouchableOpacity>
-        <Text className="text-white text-lg font-bold">{isEditing ? 'Edit Record' : 'Record Details'}</Text>
+        <Text className="text-white text-xl font-bold">{isEditing ? 'Edit Record' : 'Record Details'}</Text>
         {!isEditing ? (
           <TouchableOpacity onPress={() => setIsEditing(true)} className="p-2">
             <Feather name="edit-2" size={24} color="#f5c518" />
@@ -206,7 +329,7 @@ export default function GearDetailScreen() {
           <View className="p-6">
             {/* Document Type */}
             <View className="mb-6">
-              <Text className="text-gold font-bold mb-3 uppercase tracking-widest text-xs">Document Type</Text>
+              <Text className="text-gold font-bold mb-3 uppercase tracking-widest text-sm">Document Type</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View className="flex-row gap-2">
                   {DOCUMENT_TYPES.map((type) => (
@@ -219,7 +342,7 @@ export default function GearDetailScreen() {
                           : 'bg-crescender-900/60 border-crescender-700'
                       }`}
                     >
-                      <Text className={`text-xs font-bold ${
+                      <Text className={`text-sm font-bold ${
                         editDocumentType === type.value ? 'text-crescender-950' : 'text-crescender-400'
                       }`}>
                         {type.label}
@@ -232,11 +355,23 @@ export default function GearDetailScreen() {
 
             {/* Merchant */}
             <View className="mb-4">
-              <Text className="text-crescender-400 text-xs mb-1">Merchant</Text>
+              <Text className="text-crescender-400 text-sm mb-1">Merchant</Text>
               <TextInput
-                className="text-white text-base font-semibold border-b border-crescender-700 py-1"
+                className="text-white text-lg font-semibold border-b border-crescender-700 py-1"
                 value={editMerchant}
                 onChangeText={setEditMerchant}
+                placeholderTextColor="#666"
+              />
+            </View>
+
+            {/* Summary */}
+            <View className="mb-4">
+              <Text className="text-crescender-400 text-sm mb-1">Summary</Text>
+              <TextInput
+                className="text-white text-base border-b border-crescender-700 py-1"
+                value={editSummary}
+                onChangeText={setEditSummary}
+                placeholder="Short description (e.g. Guitar strings, lesson)"
                 placeholderTextColor="#666"
               />
             </View>
@@ -244,9 +379,9 @@ export default function GearDetailScreen() {
             {/* ABN & Invoice Number */}
             <View className="flex-row gap-4 mb-4">
               <View className="flex-1">
-                <Text className="text-crescender-400 text-xs mb-1">ABN</Text>
+                <Text className="text-crescender-400 text-sm mb-1">ABN</Text>
                 <TextInput
-                  className="text-white text-sm border-b border-crescender-700 py-1"
+                  className="text-white text-base border-b border-crescender-700 py-1"
                   value={editAbn}
                   onChangeText={setEditAbn}
                   placeholder="XX XXX XXX XXX"
@@ -255,9 +390,9 @@ export default function GearDetailScreen() {
                 />
               </View>
               <View className="flex-1">
-                <Text className="text-crescender-400 text-xs mb-1">Invoice/Receipt #</Text>
+                <Text className="text-crescender-400 text-sm mb-1">Invoice/Receipt #</Text>
                 <TextInput
-                  className="text-white text-sm border-b border-crescender-700 py-1"
+                  className="text-white text-base border-b border-crescender-700 py-1"
                   value={editInvoiceNumber}
                   onChangeText={setEditInvoiceNumber}
                   placeholderTextColor="#666"
@@ -267,9 +402,9 @@ export default function GearDetailScreen() {
 
             {/* Date */}
             <View className="mb-6">
-              <Text className="text-crescender-400 text-xs mb-1">Date</Text>
+              <Text className="text-crescender-400 text-sm mb-1">Date</Text>
               <TextInput
-                className="text-white text-base border-b border-crescender-700 py-1"
+                className="text-white text-lg border-b border-crescender-700 py-1"
                 value={editDate}
                 onChangeText={setEditDate}
                 placeholder="YYYY-MM-DD"
@@ -278,12 +413,12 @@ export default function GearDetailScreen() {
             </View>
 
             {/* Financial Details */}
-            <Text className="text-gold font-bold mb-3 uppercase tracking-widest text-xs">Financial Details</Text>
+            <Text className="text-gold font-bold mb-3 uppercase tracking-widest text-sm">Financial Details</Text>
             <View className="flex-row gap-4 mb-4">
               <View className="flex-1">
-                <Text className="text-crescender-400 text-xs mb-1">Subtotal</Text>
+                <Text className="text-crescender-400 text-sm mb-1">Subtotal</Text>
                 <TextInput
-                  className="text-white text-sm border-b border-crescender-700 py-1"
+                  className="text-white text-base border-b border-crescender-700 py-1"
                   value={editSubtotal}
                   onChangeText={setEditSubtotal}
                   placeholder="0.00"
@@ -292,9 +427,9 @@ export default function GearDetailScreen() {
                 />
               </View>
               <View className="flex-1">
-                <Text className="text-crescender-400 text-xs mb-1">GST (10%)</Text>
+                <Text className="text-crescender-400 text-sm mb-1">GST (10%)</Text>
                 <TextInput
-                  className="text-white text-sm border-b border-crescender-700 py-1"
+                  className="text-white text-base border-b border-crescender-700 py-1"
                   value={editTax}
                   onChangeText={setEditTax}
                   placeholder="0.00"
@@ -306,9 +441,9 @@ export default function GearDetailScreen() {
 
             {/* Total */}
             <View className="mb-6">
-              <Text className="text-crescender-400 text-xs mb-1">Total</Text>
+              <Text className="text-crescender-400 text-sm mb-1">Total</Text>
               <TextInput
-                className="text-white text-base font-bold border-b border-crescender-700 py-1"
+                className="text-white text-lg font-bold border-b border-crescender-700 py-1"
                 value={editTotal}
                 onChangeText={setEditTotal}
                 placeholder="0.00"
@@ -319,7 +454,7 @@ export default function GearDetailScreen() {
 
             {/* Payment Status */}
             <View className="mb-4">
-              <Text className="text-crescender-400 text-xs mb-2">Payment Status</Text>
+              <Text className="text-crescender-400 text-sm mb-2">Payment Status</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View className="flex-row gap-2">
                   {PAYMENT_STATUSES.map((status) => (
@@ -332,7 +467,7 @@ export default function GearDetailScreen() {
                           : 'bg-crescender-900/60 border-crescender-700'
                       }`}
                     >
-                      <Text className={`text-xs font-bold ${
+                      <Text className={`text-sm font-bold ${
                         editPaymentStatus === status.value ? 'text-white' : 'text-crescender-400'
                       }`}>
                         {status.label}
@@ -344,8 +479,8 @@ export default function GearDetailScreen() {
             </View>
 
             {/* Payment Method */}
-            <View className="mb-6">
-              <Text className="text-crescender-400 text-xs mb-2">Payment Method</Text>
+            <View className="mb-4">
+              <Text className="text-crescender-400 text-sm mb-2">Payment Method</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View className="flex-row gap-2">
                   {PAYMENT_METHODS.map((method) => (
@@ -358,7 +493,7 @@ export default function GearDetailScreen() {
                           : 'bg-crescender-900/60 border-crescender-700'
                       }`}
                     >
-                      <Text className={`text-xs font-bold ${
+                      <Text className={`text-sm font-bold ${
                         editPaymentMethod === method.value ? 'text-crescender-950' : 'text-crescender-400'
                       }`}>
                         {method.label}
@@ -367,6 +502,80 @@ export default function GearDetailScreen() {
                   ))}
                 </View>
               </ScrollView>
+            </View>
+
+            {/* Merchant contact & address */}
+            <Text className="text-gold font-bold mb-3 uppercase tracking-widest text-sm">Merchant contact & address</Text>
+            <View className="mb-4">
+              <Text className="text-crescender-400 text-sm mb-1">Phone</Text>
+              <TextInput
+                className="text-white text-base border-b border-crescender-700 py-1"
+                value={editMerchantPhone}
+                onChangeText={setEditMerchantPhone}
+                placeholderTextColor="#666"
+                keyboardType="phone-pad"
+              />
+            </View>
+            <View className="mb-4">
+              <Text className="text-crescender-400 text-sm mb-1">Email</Text>
+              <TextInput
+                className="text-white text-base border-b border-crescender-700 py-1"
+                value={editMerchantEmail}
+                onChangeText={setEditMerchantEmail}
+                placeholderTextColor="#666"
+                keyboardType="email-address"
+              />
+            </View>
+            <View className="mb-4">
+              <Text className="text-crescender-400 text-sm mb-1">Website</Text>
+              <TextInput
+                className="text-white text-base border-b border-crescender-700 py-1"
+                value={editMerchantWebsite}
+                onChangeText={setEditMerchantWebsite}
+                placeholder="example.com"
+                placeholderTextColor="#666"
+                keyboardType="url"
+              />
+            </View>
+            <View className="mb-4">
+              <Text className="text-crescender-400 text-sm mb-1">Address</Text>
+              <TextInput
+                className="text-white text-base border-b border-crescender-700 py-1"
+                value={editMerchantAddress}
+                onChangeText={setEditMerchantAddress}
+                placeholderTextColor="#666"
+              />
+            </View>
+            <View className="flex-row gap-4 mb-4">
+              <View className="flex-1">
+                <Text className="text-crescender-400 text-sm mb-1">Suburb</Text>
+                <TextInput
+                  className="text-white text-base border-b border-crescender-700 py-1"
+                  value={editMerchantSuburb}
+                  onChangeText={setEditMerchantSuburb}
+                  placeholderTextColor="#666"
+                />
+              </View>
+              <View className="flex-1">
+                <Text className="text-crescender-400 text-sm mb-1">State</Text>
+                <TextInput
+                  className="text-white text-base border-b border-crescender-700 py-1"
+                  value={editMerchantState}
+                  onChangeText={setEditMerchantState}
+                  placeholder="e.g. NSW"
+                  placeholderTextColor="#666"
+                />
+              </View>
+              <View className="w-24">
+                <Text className="text-crescender-400 text-sm mb-1">Postcode</Text>
+                <TextInput
+                  className="text-white text-base border-b border-crescender-700 py-1"
+                  value={editMerchantPostcode}
+                  onChangeText={setEditMerchantPostcode}
+                  placeholderTextColor="#666"
+                  keyboardType="numeric"
+                />
+              </View>
             </View>
 
             {/* Delete Button */}
@@ -381,18 +590,66 @@ export default function GearDetailScreen() {
               <View className="w-10 h-10 bg-crescender-800 rounded-full justify-center items-center">
                 <Feather name="home" size={20} color="#f5c518" />
               </View>
-              <View>
-                <Text className="text-white text-xl font-bold">{receipt.merchant}</Text>
-                <Text className="text-crescender-400 text-sm">
+              <View className="flex-1">
+                <Text className="text-white text-2xl font-bold">{receipt.merchant}</Text>
+                <Text className="text-crescender-400 text-base">
                   {new Date(receipt.transactionDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </Text>
+                {receipt.summary && (
+                  <Text className="text-gold text-sm mt-1 italic">{receipt.summary}</Text>
+                )}
               </View>
             </View>
+
+            {/* Merchant Details */}
+            {(receipt.merchantPhone || receipt.merchantEmail || receipt.merchantWebsite || receipt.merchantAddress) && (
+              <View className="mb-4 bg-crescender-900/20 p-3 rounded-xl">
+                <Text className="text-crescender-400 text-sm font-bold mb-2 uppercase tracking-widest">Merchant Details</Text>
+                {receipt.merchantPhone && (
+                  <TouchableOpacity
+                    onPress={() => Linking.openURL(`tel:${receipt.merchantPhone!.replace(/\s/g, '')}`)}
+                    className="flex-row items-center gap-2 mb-1"
+                  >
+                    <Feather name="phone" size={12} color="#f5c518" />
+                    <Text className="text-gold text-sm underline">{receipt.merchantPhone}</Text>
+                  </TouchableOpacity>
+                )}
+                {receipt.merchantEmail && (
+                  <TouchableOpacity
+                    onPress={() => Linking.openURL(`mailto:${receipt.merchantEmail}`)}
+                    className="flex-row items-center gap-2 mb-1"
+                  >
+                    <Feather name="mail" size={12} color="#f5c518" />
+                    <Text className="text-gold text-sm underline">{receipt.merchantEmail}</Text>
+                  </TouchableOpacity>
+                )}
+                {receipt.merchantWebsite && (
+                  <TouchableOpacity
+                    onPress={() => Linking.openURL(`https://${receipt.merchantWebsite!.replace(/^https?:\/\//, '')}`)}
+                    className="flex-row items-center gap-2 mb-1"
+                  >
+                    <Feather name="globe" size={12} color="#f5c518" />
+                    <Text className="text-gold text-sm underline">{receipt.merchantWebsite}</Text>
+                  </TouchableOpacity>
+                )}
+                {receipt.merchantAddress && (
+                  <View className="flex-row items-start gap-2">
+                    <Feather name="map-pin" size={12} color="#9ca3af" style={{ marginTop: 2 }} />
+                    <Text className="text-crescender-300 text-sm flex-1">
+                      {receipt.merchantAddress}
+                      {receipt.merchantSuburb && `, ${receipt.merchantSuburb}`}
+                      {receipt.merchantState && ` ${receipt.merchantState}`}
+                      {receipt.merchantPostcode && ` ${receipt.merchantPostcode}`}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
 
             <View className="bg-crescender-900/40 p-4 rounded-2xl border border-crescender-800">
               <View className="flex-row justify-between mb-2">
                 <Text className="text-crescender-400">Total Amount</Text>
-                <Text className="text-white font-bold text-lg">${(receipt.total / 100).toFixed(2)}</Text>
+                <Text className="text-white font-bold text-xl">${(receipt.total / 100).toFixed(2)}</Text>
               </View>
               <View className="flex-row justify-between mb-2">
                 <Text className="text-crescender-400">GST (10%)</Text>
@@ -401,7 +658,7 @@ export default function GearDetailScreen() {
               {receipt.merchantAbn && (
                 <View className="flex-row justify-between pt-2 border-t border-crescender-800/50">
                   <Text className="text-crescender-400">ABN</Text>
-                  <Text className="text-crescender-200 font-mono text-xs">{formatABN(receipt.merchantAbn)}</Text>
+                  <Text className="text-crescender-200 font-mono text-sm">{formatABN(receipt.merchantAbn)}</Text>
                 </View>
               )}
             </View>
@@ -413,44 +670,232 @@ export default function GearDetailScreen() {
             {/* Gear Items */}
             {gearItems.length > 0 && (
               <View className="p-6 border-b border-crescender-800">
-                <Text className="text-gold font-bold mb-4 uppercase tracking-widest text-xs">Captured Gear</Text>
-                {gearItems.map((item, idx) => (
-                  <View key={item.id} className="bg-crescender-800/30 p-4 rounded-2xl mb-3 border border-gold/10">
-                    <Text className="text-white font-bold mb-2">{item.description}</Text>
-                    <View className="flex-row flex-wrap gap-2 mb-3">
-                      {item.brand && (
-                        <View className="bg-gold/10 px-2 py-0.5 rounded-md border border-gold/20">
-                          <Text className="text-gold text-[10px] font-bold">{item.brand}</Text>
+                <Text className="text-gold font-bold mb-4 uppercase tracking-widest text-sm">Captured Gear</Text>
+                {gearItems.map((item, idx) => {
+                  const gearDetails = item.gearDetailsParsed;
+                  return (
+                    <View key={item.id} className="bg-crescender-800/30 p-4 rounded-2xl mb-3 border border-gold/10">
+                      <Text className="text-white font-bold mb-2">{item.description}</Text>
+
+                      {/* Basic Tags */}
+                      <View className="flex-row flex-wrap gap-2 mb-3">
+                        {item.brand && (
+                          <View className="bg-gold/10 px-2 py-0.5 rounded-md border border-gold/20">
+                            <Text className="text-gold text-[10px] font-bold">{item.brand}</Text>
+                          </View>
+                        )}
+                        {item.model && (
+                          <View className="bg-crescender-800 px-2 py-0.5 rounded-md">
+                            <Text className="text-crescender-300 text-[10px]">{item.model}</Text>
+                          </View>
+                        )}
+                        {gearDetails?.condition && (
+                          <View className="bg-blue-500/20 px-2 py-0.5 rounded-md border border-blue-500/30">
+                            <Text className="text-blue-300 text-[10px] font-bold">{gearDetails.condition}</Text>
+                          </View>
+                        )}
+                        {gearDetails?.tier && (
+                          <View className="bg-purple-500/20 px-2 py-0.5 rounded-md border border-purple-500/30">
+                            <Text className="text-purple-300 text-[10px] font-bold">{gearDetails.tier}</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* Comprehensive Gear Details */}
+                      {gearDetails && (
+                        <View className="bg-crescender-900/40 p-3 rounded-xl mb-3 border border-crescender-700/50">
+                          <Text className="text-crescender-400 text-[10px] font-bold mb-2 uppercase tracking-widest">Gear Details</Text>
+
+                          {gearDetails.manufacturer && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-24">Manufacturer:</Text>
+                              <Text className="text-crescender-200 text-sm flex-1">{gearDetails.manufacturer}</Text>
+                            </View>
+                          )}
+                          {gearDetails.brand && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-24">Brand:</Text>
+                              <Text className="text-crescender-200 text-sm flex-1">{gearDetails.brand}</Text>
+                            </View>
+                          )}
+                          {gearDetails.modelName && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-24">Model:</Text>
+                              <Text className="text-crescender-200 text-sm flex-1">{gearDetails.modelName}</Text>
+                            </View>
+                          )}
+                          {gearDetails.modelNumber && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-24">Model #:</Text>
+                              <Text className="text-crescender-200 text-sm flex-1 font-mono">{gearDetails.modelNumber}</Text>
+                            </View>
+                          )}
+                          {gearDetails.serialNumber && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-24">Serial #:</Text>
+                              <Text className="text-gold text-sm flex-1 font-mono font-bold">{gearDetails.serialNumber}</Text>
+                            </View>
+                          )}
+                          {gearDetails.makeYear && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-24">Year:</Text>
+                              <Text className="text-crescender-200 text-sm flex-1">{gearDetails.makeYear}</Text>
+                            </View>
+                          )}
+                          {gearDetails.colour && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-24">Colour:</Text>
+                              <Text className="text-crescender-200 text-sm flex-1">{gearDetails.colour}</Text>
+                            </View>
+                          )}
+                          {gearDetails.size && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-24">Size:</Text>
+                              <Text className="text-crescender-200 text-sm flex-1">{gearDetails.size}</Text>
+                            </View>
+                          )}
+                          {gearDetails.uniqueDetail && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-24">Details:</Text>
+                              <Text className="text-crescender-200 text-sm flex-1 italic">{gearDetails.uniqueDetail}</Text>
+                            </View>
+                          )}
+                          {gearDetails.notedDamage && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-24">Damage:</Text>
+                              <Text className="text-red-400 text-sm flex-1">{gearDetails.notedDamage}</Text>
+                            </View>
+                          )}
+                          {gearDetails.officialUrl && (
+                            <TouchableOpacity
+                              onPress={() => Linking.openURL(gearDetails.officialUrl!.startsWith('http') ? gearDetails.officialUrl! : `https://${gearDetails.officialUrl}`)}
+                              className="flex-row mb-1"
+                            >
+                              <Text className="text-crescender-500 text-sm w-24">Product URL:</Text>
+                              <Text className="text-gold text-sm flex-1 underline" numberOfLines={1}>{gearDetails.officialUrl}</Text>
+                            </TouchableOpacity>
+                          )}
+                          {gearDetails.officialManual && (
+                            <TouchableOpacity
+                              onPress={() => Linking.openURL(gearDetails.officialManual!.startsWith('http') ? gearDetails.officialManual! : `https://${gearDetails.officialManual}`)}
+                              className="flex-row mb-1"
+                            >
+                              <Text className="text-crescender-500 text-sm w-24">Manual:</Text>
+                              <Text className="text-gold text-sm flex-1 underline" numberOfLines={1}>{gearDetails.officialManual}</Text>
+                            </TouchableOpacity>
+                          )}
+                          {gearDetails.warrantyContactDetails && (
+                            <View className="mt-2 pt-2 border-t border-crescender-700/50">
+                              <Text className="text-crescender-400 text-[10px] font-bold mb-1 uppercase tracking-widest">Warranty Contact</Text>
+                              {gearDetails.warrantyContactDetails.phone && (
+                                <TouchableOpacity
+                                  onPress={() => Linking.openURL(`tel:${gearDetails.warrantyContactDetails!.phone!.replace(/\s/g, '')}`)}
+                                >
+                                  <Text className="text-gold text-sm underline">📞 {gearDetails.warrantyContactDetails.phone}</Text>
+                                </TouchableOpacity>
+                              )}
+                              {gearDetails.warrantyContactDetails.email && (
+                                <TouchableOpacity
+                                  onPress={() => Linking.openURL(`mailto:${gearDetails.warrantyContactDetails!.email}`)}
+                                >
+                                  <Text className="text-gold text-sm underline">✉️ {gearDetails.warrantyContactDetails.email}</Text>
+                                </TouchableOpacity>
+                              )}
+                              {gearDetails.warrantyContactDetails.website && (
+                                <TouchableOpacity
+                                  onPress={() => Linking.openURL(`https://${gearDetails.warrantyContactDetails!.website!.replace(/^https?:\/\//, '')}`)}
+                                >
+                                  <Text className="text-gold text-sm underline">🌐 {gearDetails.warrantyContactDetails.website}</Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          )}
                         </View>
                       )}
-                      {item.model && (
-                        <View className="bg-crescender-800 px-2 py-0.5 rounded-md">
-                          <Text className="text-crescender-300 text-[10px]">{item.model}</Text>
-                        </View>
-                      )}
+
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-crescender-400 text-sm">Qty: {item.quantity}</Text>
+                        <Text className="text-white font-bold">${(item.totalPrice / 100).toFixed(2)}</Text>
+                      </View>
                     </View>
-                    <View className="flex-row justify-between items-center">
-                      <Text className="text-crescender-400 text-xs">Qty: {item.quantity}</Text>
-                      <Text className="text-white font-bold">${(item.totalPrice / 100).toFixed(2)}</Text>
-                    </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             )}
 
             {/* Other Items */}
             {(serviceItems.length > 0 || eventItems.length > 0) && (
               <View className="p-6">
-                <Text className="text-crescender-400 font-bold mb-4 uppercase tracking-widest text-xs">Other Items</Text>
-                {[...serviceItems, ...eventItems].map((item, idx) => (
-                  <View key={item.id} className="flex-row justify-between items-center mb-4">
-                    <View className="flex-1 mr-4">
-                      <Text className="text-white font-medium">{item.description}</Text>
-                      <Text className="text-crescender-500 text-xs capitalize">{item.category}</Text>
+                <Text className="text-crescender-400 font-bold mb-4 uppercase tracking-widest text-sm">Other Items</Text>
+                {[...serviceItems, ...eventItems].map((item, idx) => {
+                  const educationDetails = item.educationDetailsParsed;
+                  return (
+                    <View key={item.id} className="bg-crescender-800/20 p-3 rounded-xl mb-3 border border-crescender-700/30">
+                      <View className="flex-row justify-between items-start mb-2">
+                        <View className="flex-1 mr-4">
+                          <Text className="text-white font-medium">{item.description}</Text>
+                          <Text className="text-crescender-500 text-sm capitalize">{item.category}</Text>
+                        </View>
+                        <Text className="text-crescender-200 font-bold">${(item.totalPrice / 100).toFixed(2)}</Text>
+                      </View>
+
+                      {/* Education Details */}
+                      {educationDetails && (
+                        <View className="bg-crescender-900/40 p-2 rounded-lg mt-2 border border-crescender-700/50">
+                          <Text className="text-crescender-400 text-[10px] font-bold mb-1 uppercase tracking-widest">Education Details</Text>
+                          {educationDetails.teacherName && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-20">Teacher:</Text>
+                              <Text className="text-crescender-200 text-sm flex-1">{educationDetails.teacherName}</Text>
+                            </View>
+                          )}
+                          {educationDetails.studentName && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-20">Student:</Text>
+                              <Text className="text-crescender-200 text-sm flex-1">{educationDetails.studentName}</Text>
+                            </View>
+                          )}
+                          {educationDetails.frequency && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-20">Frequency:</Text>
+                              <Text className="text-crescender-200 text-sm flex-1">{educationDetails.frequency}</Text>
+                            </View>
+                          )}
+                          {educationDetails.duration && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-20">Duration:</Text>
+                              <Text className="text-crescender-200 text-sm flex-1">{educationDetails.duration}</Text>
+                            </View>
+                          )}
+                          {educationDetails.startDate && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-20">Start:</Text>
+                              <Text className="text-crescender-200 text-sm flex-1">{educationDetails.startDate}</Text>
+                            </View>
+                          )}
+                          {educationDetails.endDate && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-20">End:</Text>
+                              <Text className="text-crescender-200 text-sm flex-1">{educationDetails.endDate}</Text>
+                            </View>
+                          )}
+                          {educationDetails.daysOfWeek && educationDetails.daysOfWeek.length > 0 && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-20">Days:</Text>
+                              <Text className="text-crescender-200 text-sm flex-1">{educationDetails.daysOfWeek.join(', ')}</Text>
+                            </View>
+                          )}
+                          {educationDetails.times && educationDetails.times.length > 0 && (
+                            <View className="flex-row mb-1">
+                              <Text className="text-crescender-500 text-sm w-20">Times:</Text>
+                              <Text className="text-crescender-200 text-sm flex-1">{educationDetails.times.join(', ')}</Text>
+                            </View>
+                          )}
+                        </View>
+                      )}
                     </View>
-                    <Text className="text-crescender-200">${(item.totalPrice / 100).toFixed(2)}</Text>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             )}
           </>
@@ -460,19 +905,29 @@ export default function GearDetailScreen() {
       {/* Footer Actions - Only show in view mode */}
       {!isEditing && (
         <View
-          className="absolute bottom-0 left-0 right-0 bg-crescender-950 p-6 border-t border-crescender-800 flex-row gap-4"
+          className="absolute bottom-0 left-0 right-0 bg-crescender-950 p-6 border-t border-crescender-800"
           style={{ paddingBottom: insets.bottom + 12 }}
         >
+          <View className="flex-row gap-4">
+            <TouchableOpacity
+              className="flex-1 bg-crescender-800/50 py-4 rounded-xl border border-crescender-700/50 flex-row justify-center items-center gap-2"
+              onPress={handleReplaceImage}
+            >
+              <Feather name="image" size={18} color="white" />
+              <Text className="text-white font-bold">{receipt.imageUrl ? 'Replace Image' : 'Add Image'}</Text>
+            </TouchableOpacity>
+            {receipt.imageUrl && (
+              <TouchableOpacity
+                className="flex-1 bg-crescender-800/50 py-4 rounded-xl border border-crescender-700/50 flex-row justify-center items-center gap-2"
+                onPress={handleReprocess}
+              >
+                <Feather name="refresh-cw" size={18} color="white" />
+                <Text className="text-white font-bold">Reprocess</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <TouchableOpacity
-            className="flex-1 bg-crescender-800/50 py-4 rounded-xl border border-crescender-700/50 flex-row justify-center items-center gap-2"
-            onPress={() => router.push('/scan')}
-          >
-            <Feather name="refresh-cw" size={18} color="white" />
-            <Text className="text-white font-bold">Rescan</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="flex-1 bg-red-500/10 py-4 rounded-xl border border-red-500/30 flex-row justify-center items-center gap-2"
+            className="mt-3 bg-red-500/10 py-4 rounded-xl border border-red-500/30 flex-row justify-center items-center gap-2"
             onPress={handleDelete}
           >
             <Feather name="trash-2" size={18} color="#ef4444" />

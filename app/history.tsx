@@ -54,18 +54,18 @@ export default function HistoryScreen() {
       </View>
       
       <View className="flex-1">
-        <Text className="text-white font-bold text-base" numberOfLines={1}>{item.merchant}</Text>
-        <Text className="text-crescender-400 text-xs mb-2">
+        <Text className="text-white font-bold text-lg" numberOfLines={1}>{item.merchant}</Text>
+        <Text className="text-crescender-400 text-sm mb-2">
           {new Date(item.transactionDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
         </Text>
         <View className="flex-row items-center gap-2">
           <View className={`w-2 h-2 rounded-full ${item.syncStatus === 'synced' ? 'bg-green-500' : 'bg-gold'}`} />
-          <Text className="text-crescender-500 text-[10px] uppercase tracking-widest">{item.syncStatus || 'Pending'}</Text>
+          <Text className="text-crescender-500 text-xs uppercase tracking-widest">{item.syncStatus || 'Pending'}</Text>
         </View>
       </View>
       
       <View className="items-end">
-        <Text className="text-gold font-bold text-lg">${(item.total / 100).toFixed(2)}</Text>
+        <Text className="text-gold font-bold text-xl">${(item.total / 100).toFixed(2)}</Text>
         <Feather name="chevron-right" size={16} color="#f5c518" />
       </View>
     </TouchableOpacity>
@@ -80,7 +80,7 @@ export default function HistoryScreen() {
         <View className="bg-crescender-900/40 border border-crescender-700/50 rounded-2xl flex-row items-center px-4 h-12">
           <Feather name="search" size={18} color="#9ca3af" />
           <TextInput
-            className="flex-1 text-white ml-2 text-sm"
+            className="flex-1 text-white ml-2 text-base"
             placeholder="Search receipts..."
             placeholderTextColor="#6b7280"
             value={searchQuery}

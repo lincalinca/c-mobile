@@ -137,10 +137,10 @@ export const ProcessingView = () => {
         />
       </View>
       
-      <Text className="text-white text-2xl font-bold mb-2 tracking-widest text-center" style={{ fontFamily: Platform.OS === 'web' ? 'Bebas Neue, system-ui' : 'System' }}>
+      <Text className="text-white text-3xl font-bold mb-2 tracking-widest text-center" style={{ fontFamily: Platform.OS === 'web' ? 'Bebas Neue, system-ui' : 'System' }}>
         ANALYSING RECEIPT
       </Text>
-      <Text className="text-crescender-400 text-center text-sm leading-relaxed">
+      <Text className="text-crescender-400 text-center text-base leading-relaxed">
         Our AI is extracting your gear, events, and transactions. This usually takes 5–10 seconds.
       </Text>
       
