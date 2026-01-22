@@ -1,52 +1,72 @@
-import { db } from '../db/client';
-import { receipts, receiptItems } from '../db/schema';
+import { db, waitForDb } from '../db/client';
+import { transactions, lineItems } from '../db/schema';
 import { desc, eq } from 'drizzle-orm';
 
-export type Receipt = typeof receipts.$inferSelect;
-export type ReceiptItem = typeof receiptItems.$inferSelect;
-export type NewReceipt = typeof receipts.$inferInsert;
-export type NewReceiptItem = typeof receiptItems.$inferInsert;
+// Types
+export type Transaction = typeof transactions.$inferSelect;
+export type LineItem = typeof lineItems.$inferSelect;
+export type NewTransaction = typeof transactions.$inferInsert;
+export type NewLineItem = typeof lineItems.$inferInsert;
 
-export const ReceiptRepository = {
+// Legacy aliases
+export type Receipt = Transaction;
+export type ReceiptItem = LineItem;
+export type NewReceipt = NewTransaction;
+export type NewReceiptItem = NewLineItem;
+
+/**
+ * Transaction Repository - handles receipt/invoice documents and their line items
+ */
+export const TransactionRepository = {
   async getAll() {
-    return await db.select().from(receipts).orderBy(desc(receipts.createdAt));
+    await waitForDb();
+    return await db.select().from(transactions).orderBy(desc(transactions.createdAt));
   },
 
   async getAllWithItems() {
-    const allReceipts = await db.select().from(receipts).orderBy(desc(receipts.createdAt));
-    const receiptsWithItems = await Promise.all(
-      allReceipts.map(async (receipt: Receipt) => {
-        const items = await db.select().from(receiptItems).where(eq(receiptItems.receiptId, receipt.id));
-        return { ...receipt, items: items as ReceiptItem[] };
+    await waitForDb();
+    const allTransactions = await db.select().from(transactions).orderBy(desc(transactions.createdAt));
+    const transactionsWithItems = await Promise.all(
+      allTransactions.map(async (txn: Transaction) => {
+        const items = await db.select().from(lineItems).where(eq(lineItems.transactionId, txn.id));
+        return { ...txn, items: items as LineItem[] };
       })
     );
-    return receiptsWithItems;
+    return transactionsWithItems;
   },
 
   async getById(id: string) {
-    const result = await db.select().from(receipts).where(eq(receipts.id, id));
+    await waitForDb();
+    const result = await db.select().from(transactions).where(eq(transactions.id, id));
     return result[0] || null;
   },
 
-  async getItems(receiptId: string) {
-    return await db.select().from(receiptItems).where(eq(receiptItems.receiptId, receiptId));
+  async getLineItems(transactionId: string) {
+    await waitForDb();
+    return await db.select().from(lineItems).where(eq(lineItems.transactionId, transactionId));
   },
 
-  async create(receipt: NewReceipt, items: NewReceiptItem[]) {
+  async create(transaction: NewTransaction, items: NewLineItem[]) {
+    await waitForDb();
     try {
-      await db.insert(receipts).values(receipt);
+      await db.insert(transactions).values(transaction);
       if (items.length > 0) {
-        await db.insert(receiptItems).values(items);
+        await db.insert(lineItems).values(items);
       }
-      return receipt;
+      console.log('[Repository] Created transaction:', transaction.id, 'with', items.length, 'items');
+      return transaction;
     } catch (e) {
-      console.error('Error creating receipt:', e);
+      console.error('[Repository] Error creating transaction:', e);
       throw e;
     }
   },
 
   async delete(id: string) {
-    await db.delete(receiptItems).where(eq(receiptItems.receiptId, id));
-    await db.delete(receipts).where(eq(receipts.id, id));
+    await waitForDb();
+    await db.delete(lineItems).where(eq(lineItems.transactionId, id));
+    await db.delete(transactions).where(eq(transactions.id, id));
   }
 };
+
+// Legacy alias for backward compatibility
+export const ReceiptRepository = TransactionRepository;

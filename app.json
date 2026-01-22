@@ -18,7 +18,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.crescender.mobile.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "Crescender needs access to your camera to scan receipts and extract gear information."
+        "NSCameraUsageDescription": "Crescender needs access to your camera to scan receipts and extract gear information.",
+        "NSUserTrackingUsageDescription": "This allows us to show you relevant ads and improve your experience."
       }
     },
     "android": {
@@ -39,7 +40,15 @@
           "cameraPermission": "Crescender needs access to your camera to scan receipts."
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "iosAppId": "ca-app-pub-XXXXX~YYYYY",
+          "androidAppId": "ca-app-pub-XXXXX~ZZZZZ"
+        }
+      ],
+      "expo-tracking-transparency"
     ],
     "scheme": "crescender-mobile",
     "experiments": {

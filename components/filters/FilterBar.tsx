@@ -1,24 +1,29 @@
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { ITEM_CATEGORIES, CategoryValue } from '../../constants/categories';
 
-export type FilterType = 'all' | 'gear' | 'event' | 'transaction';
+export type FilterType = 'all' | 'gear' | 'service' | 'event' | 'education' | 'transaction';
 
 interface FilterBarProps {
   activeFilter: FilterType;
   onFilterChange: (filter: FilterType) => void;
+  useIcons?: boolean;
 }
 
-export const FilterBar = ({ activeFilter, onFilterChange }: FilterBarProps) => {
-  const filters: { label: string; value: FilterType; color: string }[] = [
-    { label: 'ALL', value: 'all', color: '#f5c518' },
-    { label: 'GEAR', value: 'gear', color: '#f5c518' },
-    { label: 'EVENTS', value: 'event', color: '#22d3ee' },
-    { label: 'MONEY', value: 'transaction', color: '#a3e635' },
+export const FilterBar = ({ activeFilter, onFilterChange, useIcons = false }: FilterBarProps) => {
+  const filters: { label: string; value: FilterType; color: string; icon?: string }[] = [
+    { label: 'ALL', value: 'all', color: '#f5c518', icon: 'grid' },
+    { label: 'GEAR', value: 'gear', color: '#f5c518', icon: 'package' },
+    { label: 'SERVICE', value: 'service', color: '#f97316', icon: 'tool' },
+    { label: 'EVENTS', value: 'event', color: '#22d3ee', icon: 'calendar' },
+    { label: 'EDUCATION', value: 'education', color: '#c084fc', icon: 'book-open' },
+    { label: 'MONEY', value: 'transaction', color: '#a3e635', icon: 'dollar-sign' },
   ];
 
   return (
     <View className="mb-4">
-      <ScrollView 
-        horizontal 
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16 }}
       >
@@ -27,18 +32,25 @@ export const FilterBar = ({ activeFilter, onFilterChange }: FilterBarProps) => {
             <TouchableOpacity
               key={filter.value}
               onPress={() => onFilterChange(filter.value)}
-              className={`px-5 py-2 rounded-xl border ${
-                activeFilter === filter.value 
-                  ? 'bg-gold border-gold' 
+              className={`px-5 py-2 rounded-xl border flex-row items-center gap-2 ${
+                activeFilter === filter.value
+                  ? 'bg-gold border-gold'
                   : 'bg-crescender-900/40 border-crescender-800'
               }`}
             >
-              <Text 
+              {useIcons && filter.icon ? (
+                <Feather
+                  name={filter.icon as any}
+                  size={14}
+                  color={activeFilter === filter.value ? '#2e1065' : filter.color}
+                />
+              ) : null}
+              <Text
                 className={`font-bold text-[10px] tracking-widest ${
                   activeFilter === filter.value ? 'text-crescender-950' : 'text-crescender-400'
                 }`}
               >
-                {filter.label}
+                {useIcons ? '' : filter.label}
               </Text>
             </TouchableOpacity>
           ))}

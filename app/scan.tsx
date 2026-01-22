@@ -1,11 +1,12 @@
 import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Platform, Modal, Animated, PanResponder } from 'react-native';
 import { CameraView, useCameraPermissions, CameraType, FlashMode } from 'expo-camera';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { supabase } from '../lib/supabase';
+import { callSupabaseFunction } from '../lib/supabase';
 import { ProcessingView } from '../components/processing/ProcessingView';
 
 export default function ScanScreen() {
@@ -17,6 +18,15 @@ export default function ScanScreen() {
   const cameraRef = useRef<any>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  // Safe navigation back - goes to home if no history
+  const handleGoBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/');
+    }
+  }, [router]);
 
   const [hasWebPermission, setHasWebPermission] = useState(false);
 
@@ -56,8 +66,8 @@ export default function ScanScreen() {
           Alert.alert('Camera Unavailable', 'Camera is not supported in this browser.');
           return;
         }
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: { ideal: 'environment' } } 
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } }
         });
         stream.getTracks().forEach(track => track.stop());
         setHasWebPermission(true);
@@ -88,15 +98,27 @@ export default function ScanScreen() {
     }
   };
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      base64: true,
-      quality: 0.7,
-    });
-    if (!result.canceled && result.assets[0].base64) {
-      await processImage(result.assets[0].uri, result.assets[0].base64);
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*'],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      // Read file as base64
+      const base64 = await readAsStringAsync(asset.uri, {
+        encoding: EncodingType.Base64,
+      });
+
+      await processImage(asset.uri, base64);
+    } catch (error) {
+      console.error('Document picker error:', error);
+      Alert.alert('Error', 'Failed to pick document');
     }
   };
 
@@ -104,19 +126,17 @@ export default function ScanScreen() {
     if (!base64) return;
     setIsProcessing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('analyze-receipt', {
-        body: { imageBase64: base64 },
+      const receiptData = await callSupabaseFunction<any>('analyze-receipt', {
+        imageBase64: base64,
       });
-      if (error) throw error;
-      const receiptData = data;
       if (!receiptData || !receiptData.financial) throw new Error('Incomplete data');
-      
+
       setIsProcessing(false);
       router.push({
         pathname: '/review' as any,
-        params: { 
+        params: {
           data: JSON.stringify(receiptData),
-          uri: uri 
+          uri: uri
         }
       });
     } catch (e) {
@@ -148,7 +168,7 @@ export default function ScanScreen() {
             <Text className='text-white text-center mb-2 text-xl font-bold'>Camera Access Required</Text>
             <Text className='text-crescender-200 text-center mb-6 text-base'>Grant camera access to scan receipts.</Text>
             <View className='flex-row gap-3 w-full'>
-              <TouchableOpacity onPress={() => router.back()} className='flex-1 bg-crescender-800/50 px-6 py-4 rounded-full'><Text className='text-white font-semibold text-center'>Cancel</Text></TouchableOpacity>
+              <TouchableOpacity onPress={handleGoBack} className='flex-1 bg-crescender-800/50 px-6 py-4 rounded-full'><Text className='text-white font-semibold text-center'>Cancel</Text></TouchableOpacity>
               <TouchableOpacity onPress={handleRequestPermission} className='flex-1 bg-gold px-6 py-4 rounded-full'><Text className='text-crescender-950 font-bold text-center'>Grant</Text></TouchableOpacity>
             </View>
           </View>
@@ -161,24 +181,24 @@ export default function ScanScreen() {
             <View className='flex-1 bg-transparent'>
               {/* Header */}
               <View className='flex-row justify-between p-6 items-center'>
-                 <TouchableOpacity onPress={() => router.back()} className='bg-black/40 p-3 rounded-full border border-white/20'>
-                    <Feather name='x' size={24} color='white' />
-                 </TouchableOpacity>
-                 <Text className="text-white font-bold text-lg" style={{ fontFamily: (Platform.OS as any) === 'web' ? 'Bebas Neue, system-ui' : 'System' }}>SCAN RECORD</Text>
-                 {Platform.OS !== 'web' && (
-                   <TouchableOpacity onPress={() => setFlash(f => f === 'off' ? 'on' : 'off')} className='bg-black/40 p-3 rounded-full border border-white/20'>
-                      <Feather name={flash === 'on' ? 'zap' : 'zap-off'} size={24} color={flash === 'on' ? '#f5c518' : 'white'} />
-                   </TouchableOpacity>
-                 )}
+                <TouchableOpacity onPress={handleGoBack} className='bg-black/40 p-3 rounded-full border border-white/20'>
+                  <Feather name='x' size={24} color='white' />
+                </TouchableOpacity>
+                <Text className="text-white font-bold text-lg" style={{ fontFamily: (Platform.OS as any) === 'web' ? 'Bebas Neue, system-ui' : 'System' }}>SCAN RECEIPT</Text>
+                {Platform.OS !== 'web' && (
+                  <TouchableOpacity onPress={() => setFlash(f => f === 'off' ? 'on' : 'off')} className='bg-black/40 p-3 rounded-full border border-white/20'>
+                    <Feather name={flash === 'on' ? 'zap' : 'zap-off'} size={24} color={flash === 'on' ? '#f5c518' : 'white'} />
+                  </TouchableOpacity>
+                )}
               </View>
 
               {/* Adjustable Aperture */}
               <View className="flex-1 items-center px-6">
-                <Animated.View 
+                <Animated.View
                   {...(panResponder.panHandlers as any)}
                   style={[
                     { transform: [{ translateX: pan.x }, { translateY: pan.y }] },
-                    { width: '100%', aspectRatio: 3/4 }
+                    { width: '100%', aspectRatio: 3 / 4 }
                   ]}
                   className="border-2 border-gold rounded-3xl overflow-hidden relative"
                 >
@@ -187,7 +207,7 @@ export default function ScanScreen() {
                   <View className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-gold m-4 rounded-bl-lg" />
                   <View className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-gold m-4 rounded-br-lg" />
                   <View className="absolute top-12 left-0 right-0 items-center">
-                    <Text className="text-gold font-bold text-[10px] uppercase tracking-widest bg-black/60 px-4 py-2 rounded-full">Drag Frame to Adjust</Text>
+                    <Text className="text-gold font-bold text-[10px] uppercase tracking-widest bg-black/60 px-4 py-2 rounded-full">ADJUST FRAME</Text>
                   </View>
                 </Animated.View>
               </View>
@@ -195,11 +215,11 @@ export default function ScanScreen() {
               {/* Controls */}
               <View className='flex-1 justify-end items-center' style={{ paddingBottom: insets.bottom + 20 }}>
                 <View className='flex-row items-center w-full justify-evenly px-10'>
-                    <TouchableOpacity onPress={pickImage} className='bg-black/40 p-4 rounded-full border border-white/20'><Feather name='image' size={28} color='white' /></TouchableOpacity>
-                    <TouchableOpacity onPress={handleCapture} className='w-20 h-20 bg-white rounded-full border-4 border-gold shadow-lg shadow-gold/30' />
-                    {Platform.OS !== 'web' && (
-                      <TouchableOpacity onPress={() => setFacing(f => f === 'back' ? 'front' : 'back')} className='bg-black/40 p-4 rounded-full border border-white/20'><Feather name='refresh-cw' size={28} color='white' /></TouchableOpacity>
-                    )}
+                  <TouchableOpacity onPress={pickDocument} className='bg-black/40 p-4 rounded-full border border-white/20'><Feather name='upload' size={28} color='white' /></TouchableOpacity>
+                  <TouchableOpacity onPress={handleCapture} className='w-20 h-20 bg-white rounded-full border-4 border-gold shadow-lg shadow-gold/30' />
+                  {Platform.OS !== 'web' && (
+                    <TouchableOpacity onPress={() => setFacing(f => f === 'back' ? 'front' : 'back')} className='bg-black/40 p-4 rounded-full border border-white/20'><Feather name='refresh-cw' size={28} color='white' /></TouchableOpacity>
+                  )}
                 </View>
               </View>
             </View>

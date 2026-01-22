@@ -56,7 +56,7 @@ export default function HistoryScreen() {
       <View className="flex-1">
         <Text className="text-white font-bold text-base" numberOfLines={1}>{item.merchant}</Text>
         <Text className="text-crescender-400 text-xs mb-2">
-          {new Date(item.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+          {new Date(item.transactionDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
         </Text>
         <View className="flex-row items-center gap-2">
           <View className={`w-2 h-2 rounded-full ${item.syncStatus === 'synced' ? 'bg-green-500' : 'bg-gold'}`} />
@@ -72,7 +72,7 @@ export default function HistoryScreen() {
   );
 
   return (
-    <View className="flex-1 bg-crescender-950">
+    <View className="flex-1" style={{ backgroundColor: 'transparent' }}>
       <PersistentHeader />
 
       {/* Search */}

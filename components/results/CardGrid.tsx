@@ -2,7 +2,9 @@ import React, { forwardRef } from 'react';
 import { View, FlatList, Text } from 'react-native';
 import { ResultItem, ResultType } from '../../lib/results';
 import { GearCard } from './GearCard';
+import { ServiceCard } from './ServiceCard';
 import { EventCard } from './EventCard';
+import { EducationCard } from './EducationCard';
 import { TransactionCard } from './TransactionCard';
 
 interface CardGridProps {
@@ -33,8 +35,12 @@ export const CardGrid = forwardRef<FlatList, CardGridProps>(({
     switch (item.type) {
       case 'gear':
         return <GearCard {...commonProps} />;
+      case 'service':
+        return <ServiceCard {...commonProps} />;
       case 'event':
         return <EventCard {...commonProps} />;
+      case 'education':
+        return <EducationCard {...commonProps} />;
       case 'transaction':
         return <TransactionCard {...commonProps} />;
       default:
@@ -59,7 +65,7 @@ export const CardGrid = forwardRef<FlatList, CardGridProps>(({
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
       numColumns={2}
-      contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
+      contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 100 }}
       onRefresh={onRefresh}
       refreshing={refreshing}
       showsVerticalScrollIndicator={false}

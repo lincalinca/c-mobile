@@ -26,25 +26,29 @@ export const PersistentHeader = () => {
   return (
     <>
       <View 
-        className="bg-crescender-950"
-        style={{ paddingTop: insets.top + 16 }}
+        style={{ 
+          backgroundColor: '#2a0b4c',
+          paddingTop: insets.top,
+        }}
       >
-        <View className="flex-row items-center justify-between px-6 h-18">
+        <View className="flex-row items-center justify-between px-6 py-4">
           {/* Spacer to help center the logo */}
           <View className="w-10" />
 
           {/* Centered Logo */}
           <View className="flex-1 items-center justify-center">
             {(Platform.OS as any) === 'web' ? (
-              <Image 
+              <Image
                 source={{ uri: '/crescender-logo.svg' }}
-                style={{ width: 234, height: 38 }} 
+                style={{ width: 234, height: 38 }}
                 resizeMode="contain"
               />
             ) : (
-              <Text className="text-gold text-4xl font-bold tracking-tight" style={{ fontFamily: (Platform.OS as any) === 'web' ? 'Bebas Neue, system-ui' : 'System' }}>
-                CRESCENDER
-              </Text>
+              <Image
+                source={require('../../assets/crescender-logo.png')}
+                style={{ width: 200, height: 23 }}
+                resizeMode="contain"
+              />
             )}
           </View>
 
