@@ -9,8 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { ReviewWorkflowState, MissingDataRequirement, analyzeMissingData } from '../../../lib/reviewWorkflow';
 import { PersistentHeader } from '../../../components/header/PersistentHeader';
-import { DatePickerModal } from '../../../components/calendar/DatePickerModal';
-import { useState } from 'react';
+import { LessonDateSelector } from '../../../components/education/LessonDateSelector';
 
 interface WorkflowMissingDataPageProps {
   workflowState: ReviewWorkflowState;
@@ -28,47 +27,6 @@ export default function WorkflowMissingDataPage({
   const insets = useSafeAreaInsets();
   const missingData = analyzeMissingData(workflowState.items);
   const requiredMissing = missingData.filter(m => m.required);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editingField, setEditingField] = useState<string | null>(null);
-
-  const handleDateSelect = (date: string) => {
-    if (editingIndex === null || !editingField) return;
-    
-    const newItems = [...workflowState.items];
-    const item = newItems[editingIndex];
-    
-    if (item.category === 'education') {
-      const eduDetails = typeof item.educationDetails === 'string'
-        ? JSON.parse(item.educationDetails || '{}')
-        : (item.educationDetails || {});
-      
-      eduDetails[editingField] = date;
-      item.educationDetails = eduDetails;
-    }
-    
-    updateState({ items: newItems });
-    setShowDatePicker(false);
-    setEditingIndex(null);
-    setEditingField(null);
-  };
-
-  const openDatePicker = (index: number, field: string) => {
-    setEditingIndex(index);
-    setEditingField(field);
-    setShowDatePicker(true);
-  };
-
-  const getCurrentValue = (index: number, field: string): string | null => {
-    const item = workflowState.items[index];
-    if (item.category === 'education') {
-      const eduDetails = typeof item.educationDetails === 'string'
-        ? JSON.parse(item.educationDetails || '{}')
-        : (item.educationDetails || {});
-      return eduDetails[field] || null;
-    }
-    return null;
-  };
 
   return (
     <View className="flex-1" style={{ backgroundColor: 'transparent', paddingTop: insets.top }}>
@@ -91,7 +49,6 @@ export default function WorkflowMissingDataPage({
         ) : (
           requiredMissing.map((req, idx) => {
             const item = workflowState.items[req.itemIndex];
-            const currentValue = getCurrentValue(req.itemIndex, req.field);
             
             return (
               <View key={idx} className="bg-crescender-900/40 p-4 rounded-2xl border border-crescender-800 mb-4">
@@ -102,22 +59,24 @@ export default function WorkflowMissingDataPage({
                   {req.label}
                 </Text>
                 
-                {req.field === 'startDate' && (
-                  <TouchableOpacity
-                    onPress={() => openDatePicker(req.itemIndex, req.field)}
-                    className="bg-crescender-800 p-3 rounded-xl flex-row items-center justify-between border border-crescender-700"
-                  >
-                    <Text className={`text-base ${currentValue ? 'text-white' : 'text-crescender-500'}`}>
-                      {currentValue
-                        ? new Date(currentValue + 'T12:00:00').toLocaleDateString('en-AU', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric',
-                          })
-                        : 'Select date'}
-                    </Text>
-                    <Feather name="calendar" size={20} color="#f5c518" />
-                  </TouchableOpacity>
+                {req.field === 'startDate' && req.type === 'education' && (
+                  <LessonDateSelector
+                    item={item}
+                    transactionDate={workflowState.transactionDate}
+                    onUpdate={(updates) => {
+                      const newItems = [...workflowState.items];
+                      const updatedItem = newItems[req.itemIndex];
+                      const eduDetails = typeof updatedItem.educationDetails === 'string'
+                        ? JSON.parse(updatedItem.educationDetails || '{}')
+                        : (updatedItem.educationDetails || {});
+                      
+                      updatedItem.educationDetails = {
+                        ...eduDetails,
+                        ...updates,
+                      };
+                      updateState({ items: newItems });
+                    }}
+                  />
                 )}
               </View>
             );
@@ -149,20 +108,6 @@ export default function WorkflowMissingDataPage({
         </View>
       </View>
       
-      {/* Date Picker Modal */}
-      {editingIndex !== null && editingField && (
-        <DatePickerModal
-          visible={showDatePicker}
-          onRequestClose={() => {
-            setShowDatePicker(false);
-            setEditingIndex(null);
-            setEditingField(null);
-          }}
-          selectedDate={getCurrentValue(editingIndex, editingField)}
-          onDateSelect={handleDateSelect}
-          showFutureWarning={true}
-        />
-      )}
     </View>
   );
 }

@@ -10,6 +10,7 @@ import { ITEM_CATEGORIES } from '../constants/categories';
 import { useInterstitialAd, usePreloadInterstitialAd } from '../components/ads';
 import { generateEducationEvents, getEducationSeriesSummary } from '../lib/educationEvents';
 import { addEducationSeriesToDeviceCalendar, addEventToDeviceCalendar } from '../lib/calendarExport';
+import { LessonDateSelector } from '../components/education/LessonDateSelector';
 
 // Document type options
 const DOCUMENT_TYPES = [
@@ -629,23 +630,66 @@ export default function ReviewScreen() {
                 ))}
               </View>
 
-              {/* Education Details - Teacher Name */}
+              {/* Education Details */}
               {item.category === 'education' && item.educationDetails && (
                 <View className="mt-4 pt-4 border-t border-crescender-700">
-                  <Text className="text-crescender-400 text-sm mb-2">Teacher Name</Text>
-                  <TextInput
-                    className="text-white text-base border-b border-crescender-700 py-1"
-                    value={item.educationDetails.teacherName || ''}
-                    onChangeText={(text) => {
+                  <Text className="text-crescender-400 text-sm mb-3 font-semibold">EDUCATION DETAILS</Text>
+                  
+                  {/* Teacher Name */}
+                  <View className="mb-4">
+                    <Text className="text-crescender-500 text-xs mb-2">Teacher Name</Text>
+                    <TextInput
+                      className="text-white text-base border-b border-crescender-700 py-1"
+                      value={item.educationDetails.teacherName || ''}
+                      onChangeText={(text) => {
+                        const newItems = [...items];
+                        newItems[index].educationDetails = {
+                          ...newItems[index].educationDetails,
+                          teacherName: text,
+                        };
+                        setItems(newItems);
+                      }}
+                      placeholder="Teacher's name"
+                      placeholderTextColor="#666"
+                    />
+                  </View>
+
+                  {/* Focus Field */}
+                  <View className="mb-4">
+                    <Text className="text-crescender-500 text-xs mb-2">
+                      Focus <Text className="text-crescender-600">(e.g., Violin, Piano, Vocals, Theory)</Text>
+                    </Text>
+                    <TextInput
+                      className="text-white text-base border-b border-crescender-700 py-1"
+                      value={item.educationDetails.focus || ''}
+                      onChangeText={(text) => {
+                        const newItems = [...items];
+                        newItems[index].educationDetails = {
+                          ...newItems[index].educationDetails,
+                          focus: text.trim() || undefined,
+                        };
+                        setItems(newItems);
+                      }}
+                      placeholder="Violin, Piano, Vocals, Theory, Etc"
+                      placeholderTextColor="#666"
+                    />
+                    {!item.educationDetails.focus && (
+                      <Text className="text-yellow-500 text-xs mt-1">Focus needed for chaining lessons</Text>
+                    )}
+                  </View>
+
+                  {/* Lesson Date Selector */}
+                  <LessonDateSelector
+                    item={item}
+                    transactionDate={transactionDate}
+                    onUpdate={(updates) => {
                       const newItems = [...items];
                       newItems[index].educationDetails = {
                         ...newItems[index].educationDetails,
-                        teacherName: text,
+                        ...updates,
                       };
                       setItems(newItems);
                     }}
-                    placeholder="Teacher's name"
-                    placeholderTextColor="#666"
                   />
                 </View>
               )}

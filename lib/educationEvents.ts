@@ -8,6 +8,7 @@ type EduDetails = {
   teacherName?: string;
   studentName?: string;
   subtitle?: string;
+  focus?: string; // Instrument/subject focus (e.g., "Violin", "Piano", "Vocals", "Theory")
   frequency?: string;
   duration?: string;
   startDate?: string;

@@ -10,6 +10,7 @@ import { Feather } from '@expo/vector-icons';
 import { ReviewWorkflowState } from '../../../lib/reviewWorkflow';
 import { PersistentHeader } from '../../../components/header/PersistentHeader';
 import { SimpleEducationCard } from '../../../components/results/SimpleEducationCard';
+import { LessonDateSelector } from '../../../components/education/LessonDateSelector';
 import { useState } from 'react';
 import type { ResultItem } from '../../../lib/results';
 import { generateEducationEvents } from '../../../lib/educationEvents';
@@ -88,7 +89,7 @@ export default function WorkflowEducationPage({
               const events = generateEducationEvents(eduItem as any, receipt);
               
               return (
-                <View key={idx} className="mb-4">
+                <View key={idx} className="mb-6 bg-crescender-900/40 p-4 rounded-2xl border border-crescender-800">
                   <SimpleEducationCard
                     item={item}
                     onPress={() => {
@@ -96,10 +97,34 @@ export default function WorkflowEducationPage({
                     }}
                   />
                   
+                  {/* Lesson Date Selector */}
+                  <View className="mt-4 pt-4 border-t border-crescender-700">
+                    <LessonDateSelector
+                      item={eduItem}
+                      transactionDate={workflowState.transactionDate}
+                      onUpdate={(updates) => {
+                        const newItems = [...workflowState.items];
+                        const itemIndex = workflowState.items.findIndex(i => i.id === eduItem.id);
+                        if (itemIndex >= 0) {
+                          const updatedItem = newItems[itemIndex];
+                          const eduDetails = typeof updatedItem.educationDetails === 'string'
+                            ? JSON.parse(updatedItem.educationDetails || '{}')
+                            : (updatedItem.educationDetails || {});
+                          
+                          updatedItem.educationDetails = {
+                            ...eduDetails,
+                            ...updates,
+                          };
+                          updateState({ items: newItems });
+                        }
+                      }}
+                    />
+                  </View>
+                  
                   {events.length > 0 && (
-                    <View className="mt-2 ml-4 pl-4 border-l-2 border-crescender-700">
-                      <Text className="text-crescender-400 text-sm mb-2">
-                        {events.length} lesson{events.length !== 1 ? 's' : ''} scheduled
+                    <View className="mt-3 pt-3 border-t border-crescender-700">
+                      <Text className="text-crescender-400 text-sm">
+                        {events.length} lesson{events.length !== 1 ? 's' : ''} will be scheduled
                       </Text>
                     </View>
                   )}
