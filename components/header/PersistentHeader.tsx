@@ -35,7 +35,12 @@ export const PersistentHeader = () => {
       >
         {/* [8px padding][logo - fill width][8px gap][hamburger menu][8px padding] */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <View style={{ flex: 1, minWidth: 0 }} className="items-center justify-center">
+          <TouchableOpacity 
+            style={{ flex: 1, minWidth: 0 }} 
+            className="items-center justify-center"
+            onPress={() => router.push('/')}
+            activeOpacity={0.7}
+          >
             {(Platform.OS as any) === 'web' ? (
               <Image
                 source={{ uri: '/crescender-logo.svg' }}
@@ -49,7 +54,7 @@ export const PersistentHeader = () => {
                 resizeMode="contain"
               />
             )}
-          </View>
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setMenuVisible(true)}
             style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}

@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { initDatabase } from "../db/client";
 import { View } from "react-native";
 import { MusicFlowBackground } from "../components/common/MusicFlowBackground";
+import { ATTRequest } from "../components/ads";
 import "../global.css";
 
 export default function Layout() {
@@ -23,6 +24,11 @@ export default function Layout() {
 
   return (
     <SafeAreaProvider>
+      <ATTRequest 
+        onComplete={(status) => {
+          console.log('Tracking authorization status:', status);
+        }}
+      />
       <View 
         className="flex-1" 
         style={{ backgroundColor: isScanScreen ? 'black' : '#2a0b4c' }}

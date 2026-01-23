@@ -115,6 +115,28 @@ export const BaseCard = ({
     mainValueNode
   );
 
+  // Group chips by type and collapse if 3+ of same type
+  const groupedChips = React.useMemo(() => {
+    if (!item.links || item.links.length === 0) return [];
+    
+    // Group by type
+    const groups: Record<string, typeof item.links> = {};
+    item.links.forEach(link => {
+      if (!groups[link.type]) {
+        groups[link.type] = [];
+      }
+      groups[link.type]!.push(link);
+    });
+    
+    // Convert to array of chip groups
+    return Object.entries(groups).map(([type, links]) => ({
+      type,
+      links: links!,
+      isCollapsed: links!.length >= 3,
+      count: links!.length,
+    }));
+  }, [item.links]);
+
   const Inner = isAnimatedHighlight ? Animated.View : View;
   const innerStyle = isAnimatedHighlight
     ? [styles.animatedCard, animatedStyle]
@@ -147,17 +169,43 @@ export const BaseCard = ({
 
         <View style={styles.footer}>
           <View style={styles.chipsRow}>
-            {item.links?.map((link, idx) => {
-              const { name, color } = getChipIcon(link.type as string);
-              return (
-                <TouchableOpacity
-                  key={`${link.id}-${idx}`}
-                  onPress={() => onLinkPress?.(link.id, link.type as string)}
-                  style={styles.chip}
-                >
-                  <Feather name={name as any} size={CARD.chipIconSize} color={color} />
-                </TouchableOpacity>
-              );
+            {groupedChips.map((group, groupIdx) => {
+              const { name, color } = getChipIcon(group.type);
+              
+              if (group.isCollapsed) {
+                // Show collapsed badge: [icon +N]
+                return (
+                  <TouchableOpacity
+                    key={`${group.type}-collapsed`}
+                    onPress={() => {
+                      // For collapsed chips, navigate to first item (or parent transaction)
+                      // The handleLinkPress in index.tsx will handle navigation
+                      if (group.links.length > 0) {
+                        onLinkPress?.(group.links[0].id, group.type);
+                      }
+                    }}
+                    style={styles.chipCollapsed}
+                  >
+                    <Feather name={name as any} size={CARD.chipIconSize} color={color} />
+                    <Text style={[styles.chipCount, { color }]}>+{group.count}</Text>
+                  </TouchableOpacity>
+                );
+              } else {
+                // Show individual chips
+                return (
+                  <React.Fragment key={group.type}>
+                    {group.links.map((link, idx) => (
+                      <TouchableOpacity
+                        key={`${link.id}-${idx}`}
+                        onPress={() => onLinkPress?.(link.id, link.type as string)}
+                        style={styles.chip}
+                      >
+                        <Feather name={name as any} size={CARD.chipIconSize} color={color} />
+                      </TouchableOpacity>
+                    ))}
+                  </React.Fragment>
+                );
+              }
             })}
           </View>
           <Text style={styles.fullDate}>{formatFullDate(item.date)}</Text>
@@ -245,6 +293,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  chipCollapsed: {
+    minWidth: CARD.chipSize + 20,
+    height: CARD.chipSize,
+    borderRadius: CARD.chipSize / 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    flexDirection: 'row',
+    paddingHorizontal: 6,
+    gap: 2,
+  },
+  chipCount: {
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   fullDate: {
     color: CARD.fullDateColor,

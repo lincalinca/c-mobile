@@ -7,6 +7,9 @@ import { TransactionRepository } from '../lib/repository';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ITEM_CATEGORIES } from '../constants/categories';
+import { useInterstitialAd, usePreloadInterstitialAd } from '../components/ads';
+import { generateEducationEvents, getEducationSeriesSummary } from '../lib/educationEvents';
+import { addEducationSeriesToDeviceCalendar, addEventToDeviceCalendar } from '../lib/calendarExport';
 
 // Document type options
 const DOCUMENT_TYPES = [
@@ -104,6 +107,19 @@ export default function ReviewScreen() {
   // Debug state
   const [showRawData, setShowRawData] = useState(false);
 
+  // Preload interstitial ad early
+  usePreloadInterstitialAd();
+  const { show: showInterstitial } = useInterstitialAd();
+
+  // Check if there are education or event items for conditional save buttons
+  const hasEducationOrEvents = useMemo(() => {
+    return items.some((item: any) => 
+      item.category === 'education' || 
+      item.category === 'event' ||
+      (item.educationDetails && Object.keys(item.educationDetails).length > 0)
+    );
+  }, [items]);
+
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {
       router.back();
@@ -113,55 +129,87 @@ export default function ReviewScreen() {
     }
   }, [router]);
 
+  const performSave = async (): Promise<string | null> => {
+    const transactionId = Crypto.randomUUID();
+
+    await TransactionRepository.create({
+      id: transactionId,
+      merchant,
+      merchantAbn: merchantAbn || null,
+      merchantPhone: merchantPhone || null,
+      merchantEmail: merchantEmail || null,
+      merchantWebsite: merchantWebsite || null,
+      merchantAddress: merchantAddress || null,
+      merchantSuburb: merchantSuburb || null,
+      merchantState: merchantState || null,
+      merchantPostcode: merchantPostcode || null,
+      summary: summary || null,
+      documentType,
+      transactionDate,
+      invoiceNumber: invoiceNumber || null,
+      subtotal: subtotal ? Math.round(parseFloat(subtotal) * 100) : null,
+      tax: tax ? Math.round(parseFloat(tax) * 100) : null,
+      total: Math.round(parseFloat(total) * 100),
+      paymentStatus,
+      paymentMethod,
+      imageUrl: params.uri,
+      rawOcrData: params.data,
+      syncStatus: 'pending',
+    }, items.map((item: any) => ({
+      id: Crypto.randomUUID(),
+      transactionId,
+      description: item.description,
+      category: item.category || 'other',
+      brand: item.brand || null,
+      model: item.model || null,
+      instrumentType: item.instrumentType || null,
+      gearCategory: item.gearCategory || null,
+      serialNumber: item.serialNumber || null,
+      quantity: item.quantity || 1,
+      originalUnitPrice: item.originalUnitPrice ? Math.round(item.originalUnitPrice * 100) : null,
+      unitPrice: Math.round((item.unitPrice || 0) * 100),
+      discountAmount: item.discountAmount ? Math.round(item.discountAmount * 100) : null,
+      discountPercentage: item.discountPercentage || null,
+      totalPrice: Math.round((item.totalPrice || 0) * 100),
+      gearDetails: item.gearDetails ? JSON.stringify(item.gearDetails) : null,
+      educationDetails: item.educationDetails ? JSON.stringify(item.educationDetails) : null,
+      notes: item.notes || null,
+      confidence: item.confidence || null,
+    })));
+
+    return transactionId;
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const transactionId = Crypto.randomUUID();
+      await performSave();
 
-      await TransactionRepository.create({
-        id: transactionId,
-        merchant,
-        merchantAbn: merchantAbn || null,
-        merchantPhone: merchantPhone || null,
-        merchantEmail: merchantEmail || null,
-        merchantWebsite: merchantWebsite || null,
-        merchantAddress: merchantAddress || null,
-        merchantSuburb: merchantSuburb || null,
-        merchantState: merchantState || null,
-        merchantPostcode: merchantPostcode || null,
-        summary: summary || null,
-        documentType,
-        transactionDate,
-        invoiceNumber: invoiceNumber || null,
-        subtotal: subtotal ? Math.round(parseFloat(subtotal) * 100) : null,
-        tax: tax ? Math.round(parseFloat(tax) * 100) : null,
-        total: Math.round(parseFloat(total) * 100),
-        paymentStatus,
-        paymentMethod,
-        imageUrl: params.uri,
-        rawOcrData: params.data,
-        syncStatus: 'pending',
-      }, items.map((item: any) => ({
-        id: Crypto.randomUUID(),
-        transactionId,
-        description: item.description,
-        category: item.category || 'other',
-        brand: item.brand || null,
-        model: item.model || null,
-        instrumentType: item.instrumentType || null,
-        gearCategory: item.gearCategory || null,
-        serialNumber: item.serialNumber || null,
-        quantity: item.quantity || 1,
-        originalUnitPrice: item.originalUnitPrice ? Math.round(item.originalUnitPrice * 100) : null,
-        unitPrice: Math.round((item.unitPrice || 0) * 100),
-        discountAmount: item.discountAmount ? Math.round(item.discountAmount * 100) : null,
-        discountPercentage: item.discountPercentage || null,
-        totalPrice: Math.round((item.totalPrice || 0) * 100),
-        gearDetails: item.gearDetails ? JSON.stringify(item.gearDetails) : null,
-        educationDetails: item.educationDetails ? JSON.stringify(item.educationDetails) : null,
-        notes: item.notes || null,
-        confidence: item.confidence || null,
-      })));
+      // Show interstitial ad after successful save
+      setTimeout(() => {
+        showInterstitial();
+      }, 500);
+
+      Alert.alert('Saved!', 'Transaction saved successfully', [
+        { text: 'OK', onPress: () => router.replace('/') }
+      ]);
+    } catch (e) {
+      console.error('[Review] Save error:', e);
+      Alert.alert('Error', 'Failed to save transaction. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await performSave();
+
+      // Show interstitial ad after successful save
+      setTimeout(() => {
+        showInterstitial();
+      }, 500);
 
       Alert.alert('Saved!', 'Transaction saved successfully', [
         { text: 'OK', onPress: () => router.replace('/') }
@@ -749,25 +797,105 @@ export default function ReviewScreen() {
         <View className="h-4" />
       </ScrollView>
 
-      {/* Save Button */}
+      {/* Save Buttons */}
       <View
         className="px-6 py-4 bg-crescender-950 border-t border-crescender-800"
         style={{ paddingBottom: insets.bottom + 12 }}
       >
-        <TouchableOpacity
-          onPress={handleSave}
-          disabled={isSaving}
-          className="bg-gold h-14 rounded-xl flex-row items-center justify-center gap-3 shadow-lg shadow-gold/20"
-        >
-          {isSaving ? (
-            <ActivityIndicator color="#2e1065" />
-          ) : (
-            <>
-              <Feather name="check" size={24} color="#2e1065" />
-              <Text className="text-crescender-950 font-bold text-xl">SAVE TRANSACTION</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        {hasEducationOrEvents ? (
+          // Dual buttons for education/event items
+          <View className="flex-row gap-3">
+            <TouchableOpacity
+              onPress={handleSave}
+              disabled={isSaving}
+              className="flex-1 bg-gold h-14 rounded-xl flex-row items-center justify-center gap-3 shadow-lg shadow-gold/20"
+            >
+              {isSaving ? (
+                <ActivityIndicator color="#2e1065" />
+              ) : (
+                <>
+                  <Feather name="check" size={20} color="#2e1065" />
+                  <Text className="text-crescender-950 font-bold text-lg">SAVE + VIEW</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={async () => {
+                setIsSaving(true);
+                try {
+                  // Save first
+                  const transactionId = await performSave();
+                  if (!transactionId) throw new Error('Failed to save');
+                  
+                  // Then add events to calendar
+                  const receipt = {
+                    id: transactionId,
+                    merchant,
+                    transactionDate,
+                  } as any;
+                  
+                  // Find education items and add to calendar
+                  for (const item of items) {
+                    if (item.category === 'education' && item.educationDetails) {
+                      try {
+                        const eduDetails = typeof item.educationDetails === 'string' 
+                          ? JSON.parse(item.educationDetails) 
+                          : item.educationDetails;
+                        const lineItem = {
+                          id: Crypto.randomUUID(),
+                          description: item.description,
+                          educationDetails: JSON.stringify(eduDetails),
+                        } as any;
+                        
+                        const series = getEducationSeriesSummary(lineItem, receipt);
+                        if (series) {
+                          await addEducationSeriesToDeviceCalendar(series, receipt);
+                        }
+                      } catch (e) {
+                        console.error('Failed to add education series to calendar:', e);
+                      }
+                    }
+                  }
+                  
+                  // Show interstitial ad
+                  setTimeout(() => {
+                    showInterstitial();
+                  }, 500);
+                  
+                  Alert.alert('Success', 'Transaction saved and events added to calendar', [
+                    { text: 'OK', onPress: () => router.replace('/') }
+                  ]);
+                } catch (e) {
+                  console.error('Save + Calendar error:', e);
+                  Alert.alert('Error', 'Failed to save or add to calendar. Please try again.');
+                } finally {
+                  setIsSaving(false);
+                }
+              }}
+              disabled={isSaving}
+              className="flex-1 bg-crescender-700 h-14 rounded-xl flex-row items-center justify-center gap-3 border border-crescender-600"
+            >
+              <Feather name="calendar" size={20} color="#f5c518" />
+              <Text className="text-gold font-bold text-lg">+ CALENDAR</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          // Single button for regular transactions
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={isSaving}
+            className="bg-gold h-14 rounded-xl flex-row items-center justify-center gap-3 shadow-lg shadow-gold/20"
+          >
+            {isSaving ? (
+              <ActivityIndicator color="#2e1065" />
+            ) : (
+              <>
+                <Feather name="check" size={24} color="#2e1065" />
+                <Text className="text-crescender-950 font-bold text-xl">SAVE TRANSACTION</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

@@ -8,9 +8,17 @@ interface FilterBarProps {
   activeFilter: FilterType;
   onFilterChange: (filter: FilterType) => void;
   useIcons?: boolean;
+  showEventSeries?: boolean;
+  onToggleEventSeries?: () => void;
 }
 
-export const FilterBar = ({ activeFilter, onFilterChange, useIcons = false }: FilterBarProps) => {
+export const FilterBar = ({ 
+  activeFilter, 
+  onFilterChange, 
+  useIcons = false,
+  showEventSeries = true,
+  onToggleEventSeries,
+}: FilterBarProps) => {
   const filters: { label: string; value: FilterType; color: string; icon?: string }[] = [
     { label: 'ALL', value: 'all', color: '#f5c518', icon: 'grid' },
     { label: 'GEAR', value: 'gear', color: '#f5c518', icon: 'package' },
@@ -27,7 +35,7 @@ export const FilterBar = ({ activeFilter, onFilterChange, useIcons = false }: Fi
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 24 }}
       >
-        <View className="flex-row gap-2">
+        <View className="flex-row gap-2 items-center">
           {filters.map((filter) => (
             <TouchableOpacity
               key={filter.value}
@@ -56,6 +64,31 @@ export const FilterBar = ({ activeFilter, onFilterChange, useIcons = false }: Fi
               )}
             </TouchableOpacity>
           ))}
+          
+          {/* Event Series Toggle */}
+          {onToggleEventSeries && (
+            <TouchableOpacity
+              onPress={onToggleEventSeries}
+              className={`px-4 py-2 rounded-xl border flex-row items-center justify-center gap-2 ${
+                showEventSeries
+                  ? 'bg-crescender-700 border-crescender-600'
+                  : 'bg-crescender-900/40 border-crescender-800'
+              }`}
+            >
+              <Feather
+                name="layers"
+                size={14}
+                color={showEventSeries ? '#f5c518' : '#9ca3af'}
+              />
+              <Text
+                className={`font-bold text-xs tracking-widest ${
+                  showEventSeries ? 'text-gold' : 'text-crescender-400'
+                }`}
+              >
+                {showEventSeries ? 'SERIES' : 'EVENTS'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </View>

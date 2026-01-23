@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PersistentHeader } from '../components/header/PersistentHeader';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getReviewApproach, setReviewApproach, type ReviewApproach } from '../lib/reviewConfig';
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -13,17 +14,21 @@ export default function SettingsScreen() {
   const [useIconFilters, setUseIconFilters] = useState(false);
   const [financialYearStartMonth, setFinancialYearStartMonth] = useState(7);
   const [showFyPicker, setShowFyPicker] = useState(false);
+  const [reviewApproach, setReviewApproachState] = useState<ReviewApproach>('monolithic');
+  const [showReviewApproachPicker, setShowReviewApproachPicker] = useState(false);
 
   // Load settings from storage
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const [filters, fy] = await Promise.all([
+        const [filters, fy, approach] = await Promise.all([
           AsyncStorage.getItem('useIconFilters'),
           AsyncStorage.getItem('financialYearStartMonth'),
+          getReviewApproach(),
         ]);
         if (filters !== null) setUseIconFilters(JSON.parse(filters));
         if (fy !== null) setFinancialYearStartMonth(parseInt(fy, 10));
+        setReviewApproachState(approach);
       } catch (e) {
         console.error('Failed to load settings', e);
       }
@@ -48,6 +53,16 @@ export default function SettingsScreen() {
       await AsyncStorage.setItem('financialYearStartMonth', String(month));
     } catch (e) {
       console.error('Failed to save settings', e);
+    }
+  };
+
+  const handleReviewApproachChange = async (approach: ReviewApproach) => {
+    setReviewApproachState(approach);
+    setShowReviewApproachPicker(false);
+    try {
+      await setReviewApproach(approach);
+    } catch (e) {
+      console.error('Failed to save review approach', e);
     }
   };
 
@@ -80,6 +95,40 @@ export default function SettingsScreen() {
           </View>
           <Text className="text-crescender-500 text-[10px] mt-2 ml-1 leading-relaxed">
             Display category filters as icons instead of text labels.
+          </Text>
+        </View>
+
+        <View className="mb-6">
+          <Text className="text-gold font-bold uppercase tracking-widest text-xs ml-1 mb-2">Receipt Review</Text>
+          <TouchableOpacity
+            onPress={() => setShowReviewApproachPicker(true)}
+            className="bg-crescender-900/40 rounded-2xl border border-crescender-800 flex-row items-center justify-between p-4"
+          >
+            <View className="flex-row items-center gap-3">
+              <View className="w-8 h-8 rounded-full bg-crescender-800 items-center justify-center">
+                <Feather name="file-text" size={18} color="#f5c518" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-white font-medium">Review Style</Text>
+                <Text className="text-crescender-400 text-xs mt-0.5">
+                  {reviewApproach === 'workflow' 
+                    ? 'Multi-page step-by-step workflow' 
+                    : reviewApproach === 'simplified' 
+                    ? 'Simplified single-page view' 
+                    : 'Full details single-page view'}
+                </Text>
+              </View>
+            </View>
+            <View className="flex-row items-center gap-2 ml-2">
+              <Text className="text-crescender-300 text-sm font-medium">
+                {reviewApproach === 'workflow' ? 'Workflow' : 
+                 reviewApproach === 'simplified' ? 'Simplified' : 'Full Details'}
+              </Text>
+              <Feather name="chevron-right" size={18} color="#6b7280" />
+            </View>
+          </TouchableOpacity>
+          <Text className="text-crescender-500 text-[10px] mt-2 ml-1 leading-relaxed">
+            Choose your preferred way to review receipts after scanning. You can change this anytime.
           </Text>
         </View>
 
@@ -174,6 +223,63 @@ export default function SettingsScreen() {
                   className={`py-3 px-4 border-b border-crescender-800/50 ${financialYearStartMonth === i + 1 ? 'bg-gold/10' : ''}`}
                 >
                   <Text className={financialYearStartMonth === i + 1 ? 'text-gold font-semibold' : 'text-white'}>{name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal transparent visible={showReviewApproachPicker} animationType="fade" onRequestClose={() => setShowReviewApproachPicker(false)}>
+        <Pressable className="flex-1 bg-black/60 justify-center px-6" onPress={() => setShowReviewApproachPicker(false)}>
+          <Pressable onPress={(e) => e.stopPropagation()} className="bg-crescender-900 rounded-2xl border border-crescender-700 max-h-96">
+            <Text className="text-gold font-bold text-center py-4 border-b border-crescender-700">Choose Review Style</Text>
+            <ScrollView>
+              {[
+                { 
+                  value: 'monolithic' as ReviewApproach, 
+                  label: 'Full Details', 
+                  desc: 'See all captured information on a single page. Best for detailed review and editing.',
+                  icon: 'file-text' as const
+                },
+                { 
+                  value: 'workflow' as ReviewApproach, 
+                  label: 'Workflow', 
+                  desc: 'Step-by-step multi-page review. Guided process through each category.',
+                  icon: 'layers' as const
+                },
+                { 
+                  value: 'simplified' as ReviewApproach, 
+                  label: 'Simplified', 
+                  desc: 'Minimal display, trust AI. Only prompts for critical missing information.',
+                  icon: 'check-circle' as const
+                },
+              ].map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  onPress={() => handleReviewApproachChange(option.value)}
+                  className={`py-4 px-4 border-b border-crescender-800/50 ${reviewApproach === option.value ? 'bg-gold/10' : ''}`}
+                >
+                  <View className="flex-row items-start gap-3">
+                    <View className={`w-10 h-10 rounded-full items-center justify-center ${reviewApproach === option.value ? 'bg-gold/20' : 'bg-crescender-800'}`}>
+                      <Feather 
+                        name={option.icon} 
+                        size={20} 
+                        color={reviewApproach === option.value ? '#f5c518' : '#9ca3af'} 
+                      />
+                    </View>
+                    <View className="flex-1">
+                      <Text className={`text-base ${reviewApproach === option.value ? 'text-gold font-semibold' : 'text-white font-medium'}`}>
+                        {option.label}
+                      </Text>
+                      <Text className={`text-xs mt-1 leading-relaxed ${reviewApproach === option.value ? 'text-gold/80' : 'text-crescender-400'}`}>
+                        {option.desc}
+                      </Text>
+                    </View>
+                    {reviewApproach === option.value && (
+                      <Feather name="check" size={20} color="#f5c518" />
+                    )}
+                  </View>
                 </TouchableOpacity>
               ))}
             </ScrollView>

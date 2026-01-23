@@ -27,151 +27,55 @@
 
 ## AI Prompt Improvements
 
+> **⚠️ NOTE:** All AI prompt improvements (Requests 1-6) have been **VERIFIED IN PRODUCTION** and are deployed to Supabase. These are now in a reliable and resilient state. No further changes needed unless new requirements arise.
+
 ### Request 1: Address Extraction (Lines 8-9, 352-360)
 **User Request:** "it assumed the address on the receipt was the merchant, but it was near my name. it should clearly infer that it is not their address."
 
-**Implementation Status:** ✅ COMPLETE  
+**Implementation Status:** ✅ VERIFIED IN PRODUCTION (24/Jan/2026)  
 **File:** `/Users/linc/Dev-Work/Crescender/crescender-core/supabase/functions/analyze-receipt/index.ts`
 
-**Code Added:**
-```typescript
-8. ADDRESS EXTRACTION (CRITICAL):
-   - Merchant Address: Usually at TOP of receipt with merchant name/logo in header/footer
-   - Customer Address: Usually in "Sold To:", "Ship To:", "Bill To:" sections, or NEAR customer name
-   - Context Clues:
-     * If address appears with customer name → customer address (IGNORE IT)
-     * If address in header/footer with merchant contact info → merchant address
-     * If address in "delivery" or "billing" section → customer address (IGNORE IT)
-     * If NO merchant address found → leave merchantAddress null (don't guess)
-   - Validation: If uncertain whether address belongs to merchant or customer, set merchantAddress to null
-```
-
-**Verification:** Check that AI prompt includes Rule 8 with address extraction logic.
+**Verification:** ✅ Confirmed deployed version matches local. Rule 8 with address extraction logic is live in production.
 
 ---
 
 ### Request 2: Merchant URL Extraction (Line 9, 361-365)
 **User Request:** "it didn't grab the merchant url, despite being on the receipt"
 
-**Implementation Status:** ✅ COMPLETE  
-**File:** `/Users/linc/Dev-Work/Crescender/crescender-core/supabase/functions/analyze-receipt/index.ts`
-
-**Code Added:**
-```typescript
-9. MERCHANT CONTACT DETAILS:
-   - Website/URL: Look for "www.", "http://", ".com", ".au", ".com.au" patterns
-   - Locations: Headers, footers, contact sections, social media areas, email signatures
-   - Formats: May include "Visit us:", "Website:", "Web:", or just the URL alone
-   - Extract full URL including protocol if visible (e.g., "https://www.merchant.com.au")
-```
-
-**Verification:** Check that AI prompt includes Rule 9 with URL extraction patterns.
+**Implementation Status:** ✅ VERIFIED IN PRODUCTION (24/Jan/2026)  
+**Verification:** ✅ Confirmed deployed. Rule 9 with URL extraction patterns is live in production.
 
 ---
 
 ### Request 3: Color Extraction (Line 10, 366-375)
 **User Request:** "it didn't grab the colour or size from the item name (22" is the size, Clear Black Dot is the colour)"
 
-**Implementation Status:** ✅ COMPLETE  
-**File:** `/Users/linc/Dev-Work/Crescender/crescender-core/supabase/functions/analyze-receipt/index.ts`
-
-**Code Added:**
-```typescript
-10. COLOUR EXTRACTION FROM ITEM NAMES:
-    - Common Patterns:
-      * "Red Fender Stratocaster" → colour: "Red"
-      * "Yamaha P-125 White Digital Piano" → colour: "White"
-      * "Remo Clear Black Dot 22\" Bass Drum" → colour: "Clear Black Dot"
-      * "Natural Finish Acoustic Guitar" → colour: "Natural"
-    - Multi-word Colours: Extract FULL colour phrase (e.g., "Clear Black Dot", "Vintage Sunburst", "Pearl White", "Metallic Blue", "Tobacco Burst")
-    - Music-Specific Colours: "Sunburst", "Starburst", "Clear Black Dot", "Natural", "Vintage White", "Aged Cherry"
-    - Location: Extract from anywhere in item description/name
-    - Storage: Place in gearDetails.colour field
-```
-
-**Verification:** Check that AI prompt includes Rule 10 with color extraction patterns, including music-specific colors.
+**Implementation Status:** ✅ VERIFIED IN PRODUCTION (24/Jan/2026)  
+**Verification:** ✅ Confirmed deployed. Rule 10 with color extraction patterns, including music-specific colors, is live in production.
 
 ---
 
 ### Request 4: Size Extraction (Line 10, 376-386)
 **User Request:** "22" is the size"
 
-**Implementation Status:** ✅ COMPLETE  
-**File:** `/Users/linc/Dev-Work/Crescender/crescender-core/supabase/functions/analyze-receipt/index.ts`
-
-**Code Added:**
-```typescript
-11. SIZE EXTRACTION FROM ITEM NAMES:
-    - Numeric Sizes with Units:
-      * Drum heads: 10", 12", 14", 22" (diameter in inches)
-      * Cymbals: 14", 16", 18", 20", 22" (diameter in inches)
-      * Guitar scale: 24.75", 25.5" (scale length)
-      * String gauge: .009, .010, .011, .012
-    - Fractional Sizes: 1/2, 3/4, 4/4, 7/8 (violin/cello sizes)
-    - Named Sizes: Small, Medium, Large, XL, XXL
-    - Pattern: Extract size WITH unit (e.g., "22\"", not just "22")
-    - Context Example: "Remo 22\" Control Sound..." → size: "22\""
-    - Storage: Place in gearDetails.size field
-```
-
-**Verification:** Check that AI prompt includes Rule 11 with size extraction patterns, ensuring units are included.
+**Implementation Status:** ✅ VERIFIED IN PRODUCTION (24/Jan/2026)  
+**Verification:** ✅ Confirmed deployed. Rule 11 with size extraction patterns, ensuring units are included, is live in production.
 
 ---
 
 ### Request 5: SKU vs Serial Number (Line 11, 387-408)
 **User Request:** "it inferred the model number (which is clearly displayed as the SKU in the receipt) as the Serial no."
 
-**Implementation Status:** ✅ COMPLETE  
-**File:** `/Users/linc/Dev-Work/Crescender/crescender-core/supabase/functions/analyze-receipt/index.ts`
-
-**Code Added:**
-```typescript
-12. SKU vs MODEL NUMBER vs SERIAL NUMBER (CRITICAL DISTINCTION):
-    - SKU (Stock Keeping Unit):
-      * Retailer's internal product code (not unique to individual unit)
-      * Usually alphanumeric code on receipt line items
-      * Examples: "SKU12345", "ITEM-ABC-001", "787724024751"
-      * Labels: May appear as "SKU:", "Item#:", "Product Code:", "DLUO:", or unlabeled number
-      * ACTION: Extract to `sku` field (NOT serialNumber, NOT modelNumber)
-    - Model Number:
-      * Manufacturer's product identifier (same for all units of that product)
-      * Examples: "Stratocaster HSS", "P-125", "PSR-E373", "Control Sound Clear Black Dot"
-      * ACTION: Extract to `modelNumber` or `model` field
-    - Serial Number:
-      * UNIQUE identifier for ONE specific unit (different for each individual item)
-      * Only appears if explicitly labeled: "Serial:", "SN:", "Serial No:", "S/N:"
-      * Examples: "SN: Z1234567", "Serial: US19087432"
-      * ACTION: ONLY extract if explicitly labeled → `serialNumber` field
-      * If NO serial visible or labeled → serialNumber: null
-      * NEVER use SKU as serial number - they are completely different
-    - Priority: If you see a code on the receipt, determine:
-      1. Is it labeled "Serial" or "SN"? → serialNumber
-      2. Is it a product/SKU/item code? → sku
-      3. Is it part of the product name? → modelNumber
-```
-
-**Database Schema Change:** Added `sku` field to `lineItems` table.
-
-**Verification:** 
-- Check that AI prompt includes Rule 12 with SKU/serial distinction
-- Verify `sku` field exists in database schema
-- Verify `sku` field is saved when creating line items
+**Implementation Status:** ✅ VERIFIED IN PRODUCTION (24/Jan/2026)  
+**Verification:** ✅ Confirmed deployed. Rule 12 with SKU/serial distinction is live in production. Database schema includes `sku` field.
 
 ---
 
 ### Request 6: Education Details Enhancement (Lines 443-444, 453-454)
 **User Request:** Extract teacher name, frequency, duration, dates, days of week, times for education items.
 
-**Implementation Status:** ✅ COMPLETE  
-**File:** `/Users/linc/Dev-Work/Crescender/crescender-core/supabase/functions/analyze-receipt/index.ts`
-
-**Code Added:**
-```typescript
-15. EDUCATION DETAILS - TEACHER NAME: For education items, ALWAYS extract teacherName into educationDetails if visible on receipt.
-    This is in addition to studentName, frequency, duration, dates, etc.
-```
-
-**Verification:** Check that AI prompt includes Rule 15 for teacher name extraction, and that education details schema includes all required fields.
+**Implementation Status:** ✅ VERIFIED IN PRODUCTION (24/Jan/2026)  
+**Verification:** ✅ Confirmed deployed. Rule 16 (comprehensive education extraction) is live in production with all required fields.
 
 ---
 
@@ -260,38 +164,34 @@ export function DatePickerModal({
 ### Request 9: Education Card Title Formatting
 **User Request:** "the titles the AI is serving back are 'Term 1 fees vivian'. The fees side of things should just be what the money transaction is about, this card should instead have the title 'Music lessons for Vivian' and if the focus has been defined either on the receipt or independently by the user, '[Instrument/focus] lessons for Vivian'"
 
-**Implementation Status:** ⚠️ NEEDS VERIFICATION  
-**Files:** Check `lib/results.ts` and education card components
+**Implementation Status:** ✅ VERIFIED - IMPLEMENTED  
+**Files:** 
+- `/Users/linc/Dev-Work/Crescender/crescender-mobile/lib/results.ts` (line 215: uses `formatEducationTitle`)
+- `/Users/linc/Dev-Work/Crescender/crescender-mobile/lib/educationUtils.ts` (formatEducationTitle function)
 
-**Expected Implementation:**
-- Title should be formatted as "Music lessons for Vivian" or "[Instrument/focus] lessons for Vivian"
-- Use `focus` field from educationDetails if available
-- Use `studentName` from educationDetails
-
-**Verification:** Check that education cards display formatted titles, not raw receipt descriptions.
+**Verification:** ✅ Confirmed - `formatEducationTitle` function exists and is used in `reshapeToResults` to format education titles properly.
 
 ---
 
 ### Request 10: Education Card Details Condensation
 **User Request:** "we have a list of - term duration - lesson frequency - start date. This takes up more vertical space than needed. These could be converted into a string sentence, like '9x Weekly lessons from 30th January until 30th March'"
 
-**Implementation Status:** ⚠️ NEEDS VERIFICATION  
-**Files:** Check `SimpleEducationCard.tsx` and education card rendering
+**Implementation Status:** ✅ VERIFIED - IMPLEMENTED  
+**Files:** 
+- `/Users/linc/Dev-Work/Crescender/crescender-mobile/components/results/SimpleEducationCard.tsx` (line 24: uses `formatEducationDetailsSentence`)
+- `/Users/linc/Dev-Work/Crescender/crescender-mobile/lib/educationUtils.ts` (formatEducationDetailsSentence function)
 
-**Expected Implementation:**
-- Condense term duration, lesson frequency, start date into single sentence
-- Format: "9x Weekly lessons from 30th January until 30th March"
-- Or: "12x twice weekly lessons on Tuesday and Friday from 5th June to 18th July"
-
-**Verification:** Check that education cards show condensed schedule details.
+**Verification:** ✅ Confirmed - `formatEducationDetailsSentence` function exists and formats details into condensed sentences like "9x Weekly lessons from 30th January until 30th March".
 
 ---
 
 ### Request 11: Education Lesson Date Selection
 **User Request:** "It also only captures the date of the invoice and assumes that's when the lessons are, which is very unlikely to correspond with the days of the week that the lessons take place. This should be one of the more directly sought questions, unless it's somehow included in the invoice (not likely, though)."
 
-**Implementation Status:** ⚠️ NEEDS VERIFICATION  
+**Implementation Status:** ❌ NOT IMPLEMENTED  
 **Files:** Check `app/review.tsx` education section
+
+**Current State:** Review screen only has teacher name field for education items. No lesson start date picker, no frequency selector, no lesson date preview.
 
 **Expected Implementation:**
 - User-selectable lesson start date (separate from invoice date)
@@ -299,7 +199,7 @@ export function DatePickerModal({
 - Preview of calculated lesson occurrence dates as chips
 - Format: "Weekly: March 2, 9, 16, 23, 30, April 5, 12, 19, 26, May 3"
 
-**Verification:** Check that review screen has lesson start date picker and lesson date preview.
+**Action Required:** Implement lesson date selection UI in review screen education section.
 
 ---
 
@@ -318,8 +218,10 @@ export function DatePickerModal({
 ### Request 13: Save + Calendar Options
 **User Request:** "At the bottom of the save screen, there should be two save options when there are events involved: 'Save + View' or 'Save + Add to Calendar'"
 
-**Implementation Status:** ⚠️ NEEDS VERIFICATION  
+**Implementation Status:** ❌ NOT IMPLEMENTED  
 **Files:** Check `app/review.tsx` save buttons
+
+**Current State:** Only single "SAVE TRANSACTION" button exists (line 767). No conditional rendering for dual buttons.
 
 **Expected Implementation:**
 - Conditional rendering: Show dual buttons when education/event items present
@@ -327,7 +229,7 @@ export function DatePickerModal({
 - "+ CALENDAR" button (or "SAVE + ADD TO CALENDAR")
 - Default to single "SAVE TRANSACTION" button otherwise
 
-**Verification:** Check that review screen shows dual save buttons for education/event items.
+**Action Required:** Add conditional save button logic based on presence of education/event items.
 
 ---
 
@@ -388,18 +290,17 @@ export function DatePickerModal({
 ### Request 17: Collapse Multiple Chips
 **User Request:** "The icon in the money card and in the education card that shows the events is also busier than it should be. It should be all collapsed into one signifying it's got a set/series, e.g. [event +6], and on click, like usual, it would navigate on that page, to the actual result tile/card"
 
-**Implementation Status:** ✅ COMPLETE (per summary)  
+**Implementation Status:** ❌ NOT IMPLEMENTED  
 **File:** `/Users/linc/Dev-Work/Crescender/crescender-mobile/components/results/BaseCard.tsx`
+
+**Current State:** BaseCard renders all chips individually without grouping or collapsing logic.
 
 **Expected Implementation:**
 - Group link chips by type
 - Display collapsed `[icon +N]` badge for 3+ items of same type
 - Examples: `[event +6]`, `[gear +5]`, `[service +2]`
 
-**Verification:**
-- Check that BaseCard groups chips by type
-- Check that collapsed badges appear for 3+ items
-- Check that clicking collapsed chip navigates appropriately
+**Action Required:** Implement chip grouping and collapsing logic in BaseCard.tsx
 
 ---
 
@@ -409,11 +310,15 @@ export function DatePickerModal({
 **Implementation Status:** ⚠️ NEEDS VERIFICATION  
 **File:** `/Users/linc/Dev-Work/Crescender/crescender-mobile/app/index.tsx` (handleLinkPress)
 
+**Current State:** `handleLinkPress` (lines 118-145) handles event navigation and scrolling/highlighting, but doesn't implement smart navigation for collapsed chips vs single chips.
+
 **Expected Implementation:**
 - For collapsed chips: Navigate to parent/transaction page, scroll to relevant section
 - For single chips: Navigate directly to item's detail page
 
-**Verification:** Check that `handleLinkPress` implements smart navigation based on chip type and collapse state.
+**Note:** This depends on Request 17 (chip collapsing) being implemented first.
+
+**Action Required:** Enhance handleLinkPress to handle collapsed chip navigation once chip collapsing is implemented.
 
 ---
 
@@ -422,20 +327,22 @@ export function DatePickerModal({
 ### Request 19: Event Series Toggle
 **User Request:** "well I want all events, including education ones, to appear. Maybe we need a filter instead that display toggles between series and individual events, with series being the default."
 
-**Implementation Status:** ✅ COMPLETE (per summary)  
+**Implementation Status:** ❌ NOT IMPLEMENTED  
 **Files:**
-- `/Users/linc/Dev-Work/Crescender/crescender-mobile/app/index.tsx` (showEventSeries state)
-- `/Users/linc/Dev-Work/Crescender/crescender-mobile/components/filters/FilterBar.tsx` (toggle button)
+- `/Users/linc/Dev-Work/Crescender/crescender-mobile/app/index.tsx` (no showEventSeries state found)
+- `/Users/linc/Dev-Work/Crescender/crescender-mobile/components/filters/FilterBar.tsx` (no toggle props found)
+
+**Current State:** FilterBar does not have event series toggle. No filtering logic for hiding individual events.
 
 **Expected Implementation:**
 - Toggle between "series" and "individual events" views
-- Default to "series" (hide individual generated events)
+- Default to "series" (hide individual generated events - IDs starting with `event_`)
 - Toggle appears in FilterBar row, not separate row
 
-**Verification:**
-- Check that FilterBar has event series toggle
-- Check that toggle is in the filter row (not separate)
-- Check that default hides individual events (event IDs starting with `event_`)
+**Action Required:** 
+- Add `showEventSeries` state to `app/index.tsx`
+- Add toggle props to `FilterBar.tsx`
+- Filter out event IDs starting with `event_` when toggle is "series"
 
 ---
 
@@ -537,30 +444,27 @@ export function DatePickerModal({
 ### Request 24: Record Details Footer Layout
 **User Request:** "the replace vs reprocess buttons have taken up more height in the receord details page, which is now covering up over the bottom of the page. We need to be able to scroll down to see the bottom of the bottom item. Either we need to reduce those footer options to a single row, or enable scrolling just a little bit further down the contents of the record details page."
 
-**Implementation Status:** ✅ COMPLETE (per summary)  
+**Implementation Status:** ⚠️ PARTIALLY COMPLETE  
 **File:** `/Users/linc/Dev-Work/Crescender/crescender-mobile/app/gear/[id].tsx`
 
-**Expected Implementation:**
-- Footer buttons in single compact row (icons with text)
-- ScrollView paddingBottom increased to 180
+**Current State:** 
+- ✅ ScrollView paddingBottom is 180 (line 360)
+- ✅ Footer buttons are in single row (lines 774-798)
+- ❌ Date field still uses TextInput instead of DatePickerModal (line 451-457)
 
-**Verification:**
-- Check that footer buttons are in single row
-- Check that ScrollView has sufficient paddingBottom
+**Action Required:** Replace TextInput with DatePickerModal for editDate field.
 
 ---
 
 ### Request 25: Month Selector Performance
 **User Request:** "The month selector sub0menu from the date picker takes about a whole second to load. Is there a performance issue, or are ther some hardcoded delays built into the component? It should load immediately."
 
-**Implementation Status:** ✅ COMPLETE (per summary)  
+**Implementation Status:** ❌ NOT FIXED  
 **File:** `/Users/linc/Dev-Work/Crescender/crescender-mobile/components/calendar/MonthPickerModal.tsx`
 
-**Expected Implementation:**
-- Replaced `setTimeout` with `requestAnimationFrame`
-- Set `animated: false` for scrolling
+**Current State:** Line 50 still uses `setTimeout` with 80ms delay. Should use `requestAnimationFrame` and `animated: false`.
 
-**Verification:** Check that MonthPickerModal uses requestAnimationFrame and has no delays.
+**Action Required:** Replace setTimeout with requestAnimationFrame and set animated: false for scrolling.
 
 ---
 
@@ -570,11 +474,13 @@ export function DatePickerModal({
 **Implementation Status:** ❌ NOT IMPLEMENTED  
 **File:** `/Users/linc/Dev-Work/Crescender/crescender-mobile/components/header/PersistentHeader.tsx`
 
+**Current State:** Logo Image (lines 39-51) is NOT wrapped in TouchableOpacity. No navigation on press.
+
 **Expected Implementation:**
 - Wrap Crescender logo Image in TouchableOpacity
 - Navigate to `/` on press
 
-**Verification:** Check that logo is wrapped in TouchableOpacity and navigates home.
+**Action Required:** Wrap logo Image in TouchableOpacity with `onPress={() => router.push('/')}`
 
 ---
 
@@ -604,25 +510,35 @@ export function DatePickerModal({
 
 ## Pending & Verification
 
-### Critical Items Needing Verification
+### Critical Items Needing Implementation
 
 1. **Logo Navigation** (Request 26) - ❌ NOT IMPLEMENTED
-   - Action: Wrap logo in TouchableOpacity, navigate to `/`
+   - File: `components/header/PersistentHeader.tsx`
+   - Action: Wrap logo Image in TouchableOpacity, navigate to `/`
 
-2. **Education Card Titles** (Request 9) - ⚠️ NEEDS VERIFICATION
-   - Action: Check title formatting in education cards
+2. **Chip Collapsing** (Request 17) - ❌ NOT IMPLEMENTED
+   - File: `components/results/BaseCard.tsx`
+   - Action: Implement chip grouping logic, display `[icon +N]` for 3+ items
 
-3. **Education Card Details** (Request 10) - ⚠️ NEEDS VERIFICATION
-   - Action: Check condensed schedule display
+3. **Event Series Toggle** (Request 19) - ❌ NOT IMPLEMENTED
+   - Files: `app/index.tsx`, `components/filters/FilterBar.tsx`
+   - Action: Add toggle state and filter logic to hide individual events
 
-4. **Lesson Date Selection** (Request 11) - ⚠️ NEEDS VERIFICATION
-   - Action: Check review screen for lesson date picker and preview
+4. **Lesson Date Selection** (Request 11) - ❌ NOT IMPLEMENTED
+   - File: `app/review.tsx`
+   - Action: Add lesson start date picker and lesson date preview
 
-5. **Save + Calendar Buttons** (Request 13) - ⚠️ NEEDS VERIFICATION
-   - Action: Check review screen for dual save buttons
+5. **Save + Calendar Buttons** (Request 13) - ❌ NOT IMPLEMENTED
+   - File: `app/review.tsx`
+   - Action: Add conditional dual save buttons for education/event items
 
-6. **Multi-Reference Chip Navigation** (Request 18) - ⚠️ NEEDS VERIFICATION
-   - Action: Check handleLinkPress implementation
+6. **Date Picker in Edit Record** (Request 8) - ⚠️ PARTIALLY COMPLETE
+   - File: `app/gear/[id].tsx`
+   - Action: Replace TextInput with DatePickerModal for editDate
+
+7. **Month Selector Performance** (Request 25) - ❌ NOT FIXED
+   - File: `components/calendar/MonthPickerModal.tsx`
+   - Action: Replace setTimeout with requestAnimationFrame
 
 ### Major Features Pending Implementation
 
@@ -648,12 +564,20 @@ export function DatePickerModal({
 ## Implementation Priority
 
 ### Phase 1: Critical Fixes (Immediate)
-1. ✅ Fix logo navigation (Request 26)
-2. ⚠️ Verify education card titles (Request 9)
-3. ⚠️ Verify education card details condensation (Request 10)
-4. ⚠️ Verify lesson date selection (Request 11)
-5. ⚠️ Verify save + calendar buttons (Request 13)
-6. ⚠️ Verify multi-reference chip navigation (Request 18)
+1. ❌ Fix logo navigation (Request 26) - Quick fix
+2. ❌ Fix month selector performance (Request 25) - Quick fix
+3. ❌ Add date picker to edit record page (Request 8) - Quick fix
+4. ❌ Implement chip collapsing (Request 17) - Medium complexity
+5. ❌ Implement event series toggle (Request 19) - Medium complexity
+6. ❌ Implement lesson date selection (Request 11) - Medium complexity
+7. ❌ Implement save + calendar buttons (Request 13) - Medium complexity
+
+### Phase 2: Core Features (Next Sprint)
+1. Usage tracking logic (Request 21)
+2. Bulk upload queue system (Request 22)
+
+### Phase 3: Monetization (Future)
+1. Ad integration (Request 23)
 
 ### Phase 2: Core Features (Next Sprint)
 1. Usage tracking logic (Request 21)
@@ -673,5 +597,38 @@ export function DatePickerModal({
 
 ---
 
-**Last Updated:** 23/Jan/2026  
-**Status:** In Progress - Verification Phase
+**Last Updated:** 24/Jan/2026  
+**Status:** Audit Complete - Ready for Implementation
+
+## Summary of Audit Results
+
+### ✅ Verified Complete (No Action Needed)
+- **AI Prompt Improvements (Requests 1-6):** All verified in production Supabase deployment
+- **Education Card Titles (Request 9):** ✅ Implemented via `formatEducationTitle`
+- **Education Card Details (Request 10):** ✅ Implemented via `formatEducationDetailsSentence`
+- **Education Event Series (Request 12):** ✅ Implemented via `generateEducationEvents`
+- **Service Events (Request 14):** ✅ Implemented via `generateServiceEvents`
+- **Simple Cards (Request 15):** ✅ All SimpleCard components exist and are used
+- **Gear Detail Page (Request 16):** ✅ Exists with external links
+- **Merchant Updates (Request 7):** ✅ Component and logic exist
+- **Date Picker in Review (Request 8):** ✅ DatePickerModal exists and is used
+- **Usage Screen UI (Request 21):** ✅ UI exists (logic pending)
+- **Share Functionality (Request 20):** ✅ Android implemented
+- **Menu Updates (Requests 27-28):** ✅ UI Mockup removed, Usage added
+
+### ❌ Needs Implementation
+1. **Logo Navigation (Request 26)** - Quick fix
+2. **Chip Collapsing (Request 17)** - Medium complexity
+3. **Event Series Toggle (Request 19)** - Medium complexity
+4. **Lesson Date Selection (Request 11)** - Medium complexity
+5. **Save + Calendar Buttons (Request 13)** - Medium complexity
+6. **Date Picker in Edit Record (Request 8)** - Quick fix
+7. **Month Selector Performance (Request 25)** - Quick fix
+
+### ⚠️ Depends on Other Features
+- **Multi-Reference Chip Navigation (Request 18)** - Depends on chip collapsing
+
+### 📋 Major Features Pending (Not Started)
+- Usage tracking logic
+- Bulk upload queue
+- Ad integration

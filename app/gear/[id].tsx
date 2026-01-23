@@ -15,6 +15,7 @@ import { SimpleGearCard } from '../../components/results/SimpleGearCard';
 import { SimpleServiceCard } from '../../components/results/SimpleServiceCard';
 import { SimpleEducationCard } from '../../components/results/SimpleEducationCard';
 import type { ResultItem } from '../../lib/results';
+import { DatePickerModal } from '../../components/calendar/DatePickerModal';
 
 // Helper to convert line item to ResultItem format for card rendering
 function lineItemToResultItem(item: LineItemWithDetails, receipt: Receipt): ResultItem {
@@ -113,6 +114,7 @@ export default function GearDetailScreen() {
   const [editMerchantSuburb, setEditMerchantSuburb] = useState('');
   const [editMerchantState, setEditMerchantState] = useState('');
   const [editMerchantPostcode, setEditMerchantPostcode] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id || typeof id !== 'string') return;
@@ -448,13 +450,21 @@ export default function GearDetailScreen() {
             {/* Date */}
             <View className="mb-6">
               <Text className="text-crescender-400 text-sm mb-1">Date</Text>
-              <TextInput
-                className="text-white text-lg border-b border-crescender-700 py-1"
-                value={editDate}
-                onChangeText={setEditDate}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#666"
-              />
+              <TouchableOpacity
+                onPress={() => setShowDatePicker(true)}
+                className="flex-row items-center justify-between border-b border-crescender-700 py-1"
+              >
+                <Text className={`text-lg ${editDate ? 'text-white' : 'text-crescender-500'}`}>
+                  {editDate 
+                    ? new Date(editDate + 'T12:00:00').toLocaleDateString('en-AU', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })
+                    : 'Select date'}
+                </Text>
+                <Feather name="calendar" size={20} color="#f5c518" />
+              </TouchableOpacity>
             </View>
 
             {/* Financial Details */}
@@ -798,6 +808,18 @@ export default function GearDetailScreen() {
           </View>
         </View>
       )}
+
+      {/* Date Picker Modal */}
+      <DatePickerModal
+        visible={showDatePicker}
+        onRequestClose={() => setShowDatePicker(false)}
+        selectedDate={editDate || null}
+        onDateSelect={(date) => {
+          setEditDate(date);
+          setShowDatePicker(false);
+        }}
+        showFutureWarning={true}
+      />
     </View>
   );
 }

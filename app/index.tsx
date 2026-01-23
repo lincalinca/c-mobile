@@ -11,6 +11,7 @@ import { PersistentHeader } from '../components/header/PersistentHeader';
 import { DateRangeCalendarModal } from '../components/calendar/DateRangeCalendarModal';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AdBanner } from '../components/ads';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function HomeScreen() {
   const [showExitModal, setShowExitModal] = useState(false);
   const [useIconFilters, setUseIconFilters] = useState(true);
   const [financialYearStartMonth, setFinancialYearStartMonth] = useState(7);
+  const [showEventSeries, setShowEventSeries] = useState(true); // Default: hide individual events
 
   const gridRef = useRef<FlatList>(null);
 
@@ -80,6 +82,11 @@ export default function HomeScreen() {
       filtered = filtered.filter(item => item.type === activeFilter);
     }
     
+    // Filter event series: if showEventSeries is true, hide individual events (IDs starting with event_)
+    if (showEventSeries) {
+      filtered = filtered.filter(item => !(item.type === 'event' && item.id.startsWith('event_')));
+    }
+    
     // Filter by date range (item.date can be YYYY-MM-DD or ISO with time)
     const startStr = startDate ? startDate.toISOString().split('T')[0] : null;
     const endStr = endDate ? endDate.toISOString().split('T')[0] : null;
@@ -93,7 +100,7 @@ export default function HomeScreen() {
     }
     
     return filtered;
-  }, [allResults, activeFilter, startDate, endDate]);
+  }, [allResults, activeFilter, startDate, endDate, showEventSeries]);
 
   const handleItemPress = (item: ResultItem) => {
     // Clear highlight on manual touch
@@ -213,7 +220,13 @@ export default function HomeScreen() {
       />
 
       {/* Filter Bar */}
-      <FilterBar activeFilter={activeFilter} onFilterChange={setActiveFilter} useIcons={useIconFilters} />
+      <FilterBar 
+        activeFilter={activeFilter} 
+        onFilterChange={setActiveFilter} 
+        useIcons={useIconFilters}
+        showEventSeries={showEventSeries}
+        onToggleEventSeries={() => setShowEventSeries(!showEventSeries)}
+      />
 
       {/* Results Grid */}
       <CardGrid 
@@ -225,6 +238,9 @@ export default function HomeScreen() {
         onRefresh={onRefresh}
         refreshing={refreshing}
       />
+
+      {/* Banner Ad at bottom */}
+      <AdBanner position="bottom" />
 
       {/* Exit app confirmation modal (Android hardware back on home) */}
       <Modal

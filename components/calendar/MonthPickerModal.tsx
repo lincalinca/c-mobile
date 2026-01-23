@@ -47,7 +47,9 @@ export function MonthPickerModal({
   useEffect(() => {
     if (visible && scrollRef.current) {
       const y = Math.max(0, yearIndex * YEAR_BLOCK_HEIGHT - YEAR_BLOCK_HEIGHT);
-      setTimeout(() => scrollRef.current?.scrollTo({ y, animated: true }), 80);
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ y, animated: false });
+      });
     }
   }, [visible, yearIndex]);
 
