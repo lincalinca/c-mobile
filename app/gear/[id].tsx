@@ -52,6 +52,7 @@ function lineItemToResultItem(item: LineItemWithDetails, receipt: Receipt): Resu
     date: receipt.transactionDate, // Not used in SimpleCard footer but part of type
     metadata: metadata,
     receiptId: receipt.id,
+    links: [], // Empty links array - SimpleCard doesn't show footer chips
   };
 }
 
@@ -334,6 +335,7 @@ export default function GearDetailScreen() {
 
   const gearItems = items.filter(item => item.category === 'gear');
   const serviceItems = items.filter(item => item.category === 'service');
+  const educationItems = items.filter(item => item.category === 'education');
   const eventItems = items.filter(item => item.category === 'event');
 
   return (
@@ -355,7 +357,7 @@ export default function GearDetailScreen() {
         )}
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 180 }}>
         {/* Receipt Image */}
         {receipt.imageUrl && (
           <View className="bg-black/40 h-64 w-full">
@@ -728,11 +730,11 @@ export default function GearDetailScreen() {
             )}
 
             {/* Other Items */}
-            {(serviceItems.length > 0 || eventItems.length > 0) && (
+            {(serviceItems.length > 0 || educationItems.length > 0 || eventItems.length > 0) && (
               <View className="p-6">
                 <Text className="text-crescender-400 font-bold mb-4 uppercase tracking-widest text-sm">Other Items</Text>
                 <View className="flex-row flex-wrap" style={{ marginHorizontal: -4 }}>
-                  {[...serviceItems, ...eventItems].map((item) => {
+                  {[...serviceItems, ...educationItems, ...eventItems].map((item) => {
                     const resultItem = lineItemToResultItem(item, receipt);
                     return (
                       <View key={item.id} style={{ width: '100%', padding: 4 }}>
@@ -747,7 +749,7 @@ export default function GearDetailScreen() {
                             onPress={() => router.push(`/gear/item/${item.id}`)}
                           />
                         ) : (
-                          // Fallback for events or other types not strictly education/service but in this list
+                          // Fallback for events or other types
                           <SimpleGearCard
                              item={resultItem}
                              onPress={() => router.push(`/gear/item/${item.id}`)}
@@ -766,34 +768,34 @@ export default function GearDetailScreen() {
       {/* Footer Actions - Only show in view mode */}
       {!isEditing && (
         <View
-          className="absolute bottom-0 left-0 right-0 bg-crescender-950 p-6 border-t border-crescender-800"
-          style={{ paddingBottom: insets.bottom + 12 }}
+          className="absolute bottom-0 left-0 right-0 bg-crescender-950/95 px-4 py-3 border-t border-crescender-800"
+          style={{ paddingBottom: insets.bottom + 8 }}
         >
-          <View className="flex-row gap-4">
+          <View className="flex-row gap-2 justify-center">
             <TouchableOpacity
-              className="flex-1 bg-crescender-800/50 py-4 rounded-xl border border-crescender-700/50 flex-row justify-center items-center gap-2"
+              className="flex-1 bg-crescender-800/50 py-3 rounded-xl border border-crescender-700/50 items-center"
               onPress={handleReplaceImage}
             >
-              <Feather name="image" size={18} color="white" />
-              <Text className="text-white font-bold">{receipt.imageUrl ? 'Replace Image' : 'Add Image'}</Text>
+              <Feather name="image" size={20} color="white" />
+              <Text className="text-white text-xs font-semibold mt-1">{receipt.imageUrl ? 'Replace' : 'Add'}</Text>
             </TouchableOpacity>
             {receipt.imageUrl && (
               <TouchableOpacity
-                className="flex-1 bg-crescender-800/50 py-4 rounded-xl border border-crescender-700/50 flex-row justify-center items-center gap-2"
+                className="flex-1 bg-crescender-800/50 py-3 rounded-xl border border-crescender-700/50 items-center"
                 onPress={handleReprocess}
               >
-                <Feather name="refresh-cw" size={18} color="white" />
-                <Text className="text-white font-bold">Reprocess</Text>
+                <Feather name="refresh-cw" size={20} color="white" />
+                <Text className="text-white text-xs font-semibold mt-1">Reprocess</Text>
               </TouchableOpacity>
             )}
+            <TouchableOpacity
+              className="flex-1 bg-red-500/10 py-3 rounded-xl border border-red-500/30 items-center"
+              onPress={handleDelete}
+            >
+              <Feather name="trash-2" size={20} color="#ef4444" />
+              <Text className="text-red-500 text-xs font-semibold mt-1">Delete</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            className="mt-3 bg-red-500/10 py-4 rounded-xl border border-red-500/30 flex-row justify-center items-center gap-2"
-            onPress={handleDelete}
-          >
-            <Feather name="trash-2" size={18} color="#ef4444" />
-            <Text className="text-red-500 font-bold">Delete</Text>
-          </TouchableOpacity>
         </View>
       )}
     </View>

@@ -116,6 +116,12 @@ export default function HomeScreen() {
   };
 
   const handleLinkPress = (targetId: string, targetType: ResultType) => {
+    // For events, navigate directly to the event detail page
+    if (targetType === 'event') {
+      router.push(`/events/${targetId}` as any);
+      return;
+    }
+    
     // 1. Ensure the item is visible in current filter
     if (activeFilter !== 'all' && activeFilter !== targetType) {
       setActiveFilter('all');

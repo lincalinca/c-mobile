@@ -2,6 +2,7 @@ import React from 'react';
 import { BaseCard, BaseCardProps } from './BaseCard';
 import { CardDetailRows } from './CardDetailRows';
 import type { CardDetailRow } from './CardDetailRows';
+import { formatEducationDetailsSentence } from '../../lib/educationUtils';
 
 const ACCENT_COLOR = '#c084fc';
 const ICON_BG_COLOR = 'rgba(192, 132, 252, 0.15)';
@@ -21,35 +22,13 @@ export const EducationCard = ({
 }: EducationCardProps) => {
   const metadata = item.metadata || {};
   const studentName = metadata.studentName || 'Student';
-  const frequency = metadata.frequency || 'One-off';
-  const duration = metadata.duration || '60m';
-  const daysOfWeek = metadata.daysOfWeek || [];
-  const times = metadata.times || [];
-
-  const scheduleText = (() => {
-    if (daysOfWeek.length === 0 || times.length === 0) return frequency;
-    const schedulePairs: string[] = [];
-    for (let i = 0; i < Math.max(daysOfWeek.length, times.length); i++) {
-      const day = daysOfWeek[i] || daysOfWeek[0];
-      const time = times[i] || times[0];
-      schedulePairs.push(`${time} ${day}`);
-    }
-    return schedulePairs.join(', ');
-  })();
-
+  
+  // Format details into a condensed sentence
+  const detailsSentence = formatEducationDetailsSentence(metadata);
+  
   const rows: CardDetailRow[] = [
-    { icon: 'clock', text: duration, accent: true },
-    { icon: 'repeat', text: scheduleText },
+    { icon: 'calendar', text: detailsSentence, accent: true, numberOfLines: 2 },
   ];
-  if (metadata.startDate) {
-    rows.push({
-      icon: 'calendar',
-      text: `Starts ${new Date(metadata.startDate).toLocaleDateString('en-AU', {
-        day: 'numeric',
-        month: 'short',
-      })}`,
-    });
-  }
 
   const detailContent = <CardDetailRows rows={rows} accentColor={ACCENT_COLOR} />;
 

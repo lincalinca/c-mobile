@@ -138,10 +138,10 @@ export const ProcessingView = () => {
       </View>
       
       <Text className="text-white text-3xl font-bold mb-2 tracking-widest text-center" style={{ fontFamily: Platform.OS === 'web' ? 'Bebas Neue, system-ui' : 'System' }}>
-        ANALYSING RECEIPT
+        Analysing Your Receipt
       </Text>
       <Text className="text-crescender-400 text-center text-base leading-relaxed">
-        Our AI is extracting your gear, events, and transactions. This usually takes 5–10 seconds.
+        Crescender's custom AI is searching your receipt to find gear, events, services, and any lesson details, as well as merchant or provider details. This usually takes less than 20 seconds.
       </Text>
       
       <View className="flex-row gap-2 mt-12 items-center">

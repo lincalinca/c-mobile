@@ -49,6 +49,11 @@ export interface EducationDetails {
   endDate?: string;
   daysOfWeek?: string[];
   times?: string[];
+  /** Instrument or subject focus (e.g., "Violin", "Music Theory", "Piano") */
+  focus?: string;
+  /** Alternative field names for focus (for compatibility) */
+  instrument?: string;
+  subject?: string;
 }
 
 // Warranty Details Interface (Phase 2)

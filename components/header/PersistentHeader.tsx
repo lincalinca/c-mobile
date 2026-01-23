@@ -13,8 +13,8 @@ export const PersistentHeader = () => {
   const menuItems = [
     { label: 'HOME', icon: 'grid', path: '/' },
     { label: 'HISTORY', icon: 'clock', path: '/history' },
+    { label: 'USAGE', icon: 'activity', path: '/usage' },
     { label: 'SETTINGS', icon: 'settings', path: '/settings' },
-    { label: 'UI MOCKUP', icon: 'eye', path: '/mock' },
   ];
 
   const navigateTo = (path: string) => {

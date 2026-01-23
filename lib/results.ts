@@ -1,5 +1,6 @@
 import { Receipt, ReceiptItem } from './repository';
 import { generateEducationEvents } from './educationEvents';
+import { formatEducationTitle } from './educationUtils';
 
 export type ResultType = 'gear' | 'service' | 'event' | 'education' | 'transaction';
 
@@ -210,10 +211,13 @@ export function reshapeToResults(receipts: (Receipt & { items: ReceiptItem[] })[
         const eduEventItems = generateEducationEvents(item, receipt);
         const eduEventLinks = eduEventItems.map((e) => ({ id: e.id, type: 'event' as ResultType }));
 
+        // Format the title properly
+        const formattedTitle = formatEducationTitle(item.description, eduDetails as any);
+
         itemResults.push({
           id: item.id,
           type: 'education',
-          title: item.description,
+          title: formattedTitle,
           subtitle: (eduDetails as any).studentName || 'Education Session',
           amount: item.totalPrice,
           date: receipt.transactionDate,

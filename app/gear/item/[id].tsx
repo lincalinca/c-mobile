@@ -152,8 +152,8 @@ export default function GearItemDetailScreen() {
                 </View>
               )}
 
-              {/* Serial & Colour */}
-              {(gearDetails.serialNumber || gearDetails.colour) && (
+              {/* Serial, Colour & Size */}
+              {(gearDetails.serialNumber || gearDetails.colour || gearDetails.size) && (
                 <View className="p-4 border-b border-crescender-800/50 flex-row">
                   {gearDetails.serialNumber && (
                     <View className="flex-1">
@@ -165,6 +165,12 @@ export default function GearItemDetailScreen() {
                     <View className="flex-1">
                       <Text className="text-crescender-500 text-xs mb-1">Colour</Text>
                       <Text className="text-white font-medium">{gearDetails.colour}</Text>
+                    </View>
+                  )}
+                  {gearDetails.size && (
+                    <View className="flex-1">
+                      <Text className="text-crescender-500 text-xs mb-1">Size</Text>
+                      <Text className="text-white font-medium">{gearDetails.size}</Text>
                     </View>
                   )}
                 </View>
