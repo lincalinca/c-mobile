@@ -1,4 +1,5 @@
 import { Receipt, ReceiptItem } from './repository';
+import { generateEducationEvents } from './educationEvents';
 
 export type ResultType = 'gear' | 'service' | 'event' | 'education' | 'transaction';
 
@@ -206,6 +207,9 @@ export function reshapeToResults(receipts: (Receipt & { items: ReceiptItem[] })[
           console.error('Failed to parse education details', e);
         }
 
+        const eduEventItems = generateEducationEvents(item, receipt);
+        const eduEventLinks = eduEventItems.map((e) => ({ id: e.id, type: 'event' as ResultType }));
+
         itemResults.push({
           id: item.id,
           type: 'education',
@@ -217,8 +221,9 @@ export function reshapeToResults(receipts: (Receipt & { items: ReceiptItem[] })[
             ...eduDetails as any,
           },
           receiptId: receipt.id,
-          links: [{ id: transactionId, type: 'transaction' }]
+          links: [{ id: transactionId, type: 'transaction' }, ...eduEventLinks]
         });
+        itemResults.push(...eduEventItems);
       }
     }
 

@@ -25,6 +25,7 @@ export default function HomeScreen() {
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [useIconFilters, setUseIconFilters] = useState(true);
+  const [financialYearStartMonth, setFinancialYearStartMonth] = useState(7);
 
   const gridRef = useRef<FlatList>(null);
 
@@ -45,11 +46,15 @@ export default function HomeScreen() {
     useCallback(() => {
       loadData();
 
-      // Load filter display setting — default to icon filters when no saved value (#8)
+      // Load settings
       const loadSettings = async () => {
         try {
-          const saved = await AsyncStorage.getItem('useIconFilters');
-          setUseIconFilters(saved !== null ? JSON.parse(saved) : true);
+          const [filters, fyStart] = await Promise.all([
+            AsyncStorage.getItem('useIconFilters'),
+            AsyncStorage.getItem('financialYearStartMonth'),
+          ]);
+          setUseIconFilters(filters !== null ? JSON.parse(filters) : true);
+          setFinancialYearStartMonth(fyStart !== null ? parseInt(fyStart, 10) : 7);
         } catch (e) {
           console.error('Failed to load settings', e);
         }
@@ -190,6 +195,7 @@ export default function HomeScreen() {
         startDate={startDate}
         endDate={endDate}
         onApply={onDateRangeApply}
+        financialYearStartMonth={financialYearStartMonth}
       />
 
       {/* Camera Capture Bar with Date Filter */}

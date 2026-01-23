@@ -25,37 +25,35 @@ export const PersistentHeader = () => {
 
   return (
     <>
-      <View 
-        style={{ 
+      <View
+        style={{
           backgroundColor: '#2a0b4c',
           paddingTop: insets.top,
+          paddingHorizontal: 8,
+          paddingBottom: 10,
         }}
       >
-        <View className="flex-row items-center justify-between px-6 py-4">
-          {/* Spacer to help center the logo */}
-          <View className="w-10" />
-
-          {/* Centered Logo — fills centre area between spacer and menu, aspectRatio preserves proportions */}
-          <View className="flex-1 items-center justify-center min-w-0">
+        {/* [8px padding][logo - fill width][8px gap][hamburger menu][8px padding] */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ flex: 1, minWidth: 0 }} className="items-center justify-center">
             {(Platform.OS as any) === 'web' ? (
               <Image
                 source={{ uri: '/crescender-logo.svg' }}
-                style={{ width: '100%', aspectRatio: 234 / 38 }}
+                style={{ width: '100%', maxHeight: 28, aspectRatio: 234 / 38 }}
                 resizeMode="contain"
               />
             ) : (
               <Image
                 source={require('../../assets/crescender-logo.png')}
-                style={{ width: '100%', aspectRatio: 200 / 23 }}
+                style={{ width: '100%', maxHeight: 28, aspectRatio: 200 / 23 }}
                 resizeMode="contain"
               />
             )}
           </View>
-
-          {/* Menu Button on the right */}
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => setMenuVisible(true)}
-            className="w-10 h-10 items-center justify-center rounded-full bg-crescender-900/60"
+            style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+            className="rounded-full bg-crescender-900/60"
           >
             <Feather name="menu" size={24} color="#f5c518" />
           </TouchableOpacity>

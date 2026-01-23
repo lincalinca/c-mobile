@@ -1,11 +1,12 @@
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Linking, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ReceiptRepository, type LineItemWithDetails, type Receipt } from '../../lib/repository';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatFullDate, getRelativeDateLabel } from '../../lib/dateUtils';
 import { ResultItem, reshapeToResults } from '../../lib/results';
+import { addEventToDeviceCalendar } from '../../lib/calendarExport';
 import { ServiceCard } from '../../components/results/ServiceCard';
 import { GearCard } from '../../components/results/GearCard';
 import { TransactionCard } from '../../components/results/TransactionCard';
@@ -13,11 +14,13 @@ import { EventCard } from '../../components/results/EventCard';
 import { EducationCard } from '../../components/results/EducationCard';
 
 const ACCENT_COLOR = '#22d3ee'; // Cyan for events
+const RELATED_COLUMN_BREAK = 600;
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
   const [item, setItem] = useState<LineItemWithDetails | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
@@ -29,10 +32,9 @@ export default function EventDetailScreen() {
       if (!id) return;
       try {
         const allReceipts = await ReceiptRepository.getAllWithItems();
-        // Events can be either line items or generated from services
-        // First check if this is a generated event (starts with event_)
+        // Events can be line items or generated from services or education
         if (id.startsWith('event_')) {
-          // This is a generated event from a service
+          // Generated event (service or education): find in reshaped results
           for (const r of allReceipts) {
             const results = reshapeToResults([r]);
             const foundEvent = results.find(ri => ri.id === id);
@@ -92,6 +94,17 @@ export default function EventDetailScreen() {
   const openPhone = (phone: string) => Linking.openURL(`tel:${phone.replace(/\s/g, '')}`);
   const openEmail = (email: string) => Linking.openURL(`mailto:${email}`);
 
+  const handleRelatedLinkPress = (targetId: string, targetType: string) => {
+    if (targetType === 'transaction') {
+      const r = relatedItems.find((x) => x.id === targetId);
+      const rid = (r as ResultItem & { receiptId?: string })?.receiptId;
+      if (rid) router.push(`/gear/${rid}` as any);
+    } else {
+      const seg = targetType === 'education' ? 'education' : targetType === 'service' ? 'services' : targetType === 'event' ? 'events' : 'gear';
+      router.push(`/${seg}/${targetId}` as any);
+    }
+  };
+
   if (loading) {
     return (
       <View className="flex-1 bg-crescender-950 justify-center items-center">
@@ -105,6 +118,28 @@ export default function EventDetailScreen() {
   const subtitle = eventData?.subtitle || 'Scheduled Event';
   const eventDate = eventData?.date || receipt?.transactionDate || '';
   const metadata = eventData?.metadata || {};
+
+  const eventResult: ResultItem | null = useMemo(() => {
+    if (eventData) return eventData;
+    if (item && receipt) {
+      return {
+        id: item.id,
+        type: 'event',
+        title: item.description,
+        subtitle: 'Scheduled Event',
+        date: receipt.transactionDate,
+        metadata: { venue: item.description },
+        receiptId: receipt.id,
+        links: [{ id: `trans_${receipt.id}`, type: 'transaction' }],
+      };
+    }
+    return null;
+  }, [eventData, item, receipt]);
+
+  const handleAddToCalendar = useCallback(async () => {
+    if (!eventResult) return;
+    await addEventToDeviceCalendar(eventResult, receipt ?? null);
+  }, [eventResult, receipt]);
 
   if (!receipt && !eventData) {
     return (
@@ -125,7 +160,13 @@ export default function EventDetailScreen() {
           <Feather name="arrow-left" size={24} color="white" />
         </TouchableOpacity>
         <Text className="text-white text-lg font-bold">Event Details</Text>
-        <View className="w-10" />
+        {eventResult ? (
+          <TouchableOpacity onPress={handleAddToCalendar} className="p-2">
+            <Feather name="calendar" size={22} color={ACCENT_COLOR} />
+          </TouchableOpacity>
+        ) : (
+          <View className="w-10" />
+        )}
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}>
@@ -215,7 +256,7 @@ export default function EventDetailScreen() {
           </View>
         )}
 
-        {/* Related Records */}
+        {/* Related Records — single column on mobile */}
         {relatedItems.length > 0 && (
           <View className="p-6">
             <Text className="font-bold mb-4 uppercase tracking-widest text-xs" style={{ color: ACCENT_COLOR }}>Related Records</Text>
@@ -224,9 +265,11 @@ export default function EventDetailScreen() {
                 const cardProps = {
                   item: relatedItem,
                   onPress: () => handleRelatedItemPress(relatedItem),
+                  onLinkPress: handleRelatedLinkPress,
                 };
+                const colWidth = width < RELATED_COLUMN_BREAK ? '100%' : '50%';
                 return (
-                  <View key={relatedItem.id} style={{ width: '50%', padding: 4 }}>
+                  <View key={relatedItem.id} style={{ width: colWidth, padding: 4 }}>
                     {relatedItem.type === 'gear' && <GearCard {...cardProps} />}
                     {relatedItem.type === 'service' && <ServiceCard {...cardProps} />}
                     {relatedItem.type === 'transaction' && <TransactionCard {...cardProps} />}

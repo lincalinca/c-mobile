@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Linking, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import { ReceiptRepository, type LineItemWithDetails, type Receipt } from '../../lib/repository';
@@ -10,13 +10,16 @@ import { ServiceCard } from '../../components/results/ServiceCard';
 import { GearCard } from '../../components/results/GearCard';
 import { TransactionCard } from '../../components/results/TransactionCard';
 import { EventCard } from '../../components/results/EventCard';
+import { EducationCard } from '../../components/results/EducationCard';
 
 const ACCENT_COLOR = '#f97316'; // Orange for services
+const RELATED_COLUMN_BREAK = 600;
 
 export default function ServiceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
   const [item, setItem] = useState<LineItemWithDetails | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
@@ -77,6 +80,17 @@ export default function ServiceDetailScreen() {
 
   const openEmail = (email: string) => {
     Linking.openURL(`mailto:${email}`);
+  };
+
+  const handleRelatedLinkPress = (targetId: string, targetType: string) => {
+    if (targetType === 'transaction') {
+      const r = relatedItems.find((x) => x.id === targetId);
+      const rid = (r as ResultItem & { receiptId?: string })?.receiptId;
+      if (rid) router.push(`/gear/${rid}` as any);
+    } else {
+      const seg = targetType === 'education' ? 'education' : targetType === 'service' ? 'services' : targetType === 'event' ? 'events' : 'gear';
+      router.push(`/${seg}/${targetId}` as any);
+    }
   };
 
   if (loading) {
@@ -196,7 +210,7 @@ export default function ServiceDetailScreen() {
           </View>
         )}
 
-        {/* Related Records */}
+        {/* Related Records — single column on mobile */}
         {relatedItems.length > 0 && (
           <View className="p-6">
             <Text className="font-bold mb-4 uppercase tracking-widest text-xs" style={{ color: ACCENT_COLOR }}>Related Records</Text>
@@ -205,13 +219,16 @@ export default function ServiceDetailScreen() {
                 const cardProps = {
                   item: relatedItem,
                   onPress: () => handleRelatedItemPress(relatedItem),
+                  onLinkPress: handleRelatedLinkPress,
                 };
+                const colWidth = width < RELATED_COLUMN_BREAK ? '100%' : '50%';
                 return (
-                  <View key={relatedItem.id} style={{ width: '50%', padding: 4 }}>
+                  <View key={relatedItem.id} style={{ width: colWidth, padding: 4 }}>
                     {relatedItem.type === 'gear' && <GearCard {...cardProps} />}
                     {relatedItem.type === 'service' && <ServiceCard {...cardProps} />}
                     {relatedItem.type === 'transaction' && <TransactionCard {...cardProps} />}
                     {relatedItem.type === 'event' && <EventCard {...cardProps} />}
+                    {relatedItem.type === 'education' && <EducationCard {...cardProps} />}
                   </View>
                 );
               })}

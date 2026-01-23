@@ -39,136 +39,76 @@ function parseDateString(s: string): Date {
   return isNaN(d.getTime()) ? new Date() : d;
 }
 
-/** startMonth 1–12 (July=7). Returns { start, end } for the given financial year. */
-function getFinancialYearRange(startMonth: number, refDate: Date, which: 'this' | 'last'): { start: Date; end: Date } {
-  const refYear = refDate.getFullYear();
-  const refMon = refDate.getMonth();
-  const startMon0 = startMonth - 1;
-  let startYear: number, endYear: number;
-  if (refMon >= startMon0) {
-    startYear = refYear;
-    endYear = startMonth === 1 ? refYear : refYear + 1;
-  } else {
-    startYear = refYear - 1;
-    endYear = startMonth === 1 ? refYear - 1 : refYear;
-  }
-  const start = new Date(startYear, startMon0, 1);
-  const end = new Date(endYear, startMon0 + 1, 0);
-  if (which === 'last') {
-    start.setFullYear(start.getFullYear() - 1);
-    end.setFullYear(end.getFullYear() - 1);
-  }
-  return { start, end };
-}
-
-export interface DateRange {
-  start: Date | null;
-  end: Date | null;
-}
-
-interface DateRangeCalendarModalProps {
+interface DatePickerModalProps {
   visible: boolean;
   onRequestClose: () => void;
-  startDate: Date | null;
-  endDate: Date | null;
-  onApply: (start: Date | null, end: Date | null) => void;
-  /** Financial year start month 1–12 (default 7 = July). */
-  financialYearStartMonth?: number;
+  selectedDate: string | null; // YYYY-MM-DD format
+  onDateSelect: (date: string) => void;
+  /** Optional max date (default: none) */
+  maxDate?: string;
+  /** Show warning when future date selected */
+  showFutureWarning?: boolean;
 }
 
-export function DateRangeCalendarModal({
+export function DatePickerModal({
   visible,
   onRequestClose,
-  startDate,
-  endDate,
-  onApply,
-  financialYearStartMonth = 7,
-}: DateRangeCalendarModalProps) {
-  // Initial temp state from props when modal opens; we'll derive from props for controlled-ish behaviour.
-  // When visible changes to true, we need to sync. Use startDate/endDate as initial and manage temp in state.
-  // For simplicity: when modal is visible, we treat parent's start/end as the "current" and on each tap we
-  // compute the next range and call onApply only on Apply/Clear. So we need internal temp state that we
-  // init when modal opens.
-  const [tempStart, setTempStart] = useState<string | null>(null);
-  const [tempEnd, setTempEnd] = useState<string | null>(null);
+  selectedDate,
+  onDateSelect,
+  maxDate,
+  showFutureWarning = true,
+}: DatePickerModalProps) {
+  const [tempDate, setTempDate] = useState<string | null>(null);
   const [displayMonth, setDisplayMonth] = useState<string>('');
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
 
-  const initialMonth = (startDate && toDateString(startDate)) || (endDate && toDateString(endDate)) || toDateString(new Date());
+  const initialMonth = selectedDate || toDateString(new Date());
 
   // Sync from props when modal becomes visible
   useEffect(() => {
     if (visible) {
-      setTempStart(startDate ? toDateString(startDate) : null);
-      setTempEnd(endDate ? toDateString(endDate) : null);
-      setDisplayMonth(initialMonth);
+      setTempDate(selectedDate);
+      setDisplayMonth(selectedDate || initialMonth);
+      setShowWarning(false);
     }
-  }, [visible, startDate, endDate, initialMonth]);
+  }, [visible, selectedDate, initialMonth]);
 
   const onDayPress = (day: { dateString: string }) => {
-    const s = day.dateString;
-    if (!tempStart) {
-      setTempStart(s);
-      setTempEnd(null);
-      return;
+    const today = toDateString(new Date());
+    setTempDate(day.dateString);
+
+    // Check if future date
+    if (showFutureWarning && day.dateString > today) {
+      setShowWarning(true);
+    } else {
+      setShowWarning(false);
     }
-    if (!tempEnd) {
-      if (s < tempStart) {
-        setTempStart(s);
-        setTempEnd(tempStart);
-      } else {
-        setTempEnd(s);
-      }
-      return;
-    }
-    // Both set: start new range
-    setTempStart(s);
-    setTempEnd(null);
   };
 
-  const buildMarkedDates = (): Record<string, { startingDay?: boolean; endingDay?: boolean; color: string; textColor?: string }> => {
-    const out: Record<string, { startingDay?: boolean; endingDay?: boolean; color: string; textColor?: string }> = {};
-    const color = '#f5c518';
-    const textColor = '#2e1065';
-    if (!tempStart) return out;
-    if (!tempEnd || tempStart === tempEnd) {
-      out[tempStart] = { startingDay: true, endingDay: true, color, textColor };
-      return out;
-    }
-    const [a, b] = tempStart < tempEnd ? [tempStart, tempEnd] : [tempEnd, tempStart];
-    const cur = new Date(a + 'T12:00:00');
-    const end = new Date(b + 'T12:00:00');
-    while (cur <= end) {
-      const k = toDateString(cur);
-      out[k] = {
-        startingDay: k === a,
-        endingDay: k === b,
-        color,
-        textColor,
+  const buildMarkedDates = (): Record<string, { selected: boolean; selectedColor: string }> => {
+    const out: Record<string, { selected: boolean; selectedColor: string }> = {};
+    if (tempDate) {
+      out[tempDate] = {
+        selected: true,
+        selectedColor: '#f5c518',
       };
-      cur.setDate(cur.getDate() + 1);
     }
     return out;
   };
 
-  const handleApply = () => {
-    const start = tempStart ? parseDateString(tempStart) : null;
-    const end = tempEnd ? parseDateString(tempEnd) : null;
-    onApply(start, end);
+  const handleConfirm = () => {
+    if (tempDate) {
+      onDateSelect(tempDate);
+    }
     onRequestClose();
   };
 
-  const handleClear = () => {
-    setTempStart(null);
-    setTempEnd(null);
-    onApply(null, null);
-    onRequestClose();
-  };
-
-  const handleFinancialYear = (which: 'this' | 'last') => {
-    const { start, end } = getFinancialYearRange(financialYearStartMonth, new Date(), which);
-    onApply(start, end);
-    onRequestClose();
+  const handleToday = () => {
+    const today = toDateString(new Date());
+    setTempDate(today);
+    setDisplayMonth(today);
+    setShowWarning(false);
   };
 
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -193,22 +133,29 @@ export function DateRangeCalendarModal({
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.7)' }]} />
         <View style={styles.card}>
           <Text className="text-gold text-lg font-bold mb-2 text-center" style={{ fontFamily: (Platform.OS as string) === 'web' ? 'Bebas Neue, system-ui' : undefined }}>
-            Date range
+            Select Date
           </Text>
           <Text className="text-crescender-300 text-sm mb-3 text-center">
-            Tap a start date, then an end date. Same tap again to choose a new range.
+            Choose a transaction date
           </Text>
+          {showWarning && (
+            <View className="bg-yellow-900/30 border border-yellow-600 rounded-lg p-3 mb-3">
+              <Text className="text-yellow-400 text-sm text-center">
+                ⚠️ Future date selected. Are you sure this is correct?
+              </Text>
+            </View>
+          )}
           <Calendar
             key={visible ? 'open' : 'closed'}
             initialDate={displayMonth || initialMonth}
             onDayPress={onDayPress}
             onMonthChange={(d) => setDisplayMonth((d.dateString || '').slice(0, 7) + '-01')}
-            markingType="period"
             markedDates={buildMarkedDates()}
             theme={CRESCENDER_THEME}
             firstDay={1}
             hideExtraDays={false}
             enableSwipeMonths
+            maxDate={maxDate}
             renderHeader={(date) => (
               <TouchableOpacity onPress={() => setMonthPickerOpen(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Text style={{ color: CRESCENDER_THEME.monthTextColor, fontSize: 18, fontWeight: '600' }}>
@@ -228,20 +175,11 @@ export function DateRangeCalendarModal({
             }}
           />
           <View className="flex-row gap-2 mt-3">
-            <TouchableOpacity onPress={() => handleFinancialYear('last')} className="flex-1 py-2.5 rounded-xl bg-crescender-800 border border-crescender-600">
-              <Text className="text-crescender-200 font-semibold text-center text-sm">Last financial year</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleFinancialYear('this')} className="flex-1 py-2.5 rounded-xl bg-crescender-800 border border-crescender-600">
-              <Text className="text-crescender-200 font-semibold text-center text-sm">This financial year</Text>
+            <TouchableOpacity onPress={handleToday} className="flex-1 py-2.5 rounded-xl bg-crescender-800 border border-crescender-600">
+              <Text className="text-crescender-200 font-semibold text-center text-sm">Today</Text>
             </TouchableOpacity>
           </View>
           <View className="flex-row justify-between gap-3 mt-2">
-            <TouchableOpacity
-              onPress={handleClear}
-              className="px-4 py-2.5 rounded-xl bg-crescender-800 border border-crescender-600"
-            >
-              <Text className="text-crescender-200 font-semibold">Clear</Text>
-            </TouchableOpacity>
             <TouchableOpacity
               onPress={onRequestClose}
               className="px-4 py-2.5 rounded-xl bg-crescender-800 border border-crescender-600"
@@ -249,10 +187,10 @@ export function DateRangeCalendarModal({
               <Text className="text-crescender-200 font-semibold">Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={handleApply}
-              className="px-4 py-2.5 rounded-xl bg-gold"
+              onPress={handleConfirm}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-gold"
             >
-              <Text className="text-crescender-950 font-bold">Apply</Text>
+              <Text className="text-crescender-950 font-bold">Confirm</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -12,34 +12,16 @@ import { TransactionRepository } from '../lib/repository';
 
 const isAndroid = Platform.OS === 'android';
 
-// Cap capture at ~1080p to reduce memory, disk, and bandwidth. Receipt OCR is fine at 720p–1080p.
-const MAX_PIXELS = 1920 * 1080; // 2,073,600
-const MIN_PIXELS = 640 * 480;   // 307,200 — minimum usable for receipt text
-
-function choosePictureSize(sizes: string[]): string | null {
-  if (!sizes.length) return null;
-  const parsed = sizes
-    .map((s) => {
-      const m = s.match(/^(\d+)\s*[x×]\s*(\d+)$/i);
-      return m ? { s, w: parseInt(m[1], 10), h: parseInt(m[2], 10) } : null;
-    })
-    .filter((p): p is { s: string; w: number; h: number } => p != null);
-  if (!parsed.length) return null;
-  const under = parsed.filter((p) => p.w * p.h <= MAX_PIXELS && p.w * p.h >= MIN_PIXELS);
-  if (under.length) return under.reduce((a, b) => (a.w * a.h >= b.w * b.h ? a : b)).s;
-  const over = parsed.filter((p) => p.w * p.h > MAX_PIXELS);
-  if (over.length) return over.reduce((a, b) => (a.w * a.h <= b.w * b.h ? a : b)).s;
-  return parsed.reduce((a, b) => (a.w * a.h >= b.w * b.h ? a : b)).s;
-}
+// On Android, delay (ms) after onCameraReady before allowing capture. Some devices need the preview to stabilize.
+const ANDROID_READY_DELAY_MS = 450;
 
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>((Platform.OS as any) === 'web' ? 'front' : 'back' as any);
   const [flash, setFlash] = useState<FlashMode>('off');
   const [cameraReady, setCameraReady] = useState(false);
-  const [pictureSize, setPictureSize] = useState<string | null>(null);
-  const pictureSizeChosenRef = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const readyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const cameraRef = useRef<any>(null);
   const router = useRouter();
@@ -90,6 +72,13 @@ export default function ScanScreen() {
     setCameraReady(false);
   }, [facing, flash]);
 
+  // Clear ready delay on unmount
+  useEffect(() => {
+    return () => {
+      if (readyTimeoutRef.current) clearTimeout(readyTimeoutRef.current);
+    };
+  }, []);
+
   const handleRequestPermission = async () => {
     if (Platform.OS === 'web') {
       try {
@@ -118,10 +107,9 @@ export default function ScanScreen() {
     if (!cameraRef.current || !cameraReady || isProcessing) return;
     setIsProcessing(true);
     try {
-      // On Android: lower quality + resolution cap (pictureSize) to reduce memory, disk, and bandwidth.
-      // On iOS: quality 0.7; we fall back to readAsStringAsync if base64 missing.
+      // On Android: no pictureSize (avoids reconfig that can break capture); base64 read from file after.
       const photo = await cameraRef.current.takePictureAsync({
-        quality: isAndroid ? 0.4 : 0.7,
+        quality: isAndroid ? 0.5 : 0.7,
         base64: !isAndroid,
       });
       if (!photo?.uri) {
@@ -247,20 +235,16 @@ export default function ScanScreen() {
             facing={facing}
             flash={flash}
             ref={cameraRef}
-            {...(isAndroid && pictureSize ? { pictureSize } : {})}
-            onCameraReady={async () => {
-              setCameraReady(true);
-              if (isAndroid && !pictureSizeChosenRef.current && cameraRef.current?.getAvailablePictureSizesAsync) {
-                pictureSizeChosenRef.current = true;
-                try {
-                  const sizes = await cameraRef.current.getAvailablePictureSizesAsync();
-                  if (Array.isArray(sizes) && sizes.length) {
-                    const chosen = choosePictureSize(sizes);
-                    if (chosen) setPictureSize(chosen);
-                  }
-                } catch (e) {
-                  console.warn('[Scan] getAvailablePictureSizesAsync failed:', e);
-                }
+            onCameraReady={() => {
+              // On Android, delay before allowing capture so the preview can stabilize (avoids "Failed to capture image" on some devices).
+              if (isAndroid) {
+                if (readyTimeoutRef.current) clearTimeout(readyTimeoutRef.current);
+                readyTimeoutRef.current = setTimeout(() => {
+                  readyTimeoutRef.current = null;
+                  setCameraReady(true);
+                }, ANDROID_READY_DELAY_MS);
+              } else {
+                setCameraReady(true);
               }
             }}
           />

@@ -1,11 +1,13 @@
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Linking, TextInput, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ReceiptRepository, type LineItemWithDetails, type Receipt } from '../../lib/repository';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { formatFullDate, getRelativeDateLabel } from '../../lib/dateUtils';
+import { formatFullDate } from '../../lib/dateUtils';
 import { ResultItem, reshapeToResults } from '../../lib/results';
+import { getEducationSeriesSummary } from '../../lib/educationEvents';
+import { addEducationSeriesToDeviceCalendar } from '../../lib/calendarExport';
 import { ServiceCard } from '../../components/results/ServiceCard';
 import { GearCard } from '../../components/results/GearCard';
 import { TransactionCard } from '../../components/results/TransactionCard';
@@ -13,40 +15,47 @@ import { EventCard } from '../../components/results/EventCard';
 import { EducationCard } from '../../components/results/EducationCard';
 
 const ACCENT_COLOR = '#c084fc'; // Purple for education
+const RELATED_COLUMN_BREAK = 600;
 
 export default function EducationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
   const [item, setItem] = useState<LineItemWithDetails | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [relatedItems, setRelatedItems] = useState<ResultItem[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editSubtitle, setEditSubtitle] = useState('');
+  const [editStudentName, setEditStudentName] = useState('');
+
+  const loadData = useCallback(async () => {
+    if (!id) return;
+    try {
+      const allReceipts = await ReceiptRepository.getAllWithItems();
+      for (const r of allReceipts) {
+        const foundItem = r.items.find((i: LineItemWithDetails) => i.id === id);
+        if (foundItem) {
+          setItem(foundItem);
+          setReceipt(r);
+          const results = reshapeToResults([r]);
+          setRelatedItems(results.filter(ri => ri.id !== id));
+          break;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load education details', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
   useEffect(() => {
-    const loadData = async () => {
-      if (!id) return;
-      try {
-        const allReceipts = await ReceiptRepository.getAllWithItems();
-        for (const r of allReceipts) {
-          const foundItem = r.items.find((i: LineItemWithDetails) => i.id === id);
-          if (foundItem) {
-            setItem(foundItem);
-            setReceipt(r);
-            const results = reshapeToResults([r]);
-            const related = results.filter(ri => ri.id !== id);
-            setRelatedItems(related);
-            break;
-          }
-        }
-      } catch (e) {
-        console.error('Failed to load education details', e);
-      } finally {
-        setLoading(false);
-      }
-    };
     loadData();
-  }, [id]);
+  }, [loadData]);
 
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {
@@ -55,6 +64,61 @@ export default function EducationDetailScreen() {
       router.replace('/');
     }
   }, [router]);
+
+  const handleEdit = useCallback(() => {
+    if (!item || !receipt) return;
+    const edu = item.educationDetailsParsed;
+    setEditTitle(item.description);
+    setEditSubtitle(edu?.subtitle ?? receipt.merchant ?? '');
+    setEditStudentName(edu?.studentName ?? '');
+    setIsEditing(true);
+  }, [item, receipt]);
+
+  const handleSave = useCallback(async () => {
+    if (!item || !receipt) return;
+    setIsSaving(true);
+    try {
+      const edu = item.educationDetailsParsed || {};
+      const merged = {
+        ...edu,
+        studentName: editStudentName.trim() || undefined,
+        subtitle: editSubtitle.trim() || undefined,
+      };
+      await ReceiptRepository.updateLineItem(item.id, {
+        description: editTitle.trim(),
+        educationDetails: JSON.stringify(merged),
+      });
+      await loadData();
+      setIsEditing(false);
+    } catch (e) {
+      console.error('Failed to save education details', e);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [item, receipt, editTitle, editSubtitle, editStudentName, loadData]);
+
+  const handleRelatedLinkPress = useCallback((targetId: string, targetType: string) => {
+    if (targetType === 'transaction' && receipt) {
+      router.push(`/gear/${receipt.id}` as any);
+    } else if (targetType === 'education') {
+      router.push(`/education/${targetId}` as any);
+    } else if (targetType === 'gear') {
+      router.push(`/gear/${targetId}` as any);
+    } else if (targetType === 'service') {
+      router.push(`/services/${targetId}` as any);
+    } else if (targetType === 'event') {
+      router.push(`/events/${targetId}` as any);
+    }
+  }, [receipt, router]);
+
+  const seriesSummary = useMemo(
+    () => (item && receipt ? getEducationSeriesSummary(item, receipt) : null),
+    [item, receipt]
+  );
+
+  const handleAddSeriesToCalendar = useCallback(() => {
+    if (seriesSummary && receipt) addEducationSeriesToDeviceCalendar(seriesSummary, receipt);
+  }, [seriesSummary, receipt]);
 
   const handleRelatedItemPress = (relatedItem: ResultItem) => {
     if (relatedItem.type === 'gear') {
@@ -102,7 +166,15 @@ export default function EducationDetailScreen() {
           <Feather name="arrow-left" size={24} color="white" />
         </TouchableOpacity>
         <Text className="text-white text-lg font-bold">Education Details</Text>
-        <View className="w-10" />
+        {isEditing ? (
+          <TouchableOpacity onPress={handleSave} disabled={isSaving} className="px-3 py-2 rounded-lg" style={{ backgroundColor: ACCENT_COLOR }}>
+            <Text className="text-white font-bold">{isSaving ? 'Saving…' : 'Save'}</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity onPress={handleEdit} className="p-2">
+            <Feather name="edit-2" size={22} color={ACCENT_COLOR} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}>
@@ -113,8 +185,19 @@ export default function EducationDetailScreen() {
               <Feather name="book-open" size={24} color={ACCENT_COLOR} />
             </View>
             <View className="flex-1">
-              <Text className="text-white text-xl font-bold">{item.description}</Text>
-              <Text className="text-crescender-400 text-sm">{receipt.merchant}</Text>
+              {isEditing ? (
+                <>
+                  <Text className="text-crescender-400 text-xs mb-1">Title</Text>
+                  <TextInput value={editTitle} onChangeText={setEditTitle} className="text-white text-xl font-bold bg-crescender-800/50 rounded px-2 py-1.5 border border-crescender-600" placeholderTextColor="#9ca3af" />
+                  <Text className="text-crescender-400 text-xs mt-2 mb-1">Subtitle (e.g. provider)</Text>
+                  <TextInput value={editSubtitle} onChangeText={setEditSubtitle} className="text-crescender-300 text-sm bg-crescender-800/50 rounded px-2 py-1.5 border border-crescender-600" placeholderTextColor="#9ca3af" />
+                </>
+              ) : (
+                <>
+                  <Text className="text-white text-xl font-bold">{item.description}</Text>
+                  <Text className="text-crescender-400 text-sm">{eduDetails?.subtitle ?? receipt.merchant}</Text>
+                </>
+              )}
             </View>
           </View>
 
@@ -128,24 +211,30 @@ export default function EducationDetailScreen() {
           </View>
 
           {/* Teacher/Student Info */}
-          {eduDetails && (eduDetails.teacherName || eduDetails.studentName) && (
+          {(eduDetails && (eduDetails.teacherName || eduDetails.studentName)) || isEditing ? (
             <View className="p-4 rounded-xl bg-crescender-900/40 mb-4">
-              {eduDetails.teacherName && (
+              {eduDetails?.teacherName && !isEditing && (
                 <View className="flex-row items-center gap-2 mb-2">
                   <Feather name="user" size={14} color={ACCENT_COLOR} />
                   <Text className="text-crescender-400 text-xs">Teacher:</Text>
                   <Text className="text-white text-sm font-medium">{eduDetails.teacherName}</Text>
                 </View>
               )}
-              {eduDetails.studentName && (
+              {isEditing ? (
+                <View className="flex-row items-center gap-2">
+                  <Feather name="user-check" size={14} color={ACCENT_COLOR} />
+                  <Text className="text-crescender-400 text-xs">Student:</Text>
+                  <TextInput value={editStudentName} onChangeText={setEditStudentName} className="flex-1 text-white text-sm bg-crescender-800/50 rounded px-2 py-1.5 border border-crescender-600" placeholder="Student name" placeholderTextColor="#9ca3af" />
+                </View>
+              ) : eduDetails?.studentName ? (
                 <View className="flex-row items-center gap-2">
                   <Feather name="user-check" size={14} color={ACCENT_COLOR} />
                   <Text className="text-crescender-400 text-xs">Student:</Text>
                   <Text className="text-white text-sm font-medium">{eduDetails.studentName}</Text>
                 </View>
-              )}
+              ) : null}
             </View>
-          )}
+          ) : null}
         </View>
 
         {/* Schedule Details */}
@@ -193,6 +282,30 @@ export default function EducationDetailScreen() {
           </View>
         )}
 
+        {/* Lesson series — one block: N occurrences, first–last date, Add to calendar */}
+        {seriesSummary && seriesSummary.count > 0 && (
+          <View className="p-6 border-b border-crescender-800">
+            <Text className="font-bold mb-3 uppercase tracking-widest text-xs" style={{ color: ACCENT_COLOR }}>Lesson series</Text>
+            <View className="bg-crescender-900/40 p-4 rounded-xl flex-row items-center justify-between">
+              <View className="flex-1">
+                <Text className="text-white font-medium">{seriesSummary.count} occurrence{seriesSummary.count === 1 ? '' : 's'}</Text>
+                <Text className="text-crescender-400 text-sm">
+                  {seriesSummary.firstDate === seriesSummary.lastDate
+                    ? formatFullDate(seriesSummary.firstDate)
+                    : `${formatFullDate(seriesSummary.firstDate)} to ${formatFullDate(seriesSummary.lastDate)}`}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={handleAddSeriesToCalendar}
+                className="p-2 rounded-lg"
+                style={{ backgroundColor: `${ACCENT_COLOR}20` }}
+              >
+                <Feather name="calendar" size={18} color={ACCENT_COLOR} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Merchant Contact Details */}
         {(receipt.merchantPhone || receipt.merchantEmail || receipt.merchantAddress) && (
           <View className="p-6 border-b border-crescender-800">
@@ -225,7 +338,7 @@ export default function EducationDetailScreen() {
           </View>
         )}
 
-        {/* Related Records */}
+        {/* Related Records — single column on mobile */}
         {relatedItems.length > 0 && (
           <View className="p-6">
             <Text className="font-bold mb-4 uppercase tracking-widest text-xs" style={{ color: ACCENT_COLOR }}>Related Records</Text>
@@ -234,9 +347,11 @@ export default function EducationDetailScreen() {
                 const cardProps = {
                   item: relatedItem,
                   onPress: () => handleRelatedItemPress(relatedItem),
+                  onLinkPress: handleRelatedLinkPress,
                 };
+                const colWidth = width < RELATED_COLUMN_BREAK ? '100%' : '50%';
                 return (
-                  <View key={relatedItem.id} style={{ width: '50%', padding: 4 }}>
+                  <View key={relatedItem.id} style={{ width: colWidth, padding: 4 }}>
                     {relatedItem.type === 'gear' && <GearCard {...cardProps} />}
                     {relatedItem.type === 'service' && <ServiceCard {...cardProps} />}
                     {relatedItem.type === 'transaction' && <TransactionCard {...cardProps} />}

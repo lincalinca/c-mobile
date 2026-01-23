@@ -1,24 +1,21 @@
 import React from 'react';
-import { BaseCard, BaseCardProps } from './BaseCard';
+import { SimpleCard } from './SimpleCard';
 import { CardDetailRows } from './CardDetailRows';
 import type { CardDetailRow } from './CardDetailRows';
+import type { ResultItem } from '../../lib/results';
 
 const ACCENT_COLOR = '#c084fc';
 const ICON_BG_COLOR = 'rgba(192, 132, 252, 0.15)';
 
-export interface EducationCardProps {
-  item: BaseCardProps['item'];
+export interface SimpleEducationCardProps {
+  item: ResultItem;
   onPress: () => void;
-  onLinkPress?: (targetId: string, targetType: string) => void;
-  isHighlighted?: boolean;
 }
 
-export const EducationCard = ({
+export const SimpleEducationCard = ({
   item,
   onPress,
-  onLinkPress,
-  isHighlighted,
-}: EducationCardProps) => {
+}: SimpleEducationCardProps) => {
   const metadata = item.metadata || {};
   const studentName = metadata.studentName || 'Student';
   const frequency = metadata.frequency || 'One-off';
@@ -54,17 +51,14 @@ export const EducationCard = ({
   const detailContent = <CardDetailRows rows={rows} accentColor={ACCENT_COLOR} />;
 
   return (
-    <BaseCard
+    <SimpleCard
       item={item}
       onPress={onPress}
-      onLinkPress={onLinkPress}
-      isHighlighted={isHighlighted}
       accentColor={ACCENT_COLOR}
       iconName="book-open"
       iconBgColor={ICON_BG_COLOR}
       detailContent={detailContent}
       subtitleOverride={studentName}
-      isAnimatedHighlight
     />
   );
 };

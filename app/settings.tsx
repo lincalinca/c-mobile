@@ -1,23 +1,29 @@
-import { View, Text, TouchableOpacity, ScrollView, Platform, Switch, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Platform, Switch, Linking, Modal, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PersistentHeader } from '../components/header/PersistentHeader';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [useIconFilters, setUseIconFilters] = useState(false);
+  const [financialYearStartMonth, setFinancialYearStartMonth] = useState(7);
+  const [showFyPicker, setShowFyPicker] = useState(false);
 
   // Load settings from storage
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const saved = await AsyncStorage.getItem('useIconFilters');
-        if (saved !== null) {
-          setUseIconFilters(JSON.parse(saved));
-        }
+        const [filters, fy] = await Promise.all([
+          AsyncStorage.getItem('useIconFilters'),
+          AsyncStorage.getItem('financialYearStartMonth'),
+        ]);
+        if (filters !== null) setUseIconFilters(JSON.parse(filters));
+        if (fy !== null) setFinancialYearStartMonth(parseInt(fy, 10));
       } catch (e) {
         console.error('Failed to load settings', e);
       }
@@ -30,6 +36,16 @@ export default function SettingsScreen() {
     setUseIconFilters(value);
     try {
       await AsyncStorage.setItem('useIconFilters', JSON.stringify(value));
+    } catch (e) {
+      console.error('Failed to save settings', e);
+    }
+  };
+
+  const handleFinancialYearStartChange = async (month: number) => {
+    setFinancialYearStartMonth(month);
+    setShowFyPicker(false);
+    try {
+      await AsyncStorage.setItem('financialYearStartMonth', String(month));
     } catch (e) {
       console.error('Failed to save settings', e);
     }
@@ -64,6 +80,28 @@ export default function SettingsScreen() {
           </View>
           <Text className="text-crescender-500 text-[10px] mt-2 ml-1 leading-relaxed">
             Display category filters as icons instead of text labels.
+          </Text>
+        </View>
+
+        <View className="mb-6">
+          <Text className="text-gold font-bold uppercase tracking-widest text-xs ml-1 mb-2">Financial year</Text>
+          <TouchableOpacity
+            onPress={() => setShowFyPicker(true)}
+            className="bg-crescender-900/40 rounded-2xl border border-crescender-800 flex-row items-center justify-between p-4"
+          >
+            <View className="flex-row items-center gap-3">
+              <View className="w-8 h-8 rounded-full bg-crescender-800 items-center justify-center">
+                <Feather name="calendar" size={18} color="#f5c518" />
+              </View>
+              <Text className="text-white font-medium">Financial year start month</Text>
+            </View>
+            <View className="flex-row items-center gap-2">
+              <Text className="text-crescender-300">{MONTH_NAMES[financialYearStartMonth - 1]}</Text>
+              <Feather name="chevron-down" size={18} color="#6b7280" />
+            </View>
+          </TouchableOpacity>
+          <Text className="text-crescender-500 text-[10px] mt-2 ml-1 leading-relaxed">
+            Used for “Last financial year” and “This financial year” in the date picker. Default: July.
           </Text>
         </View>
 
@@ -123,6 +161,25 @@ export default function SettingsScreen() {
           <Text className="text-crescender-700 text-[10px]">© 2024 Crescender Australia</Text>
         </View>
       </ScrollView>
+
+      <Modal transparent visible={showFyPicker} animationType="fade" onRequestClose={() => setShowFyPicker(false)}>
+        <Pressable className="flex-1 bg-black/60 justify-center px-6" onPress={() => setShowFyPicker(false)}>
+          <Pressable onPress={(e) => e.stopPropagation()} className="bg-crescender-900 rounded-2xl border border-crescender-700 max-h-80">
+            <Text className="text-gold font-bold text-center py-3 border-b border-crescender-700">Financial year start month</Text>
+            <ScrollView>
+              {MONTH_NAMES.map((name, i) => (
+                <TouchableOpacity
+                  key={i}
+                  onPress={() => handleFinancialYearStartChange(i + 1)}
+                  className={`py-3 px-4 border-b border-crescender-800/50 ${financialYearStartMonth === i + 1 ? 'bg-gold/10' : ''}`}
+                >
+                  <Text className={financialYearStartMonth === i + 1 ? 'text-gold font-semibold' : 'text-white'}>{name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

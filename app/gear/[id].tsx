@@ -11,6 +11,49 @@ import * as DocumentPicker from 'expo-document-picker';
 import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { callSupabaseFunction } from '../../lib/supabase';
 import { ProcessingView } from '../../components/processing/ProcessingView';
+import { SimpleGearCard } from '../../components/results/SimpleGearCard';
+import { SimpleServiceCard } from '../../components/results/SimpleServiceCard';
+import { SimpleEducationCard } from '../../components/results/SimpleEducationCard';
+import type { ResultItem } from '../../lib/results';
+
+// Helper to convert line item to ResultItem format for card rendering
+function lineItemToResultItem(item: LineItemWithDetails, receipt: Receipt): ResultItem {
+  const metadata: any = {};
+
+  if (item.category === 'service' && item.serviceDetailsParsed) {
+    metadata.serviceType = item.serviceDetailsParsed.serviceType;
+    metadata.technician = item.serviceDetailsParsed.technicianName || item.serviceDetailsParsed.providerName;
+    metadata.warranty = item.serviceDetailsParsed.warrantyDetails;
+    metadata.notes = item.serviceDetailsParsed.notes;
+  }
+
+  if (item.category === 'education' && item.educationDetailsParsed) {
+    metadata.studentName = item.educationDetailsParsed.studentName;
+    metadata.teacherName = item.educationDetailsParsed.teacherName;
+    metadata.frequency = item.educationDetailsParsed.frequency;
+    metadata.duration = item.educationDetailsParsed.duration;
+    metadata.startDate = item.educationDetailsParsed.startDate;
+    metadata.endDate = item.educationDetailsParsed.endDate;
+    metadata.daysOfWeek = item.educationDetailsParsed.daysOfWeek;
+    metadata.times = item.educationDetailsParsed.times;
+  }
+  
+  if (item.category === 'gear' && item.gearDetailsParsed) {
+      // Pass through gear details if needed by SimpleGearCard in future, 
+      // currently SimpleGearCard relies on default SimpleCard behavior + specific styling
+  }
+
+  return {
+    id: item.id,
+    type: item.category as any,
+    title: item.description,
+    subtitle: item.category === 'gear' ? item.brand + (item.model ? ` ${item.model}` : '') : undefined,
+    amount: item.totalPrice,
+    date: receipt.transactionDate, // Not used in SimpleCard footer but part of type
+    metadata: metadata,
+    receiptId: receipt.id,
+  };
+}
 
 // Document type options
 const DOCUMENT_TYPES = [
@@ -671,155 +714,16 @@ export default function GearDetailScreen() {
             {gearItems.length > 0 && (
               <View className="p-6 border-b border-crescender-800">
                 <Text className="text-gold font-bold mb-4 uppercase tracking-widest text-sm">Captured Gear</Text>
-                {gearItems.map((item, idx) => {
-                  const gearDetails = item.gearDetailsParsed;
-                  return (
-                    <View key={item.id} className="bg-crescender-800/30 p-4 rounded-2xl mb-3 border border-gold/10">
-                      <Text className="text-white font-bold mb-2">{item.description}</Text>
-
-                      {/* Basic Tags */}
-                      <View className="flex-row flex-wrap gap-2 mb-3">
-                        {item.brand && (
-                          <View className="bg-gold/10 px-2 py-0.5 rounded-md border border-gold/20">
-                            <Text className="text-gold text-[10px] font-bold">{item.brand}</Text>
-                          </View>
-                        )}
-                        {item.model && (
-                          <View className="bg-crescender-800 px-2 py-0.5 rounded-md">
-                            <Text className="text-crescender-300 text-[10px]">{item.model}</Text>
-                          </View>
-                        )}
-                        {gearDetails?.condition && (
-                          <View className="bg-blue-500/20 px-2 py-0.5 rounded-md border border-blue-500/30">
-                            <Text className="text-blue-300 text-[10px] font-bold">{gearDetails.condition}</Text>
-                          </View>
-                        )}
-                        {gearDetails?.tier && (
-                          <View className="bg-purple-500/20 px-2 py-0.5 rounded-md border border-purple-500/30">
-                            <Text className="text-purple-300 text-[10px] font-bold">{gearDetails.tier}</Text>
-                          </View>
-                        )}
-                      </View>
-
-                      {/* Comprehensive Gear Details */}
-                      {gearDetails && (
-                        <View className="bg-crescender-900/40 p-3 rounded-xl mb-3 border border-crescender-700/50">
-                          <Text className="text-crescender-400 text-[10px] font-bold mb-2 uppercase tracking-widest">Gear Details</Text>
-
-                          {gearDetails.manufacturer && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-24">Manufacturer:</Text>
-                              <Text className="text-crescender-200 text-sm flex-1">{gearDetails.manufacturer}</Text>
-                            </View>
-                          )}
-                          {gearDetails.brand && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-24">Brand:</Text>
-                              <Text className="text-crescender-200 text-sm flex-1">{gearDetails.brand}</Text>
-                            </View>
-                          )}
-                          {gearDetails.modelName && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-24">Model:</Text>
-                              <Text className="text-crescender-200 text-sm flex-1">{gearDetails.modelName}</Text>
-                            </View>
-                          )}
-                          {gearDetails.modelNumber && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-24">Model #:</Text>
-                              <Text className="text-crescender-200 text-sm flex-1 font-mono">{gearDetails.modelNumber}</Text>
-                            </View>
-                          )}
-                          {gearDetails.serialNumber && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-24">Serial #:</Text>
-                              <Text className="text-gold text-sm flex-1 font-mono font-bold">{gearDetails.serialNumber}</Text>
-                            </View>
-                          )}
-                          {gearDetails.makeYear && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-24">Year:</Text>
-                              <Text className="text-crescender-200 text-sm flex-1">{gearDetails.makeYear}</Text>
-                            </View>
-                          )}
-                          {gearDetails.colour && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-24">Colour:</Text>
-                              <Text className="text-crescender-200 text-sm flex-1">{gearDetails.colour}</Text>
-                            </View>
-                          )}
-                          {gearDetails.size && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-24">Size:</Text>
-                              <Text className="text-crescender-200 text-sm flex-1">{gearDetails.size}</Text>
-                            </View>
-                          )}
-                          {gearDetails.uniqueDetail && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-24">Details:</Text>
-                              <Text className="text-crescender-200 text-sm flex-1 italic">{gearDetails.uniqueDetail}</Text>
-                            </View>
-                          )}
-                          {gearDetails.notedDamage && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-24">Damage:</Text>
-                              <Text className="text-red-400 text-sm flex-1">{gearDetails.notedDamage}</Text>
-                            </View>
-                          )}
-                          {gearDetails.officialUrl && (
-                            <TouchableOpacity
-                              onPress={() => Linking.openURL(gearDetails.officialUrl!.startsWith('http') ? gearDetails.officialUrl! : `https://${gearDetails.officialUrl}`)}
-                              className="flex-row mb-1"
-                            >
-                              <Text className="text-crescender-500 text-sm w-24">Product URL:</Text>
-                              <Text className="text-gold text-sm flex-1 underline" numberOfLines={1}>{gearDetails.officialUrl}</Text>
-                            </TouchableOpacity>
-                          )}
-                          {gearDetails.officialManual && (
-                            <TouchableOpacity
-                              onPress={() => Linking.openURL(gearDetails.officialManual!.startsWith('http') ? gearDetails.officialManual! : `https://${gearDetails.officialManual}`)}
-                              className="flex-row mb-1"
-                            >
-                              <Text className="text-crescender-500 text-sm w-24">Manual:</Text>
-                              <Text className="text-gold text-sm flex-1 underline" numberOfLines={1}>{gearDetails.officialManual}</Text>
-                            </TouchableOpacity>
-                          )}
-                          {gearDetails.warrantyContactDetails && (
-                            <View className="mt-2 pt-2 border-t border-crescender-700/50">
-                              <Text className="text-crescender-400 text-[10px] font-bold mb-1 uppercase tracking-widest">Warranty Contact</Text>
-                              {gearDetails.warrantyContactDetails.phone && (
-                                <TouchableOpacity
-                                  onPress={() => Linking.openURL(`tel:${gearDetails.warrantyContactDetails!.phone!.replace(/\s/g, '')}`)}
-                                >
-                                  <Text className="text-gold text-sm underline">📞 {gearDetails.warrantyContactDetails.phone}</Text>
-                                </TouchableOpacity>
-                              )}
-                              {gearDetails.warrantyContactDetails.email && (
-                                <TouchableOpacity
-                                  onPress={() => Linking.openURL(`mailto:${gearDetails.warrantyContactDetails!.email}`)}
-                                >
-                                  <Text className="text-gold text-sm underline">✉️ {gearDetails.warrantyContactDetails.email}</Text>
-                                </TouchableOpacity>
-                              )}
-                              {gearDetails.warrantyContactDetails.website && (
-                                <TouchableOpacity
-                                  onPress={() => Linking.openURL(`https://${gearDetails.warrantyContactDetails!.website!.replace(/^https?:\/\//, '')}`)}
-                                >
-                                  <Text className="text-gold text-sm underline">🌐 {gearDetails.warrantyContactDetails.website}</Text>
-                                </TouchableOpacity>
-                              )}
-                            </View>
-                          )}
-                        </View>
-                      )}
-
-                      <View className="flex-row justify-between items-center">
-                        <Text className="text-crescender-400 text-sm">Qty: {item.quantity}</Text>
-                        <Text className="text-white font-bold">${(item.totalPrice / 100).toFixed(2)}</Text>
-                      </View>
+                <View className="flex-row flex-wrap" style={{ marginHorizontal: -4 }}>
+                  {gearItems.map((item) => (
+                    <View key={item.id} style={{ width: '100%', padding: 4 }}>
+                      <SimpleGearCard
+                        item={lineItemToResultItem(item, receipt)}
+                        onPress={() => router.push(`/gear/item/${item.id}`)}
+                      />
                     </View>
-                  );
-                })}
+                  ))}
+                </View>
               </View>
             )}
 
@@ -827,75 +731,32 @@ export default function GearDetailScreen() {
             {(serviceItems.length > 0 || eventItems.length > 0) && (
               <View className="p-6">
                 <Text className="text-crescender-400 font-bold mb-4 uppercase tracking-widest text-sm">Other Items</Text>
-                {[...serviceItems, ...eventItems].map((item, idx) => {
-                  const educationDetails = item.educationDetailsParsed;
-                  return (
-                    <View key={item.id} className="bg-crescender-800/20 p-3 rounded-xl mb-3 border border-crescender-700/30">
-                      <View className="flex-row justify-between items-start mb-2">
-                        <View className="flex-1 mr-4">
-                          <Text className="text-white font-medium">{item.description}</Text>
-                          <Text className="text-crescender-500 text-sm capitalize">{item.category}</Text>
-                        </View>
-                        <Text className="text-crescender-200 font-bold">${(item.totalPrice / 100).toFixed(2)}</Text>
+                <View className="flex-row flex-wrap" style={{ marginHorizontal: -4 }}>
+                  {[...serviceItems, ...eventItems].map((item) => {
+                    const resultItem = lineItemToResultItem(item, receipt);
+                    return (
+                      <View key={item.id} style={{ width: '100%', padding: 4 }}>
+                        {item.category === 'service' ? (
+                          <SimpleServiceCard
+                            item={resultItem}
+                            onPress={() => router.push(`/gear/item/${item.id}`)}
+                          />
+                        ) : item.category === 'education' ? (
+                          <SimpleEducationCard
+                            item={resultItem}
+                            onPress={() => router.push(`/gear/item/${item.id}`)}
+                          />
+                        ) : (
+                          // Fallback for events or other types not strictly education/service but in this list
+                          <SimpleGearCard
+                             item={resultItem}
+                             onPress={() => router.push(`/gear/item/${item.id}`)}
+                          />
+                        )}
                       </View>
-
-                      {/* Education Details */}
-                      {educationDetails && (
-                        <View className="bg-crescender-900/40 p-2 rounded-lg mt-2 border border-crescender-700/50">
-                          <Text className="text-crescender-400 text-[10px] font-bold mb-1 uppercase tracking-widest">Education Details</Text>
-                          {educationDetails.teacherName && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-20">Teacher:</Text>
-                              <Text className="text-crescender-200 text-sm flex-1">{educationDetails.teacherName}</Text>
-                            </View>
-                          )}
-                          {educationDetails.studentName && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-20">Student:</Text>
-                              <Text className="text-crescender-200 text-sm flex-1">{educationDetails.studentName}</Text>
-                            </View>
-                          )}
-                          {educationDetails.frequency && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-20">Frequency:</Text>
-                              <Text className="text-crescender-200 text-sm flex-1">{educationDetails.frequency}</Text>
-                            </View>
-                          )}
-                          {educationDetails.duration && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-20">Duration:</Text>
-                              <Text className="text-crescender-200 text-sm flex-1">{educationDetails.duration}</Text>
-                            </View>
-                          )}
-                          {educationDetails.startDate && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-20">Start:</Text>
-                              <Text className="text-crescender-200 text-sm flex-1">{educationDetails.startDate}</Text>
-                            </View>
-                          )}
-                          {educationDetails.endDate && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-20">End:</Text>
-                              <Text className="text-crescender-200 text-sm flex-1">{educationDetails.endDate}</Text>
-                            </View>
-                          )}
-                          {educationDetails.daysOfWeek && educationDetails.daysOfWeek.length > 0 && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-20">Days:</Text>
-                              <Text className="text-crescender-200 text-sm flex-1">{educationDetails.daysOfWeek.join(', ')}</Text>
-                            </View>
-                          )}
-                          {educationDetails.times && educationDetails.times.length > 0 && (
-                            <View className="flex-row mb-1">
-                              <Text className="text-crescender-500 text-sm w-20">Times:</Text>
-                              <Text className="text-crescender-200 text-sm flex-1">{educationDetails.times.join(', ')}</Text>
-                            </View>
-                          )}
-                        </View>
-                      )}
-                    </View>
-                  );
-                })}
+                    );
+                  })}
+                </View>
               </View>
             )}
           </>

@@ -60,6 +60,7 @@ const initTablesSQL = `
     model text,
     instrument_type text,
     gear_category text,
+    sku text,
     serial_number text,
     quantity integer DEFAULT 1,
     original_unit_price integer,
@@ -69,6 +70,7 @@ const initTablesSQL = `
     total_price integer NOT NULL,
     gear_details text,
     education_details text,
+    service_details text,
     warranty_details text,
     notes text,
     confidence real,
@@ -191,6 +193,22 @@ export async function initDatabase(): Promise<void> {
       try {
         expoDb.execSync('ALTER TABLE line_items ADD COLUMN warranty_details text;');
         console.log('[DB] Migration: Added warranty_details to line_items');
+      } catch (e) {
+        // Column already exists, ignore
+      }
+
+      // Phase 3: SKU column (transaction capture improvements)
+      try {
+        expoDb.execSync('ALTER TABLE line_items ADD COLUMN sku text;');
+        console.log('[DB] Migration: Added sku to line_items');
+      } catch (e) {
+        // Column already exists, ignore
+      }
+
+      // Phase 4: Service details column (service dates and event generation)
+      try {
+        expoDb.execSync('ALTER TABLE line_items ADD COLUMN service_details text;');
+        console.log('[DB] Migration: Added service_details to line_items');
       } catch (e) {
         // Column already exists, ignore
       }

@@ -48,9 +48,15 @@
           "androidAppId": "ca-app-pub-XXXXX~ZZZZZ"
         }
       ],
-      "expo-tracking-transparency"
+      "expo-tracking-transparency",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Crescender would like to add events to your calendar so you can view lessons and appointments next to your schedule."
+        }
+      ]
     ],
-    "scheme": "crescender-mobile",
+    "scheme": "crescender",
     "experiments": {
       "typedRoutes": true
     }

@@ -1,25 +1,21 @@
 import React from 'react';
-import { BaseCard, BaseCardProps } from './BaseCard';
+import { SimpleCard } from './SimpleCard';
 import { CardDetailRows } from './CardDetailRows';
 import type { CardDetailRow } from './CardDetailRows';
-import { getRelativeDateLabel } from '../../lib/dateUtils';
+import type { ResultItem } from '../../lib/results';
 
 const ACCENT_COLOR = '#f97316';
 const ICON_BG_COLOR = 'rgba(249, 115, 22, 0.15)';
 
-export interface ServiceCardProps {
-  item: BaseCardProps['item'];
+export interface SimpleServiceCardProps {
+  item: ResultItem;
   onPress: () => void;
-  onLinkPress?: (targetId: string, targetType: string) => void;
-  isHighlighted?: boolean;
 }
 
-export const ServiceCard = ({
+export const SimpleServiceCard = ({
   item,
   onPress,
-  onLinkPress,
-  isHighlighted,
-}: ServiceCardProps) => {
+}: SimpleServiceCardProps) => {
   const metadata = item.metadata || {};
   const serviceType = metadata.serviceType || metadata.type || 'Service';
   const technician = metadata.technician || metadata.provider || '';
@@ -30,22 +26,13 @@ export const ServiceCard = ({
   if (technician) rows.push({ icon: 'user', text: technician, accent: true });
   if (warranty) rows.push({ icon: 'shield', text: warranty });
   if (notes) rows.push({ icon: 'info', text: notes, numberOfLines: 2 });
-  if (rows.length === 0) {
-    rows.push({
-      icon: 'clock',
-      text: getRelativeDateLabel(item.date),
-      accent: true,
-    });
-  }
 
-  const detailContent = <CardDetailRows rows={rows} accentColor={ACCENT_COLOR} />;
+  const detailContent = rows.length > 0 ? <CardDetailRows rows={rows} accentColor={ACCENT_COLOR} /> : undefined;
 
   return (
-    <BaseCard
+    <SimpleCard
       item={item}
       onPress={onPress}
-      onLinkPress={onLinkPress}
-      isHighlighted={isHighlighted}
       accentColor={ACCENT_COLOR}
       iconName="tool"
       iconBgColor={ICON_BG_COLOR}

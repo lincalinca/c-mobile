@@ -41,6 +41,8 @@ export interface GearDetails {
 export interface EducationDetails {
   teacherName?: string;
   studentName?: string;
+  /** Override for the hero subtitle (e.g. provider name); if unset, receipt.merchant is used. */
+  subtitle?: string;
   frequency?: string;
   duration?: string;
   startDate?: string;
@@ -137,6 +139,12 @@ export const TransactionRepository = {
     return items.map(enhanceLineItem);
   },
 
+  async getLineItemById(id: string): Promise<LineItemWithDetails | null> {
+    await waitForDb();
+    const result = await db.select().from(lineItems).where(eq(lineItems.id, id));
+    return result[0] ? enhanceLineItem(result[0]) : null;
+  },
+
   async create(transaction: NewTransaction, items: NewLineItem[]) {
     await waitForDb();
     try {
@@ -174,6 +182,15 @@ export const TransactionRepository = {
     await waitForDb();
     await db.update(transactions).set(updates).where(eq(transactions.id, id));
     console.log('[Repository] Updated transaction:', id);
+  },
+
+  /**
+   * Update a single line item by id (e.g. description, educationDetails).
+   */
+  async updateLineItem(id: string, updates: Partial<Pick<LineItem, 'description' | 'educationDetails'>>) {
+    await waitForDb();
+    await db.update(lineItems).set(updates).where(eq(lineItems.id, id));
+    console.log('[Repository] Updated line item:', id);
   },
 
   /**

@@ -70,6 +70,7 @@ export const lineItems = sqliteTable('line_items', {
   model: text('model'),
   instrumentType: text('instrument_type'),
   gearCategory: text('gear_category'), // 'Instruments' | 'General Accessories' | etc
+  sku: text('sku'), // Stock Keeping Unit or internal item code (SKU, DLUO, etc.)
   serialNumber: text('serial_number'),
 
   // Pricing (all in cents)
@@ -85,6 +86,9 @@ export const lineItems = sqliteTable('line_items', {
 
   // For education items - store as JSON
   educationDetails: text('education_details'), // JSON: { teacherName, studentName, frequency, duration, startDate, endDate, daysOfWeek, times }
+
+  // For service items - store as JSON
+  serviceDetails: text('service_details'), // JSON: { startDate, endDate, isMultiDay, pickupDate, dropoffDate, technician, gearItemId, gearDescription, serviceType }
 
   // For warranty items - store as JSON
   warrantyDetails: text('warranty_details'), // JSON: { coveragePeriod, coverageType, startDate }

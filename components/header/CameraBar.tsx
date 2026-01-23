@@ -28,18 +28,62 @@ export const CameraBar = ({
   const endDate = endProp ?? null;
 
   const hasRange = startDate != null || endDate != null;
-  const label = (() => {
+  const currentYear = new Date().getFullYear();
+  const startYear = startDate?.getFullYear();
+  const endYear = endDate?.getFullYear();
+  const isSingleDate =
+    !!startDate &&
+    !!endDate &&
+    formatDayMonth(startDate) === formatDayMonth(endDate);
+  const shouldShowYears =
+    !!startDate &&
+    !!endDate &&
+    (startYear !== currentYear || endYear !== currentYear);
+  const shouldShowYearLine = shouldShowYears && startYear != null && endYear != null;
+
+  const renderRangeLabel = () => {
     if (!startDate && !endDate) return null;
-    if (startDate && endDate) {
-      const a = formatDayMonth(startDate);
-      const b = formatDayMonth(endDate);
-      if (a === b) return a;
-      return `${a} – ${b}`;
+    if (isSingleDate) {
+      return (
+        <Text
+          className="text-crescender-200 text-sm font-bold uppercase tracking-widest"
+          numberOfLines={1}
+        >
+          {formatDayMonth(startDate!)}
+        </Text>
+      );
     }
-    if (startDate) return `${formatDayMonth(startDate)} – …`;
-    if (endDate) return `… – ${formatDayMonth(endDate)}`;
-    return null;
-  })();
+
+    const startLabel = startDate ? formatDayMonth(startDate) : '…';
+    const endLabel = endDate ? formatDayMonth(endDate) : '…';
+
+    return (
+      <View className="flex-row items-center justify-center gap-1" style={{ minWidth: 120, maxWidth: 200 }}>
+        <Text
+          className="text-crescender-200 text-sm font-bold uppercase tracking-widest"
+          numberOfLines={1}
+          style={{ flex: 1, textAlign: 'left' }}
+        >
+          {startLabel}
+        </Text>
+        <Text
+          className="text-crescender-200 text-sm font-bold uppercase tracking-widest"
+          numberOfLines={1}
+          style={{ lineHeight: 16 }}
+        >
+          –
+        </Text>
+        <Text
+          className="text-crescender-200 text-sm font-bold uppercase tracking-widest"
+          numberOfLines={1}
+          style={{ flex: 1, textAlign: 'right' }}
+        >
+          {endLabel}
+        </Text>
+      </View>
+    );
+  };
+  const rangeLabelElement = renderRangeLabel();
 
   return (
     <View className="px-6 py-2 flex-row items-center gap-3">
@@ -60,10 +104,26 @@ export const CameraBar = ({
           className="h-14 bg-crescender-800/40 px-4 rounded-2xl border border-crescender-700/50 flex-row items-center justify-center gap-2"
         >
           <Feather name="calendar" size={18} color="#f5c518" />
-          {label != null && (
-            <Text className="text-crescender-200 text-sm font-bold uppercase tracking-widest" numberOfLines={1}>
-              {label}
-            </Text>
+          {rangeLabelElement && (
+            <View className="items-center justify-center gap-[2px]">
+              {rangeLabelElement}
+              {shouldShowYearLine && (
+                <View className="flex-row items-center justify-between gap-2" style={{ minWidth: 120, maxWidth: 200 }}>
+                  <Text
+                    className="text-crescender-300 text-[10px] font-bold uppercase tracking-widest text-left flex-1"
+                    numberOfLines={1}
+                  >
+                    {startYear}
+                  </Text>
+                  <Text
+                    className="text-crescender-300 text-[10px] font-bold uppercase tracking-widest text-right flex-1"
+                    numberOfLines={1}
+                  >
+                    {endYear}
+                  </Text>
+                </View>
+              )}
+            </View>
           )}
         </TouchableOpacity>
       )}
