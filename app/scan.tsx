@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { callSupabaseFunction } from '../lib/supabase';
 import { ProcessingView } from '../components/processing/ProcessingView';
 import { TransactionRepository } from '../lib/repository';
+import { canScan, recordScan, getScansRemaining } from '../lib/usageTracking';
 
 const isAndroid = Platform.OS === 'android';
 
@@ -164,6 +165,26 @@ export default function ScanScreen() {
 
   const processImage = async (uri: string, base64: string | null | undefined) => {
     if (!base64) return;
+    
+    // Check scan quota before processing
+    const hasQuota = await canScan();
+    if (!hasQuota) {
+      const remaining = await getScansRemaining();
+      Alert.alert(
+        'Scan Limit Reached',
+        `You've used all ${10 - remaining} of your weekly free scans. Your quota resets every Monday.\n\nWatch an ad to earn bonus scans, or upgrade to premium for unlimited scans.`,
+        [
+          { text: 'OK', style: 'default' },
+          { 
+            text: 'View Usage', 
+            onPress: () => router.push('/usage'),
+            style: 'default'
+          }
+        ]
+      );
+      return;
+    }
+
     setIsProcessing(true);
     try {
       // Fetch existing merchants for matching
@@ -182,6 +203,9 @@ export default function ScanScreen() {
         })),
       });
       if (!receiptData || !receiptData.financial) throw new Error('Incomplete data');
+
+      // Record successful scan
+      await recordScan();
 
       setIsProcessing(false);
       router.push({
