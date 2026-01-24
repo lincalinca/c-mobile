@@ -6,4 +6,5 @@
 
 export { AdBanner } from './BannerAd';
 export { useInterstitialAd, usePreloadInterstitialAd } from './InterstitialAd';
+export { useRewardedAd } from './RewardedAd';
 export { ATTRequest, useATT } from './ATTRequest';

@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { callSupabaseFunction } from '../lib/supabase';
 import { ProcessingView } from '../components/processing/ProcessingView';
 import { TransactionRepository } from '../lib/repository';
-import { canScan, recordScan, getScansRemaining } from '../lib/usageTracking';
+import { recordScan, hasScansRemaining } from '../lib/usageTracking';
 
 const isAndroid = Platform.OS === 'android';
 
@@ -166,18 +166,17 @@ export default function ScanScreen() {
   const processImage = async (uri: string, base64: string | null | undefined) => {
     if (!base64) return;
     
-    // Check scan quota before processing
-    const hasQuota = await canScan();
+    // Check if user has scans remaining (including bonus scans)
+    const hasQuota = await hasScansRemaining();
     if (!hasQuota) {
-      const remaining = await getScansRemaining();
       Alert.alert(
-        'Scan Limit Reached',
-        `You've used all ${10 - remaining} of your weekly free scans. Your quota resets every Monday.\n\nWatch an ad to earn bonus scans, or upgrade to premium for unlimited scans.`,
+        'No Scans Remaining',
+        'You\'ve used all your scans for this week. Watch an ad to get 10 more scans.',
         [
-          { text: 'OK', style: 'default' },
+          { text: 'Cancel', style: 'cancel' },
           { 
-            text: 'View Usage', 
-            onPress: () => router.push('/usage'),
+            text: 'Get More Scans', 
+            onPress: () => router.push('/get-more-scans'),
             style: 'default'
           }
         ]

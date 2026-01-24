@@ -1,11 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const WEEKLY_SCAN_LIMIT = 10;
+const BONUS_SCANS_PER_AD = 10;
 const STORAGE_KEY_SCANS = 'usage_scans';
 const STORAGE_KEY_WEEK_START = 'usage_week_start';
+const STORAGE_KEY_BONUS_SCANS = 'usage_bonus_scans';
 
 interface ScanRecord {
   timestamp: number; // Unix timestamp in milliseconds
+}
+
+interface BonusScanRecord {
+  timestamp: number; // When the bonus was earned
+  amount: number; // Number of scans added
 }
 
 /**
@@ -31,6 +38,7 @@ async function ensureCurrentWeek(): Promise<void> {
     // First time - set current week
     await AsyncStorage.setItem(STORAGE_KEY_WEEK_START, currentWeekStart.getTime().toString());
     await AsyncStorage.setItem(STORAGE_KEY_SCANS, JSON.stringify([]));
+    await AsyncStorage.setItem(STORAGE_KEY_BONUS_SCANS, JSON.stringify([]));
     return;
   }
 
@@ -40,6 +48,7 @@ async function ensureCurrentWeek(): Promise<void> {
   if (storedWeekStart.getTime() !== currentWeekStart.getTime()) {
     await AsyncStorage.setItem(STORAGE_KEY_WEEK_START, currentWeekStart.getTime().toString());
     await AsyncStorage.setItem(STORAGE_KEY_SCANS, JSON.stringify([]));
+    await AsyncStorage.setItem(STORAGE_KEY_BONUS_SCANS, JSON.stringify([]));
   }
 }
 
@@ -72,36 +81,80 @@ export async function recordScan(): Promise<void> {
 }
 
 /**
+ * Get bonus scans for the current week
+ */
+async function getBonusScans(): Promise<BonusScanRecord[]> {
+  await ensureCurrentWeek();
+  const bonusStr = await AsyncStorage.getItem(STORAGE_KEY_BONUS_SCANS);
+  if (!bonusStr) return [];
+  
+  try {
+    const bonuses: BonusScanRecord[] = JSON.parse(bonusStr);
+    // Filter out any bonuses from previous weeks (safety check)
+    const weekStart = getWeekStart();
+    return bonuses.filter(bonus => bonus.timestamp >= weekStart.getTime());
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Add bonus scans from watching an ad
+ */
+export async function addBonusScans(amount: number = BONUS_SCANS_PER_AD): Promise<void> {
+  await ensureCurrentWeek();
+  const bonuses = await getBonusScans();
+  bonuses.push({ timestamp: Date.now(), amount });
+  await AsyncStorage.setItem(STORAGE_KEY_BONUS_SCANS, JSON.stringify(bonuses));
+}
+
+/**
  * Get usage statistics for the current week
  */
 export async function getUsageStats(): Promise<{
   scansUsed: number;
   scansLimit: number;
+  bonusScans: number;
   scansRemaining: number;
   weekStart: Date;
   weekEnd: Date;
 }> {
   await ensureCurrentWeek();
   const scans = await getWeeklyScans();
+  const bonuses = await getBonusScans();
+  const bonusScans = bonuses.reduce((sum, b) => sum + b.amount, 0);
   const weekStart = getWeekStart();
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 7); // End of week (next Monday)
 
+  const totalAvailable = WEEKLY_SCAN_LIMIT + bonusScans;
+  const scansRemaining = Math.max(0, totalAvailable - scans.length);
+
   return {
     scansUsed: scans.length,
     scansLimit: WEEKLY_SCAN_LIMIT,
-    scansRemaining: Math.max(0, WEEKLY_SCAN_LIMIT - scans.length),
+    bonusScans,
+    scansRemaining,
     weekStart,
     weekEnd,
   };
 }
 
 /**
- * Check if user can perform a scan (has remaining quota)
+ * Check if user has any scans remaining (including bonus scans)
  */
-export async function canScan(): Promise<boolean> {
+export async function hasScansRemaining(): Promise<boolean> {
   const stats = await getUsageStats();
   return stats.scansRemaining > 0;
+}
+
+/**
+ * Check if user has used up their base free scans (10 per week)
+ * This is used to determine if we should show "Get More Scans" button
+ */
+export async function hasUsedBaseScans(): Promise<boolean> {
+  const stats = await getUsageStats();
+  return stats.scansUsed >= stats.scansLimit;
 }
 
 /**

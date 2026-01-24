@@ -1,6 +1,6 @@
 import { View, Text, Platform, TouchableOpacity, ActivityIndicator, FlatList, Modal, BackHandler } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { ReceiptRepository } from '../lib/repository';
 import { reshapeToResults, ResultItem, ResultType } from '../lib/results';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { DateRangeCalendarModal } from '../components/calendar/DateRangeCalendar
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AdBanner } from '../components/ads';
+import { hasUsedBaseScans } from '../lib/usageTracking';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -173,6 +174,16 @@ export default function HomeScreen() {
     );
   }
 
+  // Check if user has used all base scans for empty state button
+  const [showGetMoreScans, setShowGetMoreScans] = useState(false);
+  useEffect(() => {
+    const checkScans = async () => {
+      const usedAll = await hasUsedBaseScans();
+      setShowGetMoreScans(usedAll);
+    };
+    checkScans();
+  }, []);
+
   // --- EMPTY STATE ---
   if (allResults.length === 0) {
     return (
@@ -180,18 +191,27 @@ export default function HomeScreen() {
         <PersistentHeader />
         <View className="flex-1 justify-center items-center px-10">
           <TouchableOpacity 
-            onPress={() => router.push('/scan')}
+            onPress={() => {
+              if (showGetMoreScans) {
+                router.push('/get-more-scans');
+              } else {
+                router.push('/scan');
+              }
+            }}
             className="w-64 h-64 rounded-full bg-gold/10 border-4 border-gold/30 items-center justify-center shadow-2xl shadow-gold/20"
           >
             <View className="w-48 h-48 rounded-full bg-gold items-center justify-center">
-              <Feather name="camera" size={64} color="#2e1065" />
+              <Feather name={showGetMoreScans ? 'gift' : 'camera'} size={64} color="#2e1065" />
             </View>
           </TouchableOpacity>
           <Text className="text-white text-3xl font-bold mt-10 tracking-tight text-center" style={{ fontFamily: (Platform.OS as any) === 'web' ? 'Bebas Neue, system-ui' : 'System' }}>
-            GOT A RECEIPT?{'\n'}SNAP TO GET STARTED
+            {showGetMoreScans ? 'GET MORE SCANS' : 'GOT A RECEIPT?'}{'\n'}
+            {showGetMoreScans ? 'WATCH AD TO CONTINUE' : 'SNAP TO GET STARTED'}
           </Text>
           <Text className="text-crescender-400 text-center mt-4 leading-relaxed">
-            Instantly track gear, events, and transactions by snapping your first receipt.
+            {showGetMoreScans
+              ? 'You\'ve used all your weekly free scans. Watch an ad to get 10 more scans.'
+              : 'Instantly track gear, events, and transactions by snapping your first receipt.'}
           </Text>
         </View>
       </View>

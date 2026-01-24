@@ -4,7 +4,7 @@
     "slug": "crescender-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "dark",
     "description": "Track your music gear, lessons, and expenses by scanning receipts. Crescender automatically extracts gear items, lesson details, and transaction data from your receipts.",
     "privacy": "public",
@@ -12,9 +12,9 @@
       "privacyPolicyUrl": "https://www.crescender.com.au/privacy"
     },
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/900_1600.png",
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#2a0b4c"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -22,15 +22,27 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.crescender.mobile.app",
+      "icon": "./assets/app-icon.png",
+      "splash": {
+        "image": "./assets/iPhone_14_-_1170_2536.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#2a0b4c"
+      },
       "infoPlist": {
         "NSCameraUsageDescription": "Crescender needs access to your camera to scan receipts and extract gear information.",
         "NSUserTrackingUsageDescription": "This allows us to show you relevant ads and improve your experience."
       }
     },
     "android": {
+      "icon": "./assets/app-icon.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/app-icon.png",
+        "backgroundColor": "#2a0b4c"
+      },
+      "splash": {
+        "image": "./assets/Pixel_6_-_1080_2400.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#2a0b4c"
       },
       "package": "com.crescender.mobile.app"
     },

@@ -1,12 +1,13 @@
-import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PersistentHeader } from '../components/header/PersistentHeader';
 import * as DocumentPicker from 'expo-document-picker';
-import { getUsageStats, type ScanRecord } from '../lib/usageTracking';
+import { getUsageStats, addBonusScans } from '../lib/usageTracking';
 import { format } from 'date-fns';
+import { useRewardedAd } from '../components/ads';
 
 export default function UsageScreen() {
   const router = useRouter();
@@ -14,10 +15,40 @@ export default function UsageScreen() {
 
   const [scansUsed, setScansUsed] = useState(0);
   const [scansLimit, setScansLimit] = useState(10);
-  const [bonusScans] = useState(0);
+  const [bonusScans, setBonusScans] = useState(0);
   const [weekStart, setWeekStart] = useState<Date | null>(null);
   const [weekEnd, setWeekEnd] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const { show, isLoaded, isLoading: adLoading } = useRewardedAd({
+    onRewarded: async (reward) => {
+      // Add 10 bonus scans
+      await addBonusScans(10);
+      // Reload stats
+      await loadUsageStats();
+      Alert.alert(
+        'Scans Added!',
+        'You\'ve earned 10 additional scans. You can now scan more receipts this week.',
+        [{ text: 'OK' }]
+      );
+    },
+    onAdClosed: () => {
+      if (!isLoaded) {
+        Alert.alert(
+          'Ad Closed',
+          'The ad was closed before completion. Watch the full ad to earn bonus scans.',
+          [{ text: 'OK' }]
+        );
+      }
+    },
+    onAdFailedToLoad: (error) => {
+      Alert.alert(
+        'Ad Unavailable',
+        'Unable to load ad at this time. Please try again later.',
+        [{ text: 'OK' }]
+      );
+    },
+  });
 
   useEffect(() => {
     loadUsageStats();
@@ -28,12 +59,23 @@ export default function UsageScreen() {
       const stats = await getUsageStats();
       setScansUsed(stats.scansUsed);
       setScansLimit(stats.scansLimit);
+      setBonusScans(stats.bonusScans);
       setWeekStart(stats.weekStart);
       setWeekEnd(stats.weekEnd);
     } catch (error) {
       console.error('Failed to load usage stats:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleWatchAdForBulk = () => {
+    if (isLoaded) {
+      show();
+    } else if (adLoading) {
+      Alert.alert('Loading Ad', 'Please wait while we load the ad...');
+    } else {
+      Alert.alert('Ad Not Ready', 'The ad is not ready yet. Please try again in a moment.');
     }
   };
 
@@ -179,15 +221,45 @@ export default function UsageScreen() {
             <Text className="text-crescender-300 text-sm mb-4">
               Upload multiple receipt images at once. They'll be processed in a queue and you'll be notified when ready.
             </Text>
-            <TouchableOpacity
-              className="bg-gold/10 py-3 px-4 rounded-xl border border-gold/40 items-center"
-              onPress={handleBulkUpload}
-            >
-              <View className="flex-row items-center gap-2">
-                <Feather name="folder" size={16} color="#f5c518" />
-                <Text className="text-gold font-bold">Select Multiple Images</Text>
-              </View>
-            </TouchableOpacity>
+            <View className="gap-3">
+              <TouchableOpacity
+                className="bg-gold/10 py-3 px-4 rounded-xl border border-gold/40 items-center"
+                onPress={handleBulkUpload}
+              >
+                <View className="flex-row items-center gap-2">
+                  <Feather name="folder" size={16} color="#f5c518" />
+                  <Text className="text-gold font-bold">Select Multiple Images</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className={`py-3 px-4 rounded-xl border-2 items-center ${
+                  isLoaded
+                    ? 'bg-gold/10 border-gold/40'
+                    : adLoading
+                    ? 'bg-crescender-800/60 border-crescender-700'
+                    : 'bg-crescender-800/60 border-crescender-700'
+                }`}
+                onPress={handleWatchAdForBulk}
+                disabled={!isLoaded && !adLoading}
+              >
+                {adLoading ? (
+                  <View className="flex-row items-center gap-2">
+                    <ActivityIndicator size="small" color="#f5c518" />
+                    <Text className="text-crescender-400 font-semibold">Loading Ad...</Text>
+                  </View>
+                ) : isLoaded ? (
+                  <View className="flex-row items-center gap-2">
+                    <Feather name="play-circle" size={16} color="#f5c518" />
+                    <Text className="text-gold font-bold">Watch Ad for +10 Scans</Text>
+                  </View>
+                ) : (
+                  <Text className="text-crescender-400 font-semibold">Ad Not Ready</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            <Text className="text-crescender-500 text-xs mt-3 leading-relaxed">
+              Need more scans for bulk upload? Watch an ad to get 10 additional scans that can be used immediately.
+            </Text>
           </View>
 
           {/* Info Section */}

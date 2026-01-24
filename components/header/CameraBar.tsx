@@ -1,6 +1,8 @@
 import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useState, useEffect } from 'react';
+import { hasUsedBaseScans } from '../../lib/usageTracking';
 
 interface CameraBarProps {
   /** @deprecated Use startDate/endDate. Kept for backward compat. */
@@ -23,9 +25,20 @@ export const CameraBar = ({
   onClearDate,
 }: CameraBarProps) => {
   const router = useRouter();
+  const [showGetMoreScans, setShowGetMoreScans] = useState(false);
+  
   // Support legacy selectedDate or new start/end range
   const startDate = startProp ?? (selectedDate ?? null);
   const endDate = endProp ?? null;
+
+  // Check if user has used all base scans
+  useEffect(() => {
+    const checkScans = async () => {
+      const usedAll = await hasUsedBaseScans();
+      setShowGetMoreScans(usedAll);
+    };
+    checkScans();
+  }, []);
 
   const hasRange = startDate != null || endDate != null;
   const currentYear = new Date().getFullYear();
@@ -88,12 +101,31 @@ export const CameraBar = ({
   return (
     <View className="px-6 py-2 flex-row items-center gap-3">
       <TouchableOpacity
-        onPress={() => router.push('/scan')}
-        className="flex-1 h-14 bg-gold rounded-2xl flex-row items-center justify-center gap-3 shadow-lg shadow-gold/20"
+        onPress={() => {
+          if (showGetMoreScans) {
+            router.push('/get-more-scans');
+          } else {
+            router.push('/scan');
+          }
+        }}
+        className={`flex-1 h-14 rounded-2xl flex-row items-center justify-center gap-3 shadow-lg ${
+          showGetMoreScans
+            ? 'bg-crescender-800 border-2 border-gold/40'
+            : 'bg-gold shadow-gold/20'
+        }`}
       >
-        <Feather name="camera" size={24} color="#2e1065" />
-        <Text className="text-crescender-950 font-bold text-xl" style={{ fontFamily: (Platform.OS as any) === 'web' ? 'Bebas Neue, system-ui' : 'System' }}>
-          SNAP RECEIPT
+        <Feather 
+          name={showGetMoreScans ? 'gift' : 'camera'} 
+          size={24} 
+          color={showGetMoreScans ? '#f5c518' : '#2e1065'} 
+        />
+        <Text 
+          className={`font-bold text-xl ${
+            showGetMoreScans ? 'text-gold' : 'text-crescender-950'
+          }`} 
+          style={{ fontFamily: (Platform.OS as any) === 'web' ? 'Bebas Neue, system-ui' : 'System' }}
+        >
+          {showGetMoreScans ? 'GET MORE SCANS' : 'SNAP RECEIPT'}
         </Text>
       </TouchableOpacity>
 
