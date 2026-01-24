@@ -268,13 +268,52 @@ npm run test:android
 
 ## Future Roadmap
 
-- Cloud backup (optional, encrypted)
-- Receipt sharing and export
-- Tax deduction reports
-- Gear depreciation tracking
-- Insurance documentation
-- Multi-currency support
-- Web dashboard
+### Phase 1: Cloud Integration
+- **Cloud Save** - Optional encrypted cloud backup of receipts and data
+  - Sync mechanism with conflict resolution
+  - Schema alignment with main Crescender database
+  - RESTful API or GraphQL endpoints for data exchange
+  - ETL pipeline for legacy data migration
+- **Crescender Account Integration** - Link mobile app to main Crescender platform
+  - OAuth/JWT authentication flow
+  - Unified user identity across platforms
+  - Shared data models and schema versioning
+  - Real-time sync via WebSockets or polling
+
+### Phase 2: Entity Pages
+- **Merchant Page** - Dedicated merchant profile and transaction history
+  - Aggregate spending per merchant
+  - Merchant contact details and notes
+  - Link to main app's merchant database
+  - API sync for merchant metadata updates
+- **Student Page** - Student-centric view of education activities
+  - Progress tracking and lesson history
+  - Payment history and outstanding balances
+  - Schedule and calendar view
+  - Schema alignment with main app's student/education models
+- **Gear Status** - Lifecycle tracking for musical gear
+  - Current condition and location
+  - Service history and warranty status
+  - Depreciation and insurance value
+  - API endpoints for gear state updates
+  - Sync with main app's gear inventory system
+
+### Phase 3: Advanced Features
+- Receipt sharing and export (PDF, CSV, Excel)
+- Tax deduction reports with ATO compliance
+- Gear depreciation tracking and forecasting
+- Insurance documentation generation
+- Multi-currency support with historical rates
+- Web dashboard for desktop access
+
+### Technical Considerations
+- **Schema Versioning**: Maintain compatibility between mobile SQLite and main app database
+- **API Design**: RESTful or GraphQL APIs for bidirectional sync
+- **Conflict Resolution**: Last-write-wins or operational transformation for concurrent edits
+- **Data Migration**: ETL pipelines for transitioning local-only data to cloud
+- **Offline-First**: Queue mutations when offline, sync when online
+- **Type Safety**: Shared TypeScript types between mobile and backend
+- **Change Data Capture**: Track changes for efficient syncing (delta updates)
 
 ## License
 

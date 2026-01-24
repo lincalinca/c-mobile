@@ -56,14 +56,26 @@ export default function WorkflowEducationPage({
       ? JSON.parse(item.educationDetails || '{}')
       : (item.educationDetails || {});
     
+    // Use quantity from item if available, otherwise calculate from dates
+    const quantity = item.quantity || 1;
+    
+    // For education items, prefer showing unit price (per lesson) when quantity > 1
+    // Store both in metadata for display
+    const unitPrice = item.unitPrice || (item.totalPrice && quantity > 1 ? Math.round(item.totalPrice / quantity) : item.totalPrice);
+    
     return {
       id: item.id || '',
       type: 'education',
       title: item.description || '',
       subtitle: eduDetails.studentName || 'Education',
-      amount: item.totalPrice,
+      amount: item.totalPrice, // Keep total for main display
       date: workflowState.transactionDate,
-      metadata: eduDetails,
+      metadata: {
+        ...eduDetails,
+        quantity, // Add quantity to metadata for lesson count calculation
+        unitPrice, // Add unit price for per-lesson display
+        totalPrice: item.totalPrice, // Keep total for reference
+      },
       receiptId: '',
     };
   });

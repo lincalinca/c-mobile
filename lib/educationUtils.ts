@@ -14,6 +14,9 @@ export interface EducationMetadata {
   focus?: string; // Instrument or subject focus (e.g., "Violin", "Music Theory")
   instrument?: string; // Alternative field name for focus
   subject?: string; // Alternative field name for focus
+  quantity?: number; // Number of lessons from invoice/receipt
+  unitPrice?: number; // Price per lesson (in cents)
+  totalPrice?: number; // Total price (in cents)
 }
 
 /**
@@ -66,9 +69,12 @@ export function formatEducationDetailsSentence(metadata: EducationMetadata): str
   const daysOfWeek = metadata.daysOfWeek || [];
   const times = metadata.times || [];
   
-  // Calculate lesson count if we have start and end dates
+  // Prefer quantity from invoice/receipt if available (most accurate)
   let lessonCount = '';
-  if (startDate && endDate) {
+  if (metadata.quantity && metadata.quantity > 0) {
+    lessonCount = `${metadata.quantity}x `;
+  } else if (startDate && endDate) {
+    // Fallback: Calculate lesson count from start and end dates
     try {
       const start = new Date(startDate + 'T12:00:00');
       const end = new Date(endDate + 'T12:00:00');

@@ -113,7 +113,7 @@ export default function ScanScreen() {
       return;
     }
     
-    // Double-check camera ref before capture
+    // Capture camera ref before any async operations
     const currentCameraRef = cameraRef.current;
     if (!currentCameraRef) {
       console.warn('[Scan] Camera ref not available');
@@ -123,17 +123,10 @@ export default function ScanScreen() {
     
     setIsProcessing(true);
     try {
-      // Add a small delay to ensure camera is fully ready
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Verify camera ref is still valid after delay
-      if (!cameraRef.current) {
-        throw new Error('Camera reference lost during capture');
-      }
-
+      // Use the captured ref directly - don't check cameraRef.current again as it might change
       // On Android: request base64 directly (more reliable than reading from file)
       // On iOS: also request base64 directly
-      const photo = await cameraRef.current.takePictureAsync({
+      const photo = await currentCameraRef.takePictureAsync({
         quality: isAndroid ? 0.6 : 0.8,
         base64: true, // Request base64 directly for all platforms
         skipProcessing: false,

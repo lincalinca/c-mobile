@@ -23,6 +23,17 @@ export const SimpleEducationCard = ({
   // Format details into a condensed sentence
   const detailsSentence = formatEducationDetailsSentence(metadata);
   
+  // For education items with quantity > 1, show per-lesson price instead of total
+  // Create a modified item for display
+  const displayItem = { ...item };
+  const quantity = metadata.quantity || 1;
+  const unitPrice = metadata.unitPrice;
+  
+  if (quantity > 1 && unitPrice) {
+    // Show per-lesson price instead of total
+    displayItem.amount = unitPrice;
+  }
+  
   const rows: CardDetailRow[] = [
     { icon: 'calendar', text: detailsSentence, accent: true, numberOfLines: 2 },
   ];
@@ -31,7 +42,7 @@ export const SimpleEducationCard = ({
 
   return (
     <SimpleCard
-      item={item}
+      item={displayItem}
       onPress={onPress}
       accentColor={ACCENT_COLOR}
       iconName="book-open"
