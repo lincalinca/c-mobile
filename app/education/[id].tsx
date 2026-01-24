@@ -368,8 +368,18 @@ export default function EducationDetailScreen() {
             <Text className="font-bold mb-3 uppercase tracking-widest text-xs" style={{ color: ACCENT_COLOR }}>Learning Path</Text>
             <View className="mb-2">
               <Text className="text-crescender-400 text-xs mb-1">
-                {chain.items.length} lesson{chain.items.length !== 1 ? 's' : ''} in this path ({chain.focus} with {chain.provider})
+                {chain.items.length} lesson{chain.items.length !== 1 ? 's' : ''} in this path ({chain.focus})
               </Text>
+              {chain.providers.length > 1 && (
+                <Text className="text-crescender-500 text-xs mb-1">
+                  Across {chain.providers.length} provider{chain.providers.length !== 1 ? 's' : ''}: {chain.providers.join(', ')}
+                </Text>
+              )}
+              {chain.providers.length === 1 && (
+                <Text className="text-crescender-500 text-xs mb-1">
+                  Provider: {chain.providers[0]}
+                </Text>
+              )}
               <Text className="text-crescender-500 text-xs">
                 Swipe left/right to view other lessons in this series
               </Text>

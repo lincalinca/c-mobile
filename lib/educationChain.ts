@@ -2,7 +2,11 @@
  * Education Chaining Logic
  * 
  * Groups education items across receipts into chains based on:
- * studentName + focus + provider (teacherName or merchant)
+ * studentName + focus
+ * 
+ * Provider (teacher/merchant) is NOT included in chain key to allow
+ * chaining across provider changes (e.g., student switches teachers
+ * but continues same instrument/subject learning path).
  */
 
 import type { Receipt, ReceiptItem, LineItemWithDetails } from './repository';
@@ -12,7 +16,7 @@ export interface EducationChain {
   items: ChainItem[];
   studentName: string;
   focus: string;
-  provider: string;
+  providers: string[]; // Multiple providers allowed in same chain
 }
 
 export interface ChainItem {
@@ -24,18 +28,21 @@ export interface ChainItem {
 
 /**
  * Generate chain key from education details
- * Format: studentName|focus|provider
+ * Format: studentName|focus
+ * 
+ * Note: Provider (teacher/merchant) is NOT included in chain key to allow
+ * chaining across provider changes (e.g., student switches teachers but
+ * continues same instrument/subject learning path).
  */
 export function generateChainKey(
   studentName: string | null | undefined,
   focus: string | null | undefined,
-  provider: string
+  provider?: string // Kept for compatibility but not used in key
 ): string {
   const normalizedStudent = (studentName || '').toLowerCase().trim();
   const normalizedFocus = (focus || '').toLowerCase().trim();
-  const normalizedProvider = provider.toLowerCase().trim();
   
-  return `${normalizedStudent}|${normalizedFocus}|${normalizedProvider}`;
+  return `${normalizedStudent}|${normalizedFocus}`;
 }
 
 /**
@@ -103,7 +110,7 @@ export function buildEducationChains(receipts: Receipt[]): EducationChain[] {
       // Skip if missing critical fields (can't chain without student and focus)
       if (!studentName || !focus) continue;
       
-      const chainKey = generateChainKey(studentName, focus, provider);
+      const chainKey = generateChainKey(studentName, focus);
       
       if (!chainMap.has(chainKey)) {
         chainMap.set(chainKey, {
@@ -111,11 +118,17 @@ export function buildEducationChains(receipts: Receipt[]): EducationChain[] {
           items: [],
           studentName,
           focus,
-          provider,
+          providers: [],
         });
       }
       
       const chain = chainMap.get(chainKey)!;
+      
+      // Track unique providers in this chain
+      if (!chain.providers.includes(provider)) {
+        chain.providers.push(provider);
+      }
+      
       chain.items.push({
         item: item as LineItemWithDetails,
         receipt,

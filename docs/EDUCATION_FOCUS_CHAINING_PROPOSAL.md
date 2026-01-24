@@ -61,12 +61,13 @@ Update types in `EducationDetails` and parse/store `focus` alongside existing fi
 ## Chaining Logic
 ### Chain Key
 Default chain key:
-- `studentName + focus + provider`
-- `provider` = `teacherName` if present, otherwise `receipt.merchant`
+- `studentName + focus`
+- Provider (teacher/merchant) is NOT included to allow chaining across provider changes
 
 Rationale:
 - Student + focus disambiguates instrument/subject.
-- Provider prevents unrelated lessons from being merged.
+- Excluding provider allows chaining when student switches teachers but continues same learning path (e.g., same instrument/subject).
+- Multiple providers are tracked within the chain for display purposes.
 
 ### Building Chains
 - Load all receipts with items.

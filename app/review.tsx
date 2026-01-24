@@ -202,27 +202,6 @@ export default function ReviewScreen() {
     }
   };
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await performSave();
-
-      // Show interstitial ad after successful save
-      setTimeout(() => {
-        showInterstitial();
-      }, 500);
-
-      Alert.alert('Saved!', 'Transaction saved successfully', [
-        { text: 'OK', onPress: () => router.replace('/') }
-      ]);
-    } catch (e) {
-      console.error('[Review] Save error:', e);
-      Alert.alert('Error', 'Failed to save transaction. Please try again.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const updateItemCategory = (index: number, category: string) => {
     const newItems = [...items];
     newItems[index].category = category;
