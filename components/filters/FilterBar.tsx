@@ -69,24 +69,28 @@ export const FilterBar = ({
           {onToggleEventSeries && (
             <TouchableOpacity
               onPress={onToggleEventSeries}
-              className={`px-4 py-2 rounded-xl border flex-row items-center justify-center gap-2 ${
+              className={`px-5 py-2 rounded-xl border flex-row items-center justify-center gap-2 ${
                 showEventSeries
                   ? 'bg-crescender-700 border-crescender-600'
                   : 'bg-crescender-900/40 border-crescender-800'
               }`}
+              style={useIcons ? { minWidth: 44 } : undefined}
             >
-              <Feather
-                name="layers"
-                size={14}
-                color={showEventSeries ? '#f5c518' : '#9ca3af'}
-              />
-              <Text
-                className={`font-bold text-xs tracking-widest ${
-                  showEventSeries ? 'text-gold' : 'text-crescender-400'
-                }`}
-              >
-                {showEventSeries ? 'SERIES' : 'EVENTS'}
-              </Text>
+              {useIcons ? (
+                <Feather
+                  name="layers"
+                  size={14}
+                  color={showEventSeries ? '#f5c518' : '#9ca3af'}
+                />
+              ) : (
+                <Text
+                  className={`font-bold text-xs tracking-widest ${
+                    showEventSeries ? 'text-gold' : 'text-crescender-400'
+                  }`}
+                >
+                  {showEventSeries ? 'SERIES' : 'EVENTS'}
+                </Text>
+              )}
             </TouchableOpacity>
           )}
         </View>

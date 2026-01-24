@@ -5,7 +5,7 @@
  */
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, Text, Alert } from 'react-native';
 import * as Crypto from 'expo-crypto';
@@ -39,6 +39,10 @@ export default function ReviewWorkflow() {
     }
   }, [params.data]);
 
+  // Extract params values to avoid object reference issues
+  const paramsData = params.data || '';
+  const paramsUri = params.uri || '';
+
   useEffect(() => {
     // Initialize workflow state from initial data
     const merchantIsNew = initialData.financial?.merchantIsNew !== false;
@@ -67,15 +71,15 @@ export default function ReviewWorkflow() {
       items: initialData.items || [],
       currentStep: 'title',
       completedSteps: new Set(),
-      imageUri: params.uri || '',
-      rawOcrData: params.data || '',
+      imageUri: paramsUri,
+      rawOcrData: paramsData,
       merchantIsNew,
       matchedMerchantId: initialData.financial?.merchantId || null,
     };
     
     setWorkflowState(state);
     setLoading(false);
-  }, [initialData, params]);
+  }, [initialData, paramsData, paramsUri]);
 
   const updateState = (updates: Partial<ReviewWorkflowState>) => {
     setWorkflowState(prev => prev ? { ...prev, ...updates } : null);
@@ -124,13 +128,6 @@ export default function ReviewWorkflow() {
       navigateToStep('title');
     }
   };
-
-  // Auto-save when reaching complete step
-  useEffect(() => {
-    if (workflowState?.currentStep === 'complete') {
-      handleSaveAndExit();
-    }
-  }, [workflowState?.currentStep]);
 
   const performSave = async (): Promise<string | null> => {
     if (!workflowState) return null;
@@ -186,7 +183,9 @@ export default function ReviewWorkflow() {
     return transactionId;
   };
 
-  const handleSaveAndExit = async () => {
+  const handleSaveAndExit = useCallback(async () => {
+    if (!workflowState) return;
+    
     try {
       await performSave();
       
@@ -202,7 +201,14 @@ export default function ReviewWorkflow() {
       console.error('[Workflow] Save error:', e);
       Alert.alert('Error', 'Failed to save transaction. Please try again.');
     }
-  };
+  }, [workflowState, showInterstitial, router]);
+
+  // Auto-save when reaching complete step
+  useEffect(() => {
+    if (workflowState?.currentStep === 'complete') {
+      handleSaveAndExit();
+    }
+  }, [workflowState?.currentStep, handleSaveAndExit]);
 
   if (loading || !workflowState) {
     return (

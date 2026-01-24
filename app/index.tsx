@@ -29,6 +29,7 @@ export default function HomeScreen() {
   const [useIconFilters, setUseIconFilters] = useState(true);
   const [financialYearStartMonth, setFinancialYearStartMonth] = useState(7);
   const [showEventSeries, setShowEventSeries] = useState(true); // Default: hide individual events
+  const [showGetMoreScans, setShowGetMoreScans] = useState(false);
 
   const gridRef = useRef<FlatList>(null);
 
@@ -63,6 +64,17 @@ export default function HomeScreen() {
         }
       };
       loadSettings();
+
+      // Check if user has used all base scans
+      const checkScans = async () => {
+        try {
+          const usedAll = await hasUsedBaseScans();
+          setShowGetMoreScans(usedAll);
+        } catch (e) {
+          console.error('Failed to check scans', e);
+        }
+      };
+      checkScans();
 
       const onBackPress = () => {
         setShowExitModal(true);
@@ -110,7 +122,7 @@ export default function HomeScreen() {
     }
 
     if (item.type === 'gear') {
-      router.push(`/gear/${item.id}` as any);
+      router.push(`/gear/item/${item.id}` as any);
     } else if (item.type === 'transaction') {
       // Navigate to the gear detail page which shows full receipt details
       router.push(`/gear/${item.receiptId}` as any);
@@ -173,16 +185,6 @@ export default function HomeScreen() {
       </View>
     );
   }
-
-  // Check if user has used all base scans for empty state button
-  const [showGetMoreScans, setShowGetMoreScans] = useState(false);
-  useEffect(() => {
-    const checkScans = async () => {
-      const usedAll = await hasUsedBaseScans();
-      setShowGetMoreScans(usedAll);
-    };
-    checkScans();
-  }, []);
 
   // --- EMPTY STATE ---
   if (allResults.length === 0) {

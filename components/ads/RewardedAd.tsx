@@ -14,23 +14,27 @@ try {
 } catch (error) {
   // Native module not available (e.g., in Expo Go)
   console.warn('Google Mobile Ads module not available:', error);
+  // Provide fallback TestIds object
+  TestIds = {
+    REWARDED: 'ca-app-pub-3940256099942544/5224354917', // Google test ad unit ID
+  };
 }
 
 // TODO: Replace with your production Ad Unit IDs after creating them in AdMob
 // iOS Rewarded: ca-app-pub-XXXXX/YYYYY
 // Android Rewarded: ca-app-pub-XXXXX/ZZZZZ
 const IOS_REWARDED_AD_UNIT_ID = __DEV__
-  ? TestIds.REWARDED
+  ? (TestIds?.REWARDED || 'ca-app-pub-3940256099942544/5224354917')
   : 'ca-app-pub-XXXXX/YYYYY'; // Replace with your iOS rewarded ad unit ID
 
 const ANDROID_REWARDED_AD_UNIT_ID = __DEV__
-  ? TestIds.REWARDED
+  ? (TestIds?.REWARDED || 'ca-app-pub-3940256099942544/5224354917')
   : 'ca-app-pub-XXXXX/ZZZZZ'; // Replace with your Android rewarded ad unit ID
 
 const adUnitId = RewardedAd ? Platform.select({
   ios: IOS_REWARDED_AD_UNIT_ID,
   android: ANDROID_REWARDED_AD_UNIT_ID,
-  default: TestIds?.REWARDED,
+  default: TestIds?.REWARDED || 'ca-app-pub-3940256099942544/5224354917',
 }) : null;
 
 interface UseRewardedAdOptions {
@@ -62,10 +66,15 @@ export function useRewardedAd(options: UseRewardedAdOptions = {}) {
   const [rewardedAd, setRewardedAd] = useState<any | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPlaceholder, setShowPlaceholder] = useState(false);
+
+  // Check if native module is available
+  const nativeModuleAvailable = RewardedAd && adUnitId;
 
   useEffect(() => {
-    // If native module not available, return early
-    if (!RewardedAd || !adUnitId) {
+    // If native module not available, enable placeholder mode
+    if (!nativeModuleAvailable) {
+      setIsLoaded(true); // Mark as "loaded" so UI can show placeholder
       return;
     }
 
@@ -117,9 +126,15 @@ export function useRewardedAd(options: UseRewardedAdOptions = {}) {
       unsubscribeClosed();
       unsubscribeError();
     };
-  }, []);
+  }, [nativeModuleAvailable, onRewarded, onAdClosed, onAdFailedToLoad]);
 
   const show = () => {
+    if (!nativeModuleAvailable) {
+      // Show placeholder ad
+      setShowPlaceholder(true);
+      return;
+    }
+
     if (rewardedAd && isLoaded) {
       rewardedAd.show();
     } else {
@@ -132,10 +147,26 @@ export function useRewardedAd(options: UseRewardedAdOptions = {}) {
     }
   };
 
+  const handlePlaceholderReward = () => {
+    setShowPlaceholder(false);
+    // Simulate reward after 1 second (like watching an ad)
+    setTimeout(() => {
+      onRewarded?.({ type: 'scans', amount: 10 });
+    }, 1000);
+  };
+
+  const handlePlaceholderClose = () => {
+    setShowPlaceholder(false);
+    onAdClosed?.();
+  };
+
   return {
     show,
     isLoaded,
     isLoading,
+    showPlaceholder,
+    handlePlaceholderReward,
+    handlePlaceholderClose,
     load: () => {
       if (rewardedAd) {
         setIsLoading(true);

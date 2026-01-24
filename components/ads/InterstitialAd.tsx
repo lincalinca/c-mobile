@@ -14,23 +14,27 @@ try {
 } catch (error) {
   // Native module not available (e.g., in Expo Go)
   console.warn('Google Mobile Ads module not available:', error);
+  // Provide fallback TestIds object
+  TestIds = {
+    INTERSTITIAL: 'ca-app-pub-3940256099942544/1033173712', // Google test ad unit ID
+  };
 }
 
 // TODO: Replace with your production Ad Unit IDs after creating them in AdMob
 // iOS Interstitial: ca-app-pub-XXXXX/YYYYY
 // Android Interstitial: ca-app-pub-XXXXX/ZZZZZ
 const IOS_INTERSTITIAL_AD_UNIT_ID = __DEV__
-  ? TestIds.INTERSTITIAL
+  ? (TestIds?.INTERSTITIAL || 'ca-app-pub-3940256099942544/1033173712')
   : 'ca-app-pub-XXXXX/YYYYY'; // Replace with your iOS interstitial ad unit ID
 
 const ANDROID_INTERSTITIAL_AD_UNIT_ID = __DEV__
-  ? TestIds.INTERSTITIAL
+  ? (TestIds?.INTERSTITIAL || 'ca-app-pub-3940256099942544/1033173712')
   : 'ca-app-pub-XXXXX/ZZZZZ'; // Replace with your Android interstitial ad unit ID
 
 const adUnitId = InterstitialAd ? Platform.select({
   ios: IOS_INTERSTITIAL_AD_UNIT_ID,
   android: ANDROID_INTERSTITIAL_AD_UNIT_ID,
-  default: TestIds?.INTERSTITIAL,
+  default: TestIds?.INTERSTITIAL || 'ca-app-pub-3940256099942544/1033173712',
 }) : null;
 
 /**

@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PersistentHeader } from '../components/header/PersistentHeader';
 import { useRewardedAd } from '../components/ads';
+import { PlaceholderRewardedAd } from '../components/ads/PlaceholderAd';
 import { getUsageStats, addBonusScans } from '../lib/usageTracking';
 import { format } from 'date-fns';
 
@@ -21,7 +22,7 @@ export default function GetMoreScansScreen() {
     weekEnd: Date;
   } | null>(null);
 
-  const { show, isLoaded, isLoading } = useRewardedAd({
+  const { show, isLoaded, isLoading, showPlaceholder, handlePlaceholderReward, handlePlaceholderClose } = useRewardedAd({
     onRewarded: async (reward) => {
       // Add 10 bonus scans
       await addBonusScans(10);
@@ -193,6 +194,13 @@ export default function GetMoreScansScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Placeholder Rewarded Ad Modal */}
+      <PlaceholderRewardedAd
+        visible={showPlaceholder || false}
+        onClose={handlePlaceholderClose}
+        onReward={handlePlaceholderReward}
+      />
     </View>
   );
 }

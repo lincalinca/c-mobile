@@ -59,8 +59,8 @@ export default function HistoryScreen() {
           {new Date(item.transactionDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
         </Text>
         <View className="flex-row items-center gap-2">
-          <View className={`w-2 h-2 rounded-full ${item.syncStatus === 'synced' ? 'bg-green-500' : 'bg-gold'}`} />
-          <Text className="text-crescender-500 text-xs uppercase tracking-widest">{item.syncStatus || 'Pending'}</Text>
+          <View className="w-2 h-2 rounded-full bg-green-500" />
+          <Text className="text-crescender-500 text-xs uppercase tracking-widest">Saved</Text>
         </View>
       </View>
       

@@ -14,24 +14,28 @@ try {
 } catch (error) {
   // Native module not available (e.g., in Expo Go)
   console.warn('Google Mobile Ads module not available:', error);
+  // Provide fallback TestIds object
+  TestIds = {
+    BANNER: 'ca-app-pub-3940256099942544/6300978111', // Google test ad unit ID
+  };
 }
 
 // TODO: Replace with your production Ad Unit IDs after creating them in AdMob
 // iOS Banner: ca-app-pub-XXXXX/YYYYY
 // Android Banner: ca-app-pub-XXXXX/ZZZZZ
 const IOS_BANNER_AD_UNIT_ID = __DEV__ 
-  ? TestIds.BANNER 
+  ? (TestIds?.BANNER || 'ca-app-pub-3940256099942544/6300978111')
   : 'ca-app-pub-XXXXX/YYYYY'; // Replace with your iOS banner ad unit ID
 
 const ANDROID_BANNER_AD_UNIT_ID = __DEV__
-  ? TestIds.BANNER
+  ? (TestIds?.BANNER || 'ca-app-pub-3940256099942544/6300978111')
   : 'ca-app-pub-XXXXX/ZZZZZ'; // Replace with your Android banner ad unit ID
 
 // Platform-specific ad unit ID selection
 const adUnitId = BannerAd ? Platform.select({
   ios: IOS_BANNER_AD_UNIT_ID,
   android: ANDROID_BANNER_AD_UNIT_ID,
-  default: TestIds?.BANNER,
+  default: TestIds?.BANNER || 'ca-app-pub-3940256099942544/6300978111',
 }) : null;
 
 interface AdBannerProps {
@@ -63,9 +67,10 @@ export function AdBanner({
   position = 'bottom',
   size = BannerAdSize?.ANCHORED_ADAPTIVE_BANNER 
 }: AdBannerProps) {
-  // If native module not available (e.g., Expo Go), return null
+  // If native module not available (e.g., Expo Go), show placeholder ad
   if (!BannerAd || !adUnitId) {
-    return null;
+    const { PlaceholderBannerAd } = require('./PlaceholderAd');
+    return <PlaceholderBannerAd position={position} />;
   }
 
   return (

@@ -7,7 +7,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { callSupabaseFunction } from '../lib/supabase';
-import { ProcessingView } from '../components/processing/ProcessingView';
+import { ProcessingWithAdView } from '../components/processing/ProcessingWithAdView';
 import { TransactionRepository } from '../lib/repository';
 import { recordScan, hasScansRemaining } from '../lib/usageTracking';
 
@@ -22,6 +22,7 @@ export default function ScanScreen() {
   const [flash, setFlash] = useState<FlashMode>('off');
   const [cameraReady, setCameraReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingResults, setProcessingResults] = useState<{ data: any; uri: string } | null>(null);
   const readyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const cameraRef = useRef<any>(null);
@@ -105,37 +106,76 @@ export default function ScanScreen() {
   };
 
   const handleCapture = async () => {
-    if (!cameraRef.current || !cameraReady || isProcessing) return;
+    if (!cameraReady || isProcessing) {
+      if (!cameraReady) {
+        console.warn('[Scan] Camera not ready yet');
+      }
+      return;
+    }
+    
+    // Double-check camera ref before capture
+    const currentCameraRef = cameraRef.current;
+    if (!currentCameraRef) {
+      console.warn('[Scan] Camera ref not available');
+      Alert.alert('Camera Error', 'Camera is not ready. Please try again.');
+      return;
+    }
+    
     setIsProcessing(true);
     try {
-      // On Android: no pictureSize (avoids reconfig that can break capture); base64 read from file after.
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: isAndroid ? 0.5 : 0.7,
-        base64: !isAndroid,
-      });
-      if (!photo?.uri) {
-        console.error('[Scan] takePictureAsync returned no uri');
-        Alert.alert('Error', 'Capture failed—no image was saved. Try again or use Upload.');
-        return;
+      // Add a small delay to ensure camera is fully ready
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Verify camera ref is still valid after delay
+      if (!cameraRef.current) {
+        throw new Error('Camera reference lost during capture');
       }
+
+      // On Android: request base64 directly (more reliable than reading from file)
+      // On iOS: also request base64 directly
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: isAndroid ? 0.6 : 0.8,
+        base64: true, // Request base64 directly for all platforms
+        skipProcessing: false,
+      });
+
+      if (!photo) {
+        throw new Error('takePictureAsync returned null');
+      }
+
+      if (!photo.uri) {
+        throw new Error('takePictureAsync returned no uri');
+      }
+
+      // Get base64 - prefer from photo, fallback to reading file
       let base64 = photo.base64;
+      
       if (!base64 && photo.uri) {
+        console.log('[Scan] Base64 not in photo, reading from file...');
         try {
           base64 = await readAsStringAsync(photo.uri, { encoding: EncodingType.Base64 });
         } catch (e) {
           console.error('[Scan] Base64 fallback error:', e);
+          throw new Error(`Failed to read image data: ${e instanceof Error ? e.message : String(e)}`);
         }
       }
+
       if (!base64) {
-        Alert.alert('Error', 'Could not get image data. Try again or use Upload.');
-        return;
+        throw new Error('Could not get image data (no base64 and file read failed)');
       }
+
+      console.log('[Scan] Image captured successfully, processing...');
       await processImage(photo.uri, base64);
     } catch (e) {
       console.error('[Scan] Capture error:', e);
-      Alert.alert('Error', 'Failed to capture image. Try again or use Upload.');
-    } finally {
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      Alert.alert(
+        'Capture Failed', 
+        `Failed to capture image: ${errorMessage}\n\nPlease try again or use the Upload button to select an image from your gallery.`,
+        [{ text: 'OK' }]
+      );
       setIsProcessing(false);
+      setProcessingResults(null);
     }
   };
 
@@ -164,11 +204,17 @@ export default function ScanScreen() {
   };
 
   const processImage = async (uri: string, base64: string | null | undefined) => {
-    if (!base64) return;
+    if (!base64) {
+      setIsProcessing(false);
+      setProcessingResults(null);
+      return;
+    }
     
     // Check if user has scans remaining (including bonus scans)
     const hasQuota = await hasScansRemaining();
     if (!hasQuota) {
+      setIsProcessing(false);
+      setProcessingResults(null);
       Alert.alert(
         'No Scans Remaining',
         'You\'ve used all your scans for this week. Watch an ad to get 10 more scans.',
@@ -185,6 +231,7 @@ export default function ScanScreen() {
     }
 
     setIsProcessing(true);
+    setProcessingResults(null); // Clear previous results
     try {
       // Fetch existing merchants for matching
       const existingMerchants = await TransactionRepository.getUniqueMerchants();
@@ -206,19 +253,32 @@ export default function ScanScreen() {
       // Record successful scan
       await recordScan();
 
-      setIsProcessing(false);
-      router.push({
-        pathname: '/review' as any,
-        params: {
-          data: JSON.stringify(receiptData),
-          uri: uri
-        }
+      // Store results - this will enable the Review button
+      setProcessingResults({
+        data: receiptData,
+        uri: uri
       });
     } catch (e) {
       console.error('Processing error:', e);
-      Alert.alert('Analysis Failed', 'We couldn\'t process this receipt.');
       setIsProcessing(false);
+      setProcessingResults(null);
+      Alert.alert('Analysis Failed', 'We couldn\'t process this receipt.');
     }
+  };
+
+  const handleReview = () => {
+    if (!processingResults) return;
+    
+    setIsProcessing(false);
+    router.push({
+      pathname: '/review' as any,
+      params: {
+        data: JSON.stringify(processingResults.data),
+        uri: processingResults.uri
+      }
+    });
+    // Clear results after navigation
+    setProcessingResults(null);
   };
 
   if (!permission) {
@@ -231,7 +291,14 @@ export default function ScanScreen() {
 
   const shouldShowCamera = (Platform.OS === 'web' ? hasWebPermission : permission?.granted) && !showPermissionModal;
 
-  if (isProcessing) return <ProcessingView />;
+  if (isProcessing) {
+    return (
+      <ProcessingWithAdView 
+        onReview={handleReview}
+        resultsReady={processingResults !== null}
+      />
+    );
+  }
 
   return (
     <>
@@ -259,16 +326,23 @@ export default function ScanScreen() {
             flash={flash}
             ref={cameraRef}
             onCameraReady={() => {
+              console.log('[Scan] Camera ready');
               // On Android, delay before allowing capture so the preview can stabilize (avoids "Failed to capture image" on some devices).
               if (isAndroid) {
                 if (readyTimeoutRef.current) clearTimeout(readyTimeoutRef.current);
                 readyTimeoutRef.current = setTimeout(() => {
                   readyTimeoutRef.current = null;
                   setCameraReady(true);
+                  console.log('[Scan] Camera ready (Android delay complete)');
                 }, ANDROID_READY_DELAY_MS);
               } else {
                 setCameraReady(true);
+                console.log('[Scan] Camera ready (iOS/Web)');
               }
+            }}
+            onMountError={(error) => {
+              console.error('[Scan] Camera mount error:', error);
+              Alert.alert('Camera Error', 'Failed to initialize camera. Please try restarting the app.');
             }}
           />
 

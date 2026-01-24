@@ -104,13 +104,13 @@ export default function SettingsScreen() {
             onPress={() => setShowReviewApproachPicker(true)}
             className="bg-crescender-900/40 rounded-2xl border border-crescender-800 flex-row items-center justify-between p-4"
           >
-            <View className="flex-row items-center gap-3">
-              <View className="w-8 h-8 rounded-full bg-crescender-800 items-center justify-center">
+            <View className="flex-row items-center gap-3 flex-1 min-w-0">
+              <View className="w-8 h-8 rounded-full bg-crescender-800 items-center justify-center flex-shrink-0">
                 <Feather name="file-text" size={18} color="#f5c518" />
               </View>
-              <View className="flex-1">
+              <View className="flex-1 min-w-0">
                 <Text className="text-white font-medium">Review Style</Text>
-                <Text className="text-crescender-400 text-xs mt-0.5">
+                <Text className="text-crescender-400 text-xs mt-0.5" numberOfLines={1}>
                   {reviewApproach === 'workflow' 
                     ? 'Multi-page step-by-step workflow' 
                     : reviewApproach === 'simplified' 
@@ -119,8 +119,8 @@ export default function SettingsScreen() {
                 </Text>
               </View>
             </View>
-            <View className="flex-row items-center gap-2 ml-2">
-              <Text className="text-crescender-300 text-sm font-medium">
+            <View className="flex-row items-center gap-2 ml-2 flex-shrink-0">
+              <Text className="text-crescender-300 text-sm font-medium" numberOfLines={1}>
                 {reviewApproach === 'workflow' ? 'Workflow' : 
                  reviewApproach === 'simplified' ? 'Simplified' : 'Full Details'}
               </Text>

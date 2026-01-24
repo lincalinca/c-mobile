@@ -8,6 +8,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { getUsageStats, addBonusScans } from '../lib/usageTracking';
 import { format } from 'date-fns';
 import { useRewardedAd } from '../components/ads';
+import { PlaceholderRewardedAd } from '../components/ads/PlaceholderAd';
 
 export default function UsageScreen() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function UsageScreen() {
   const [weekEnd, setWeekEnd] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const { show, isLoaded, isLoading: adLoading } = useRewardedAd({
+  const { show, isLoaded, isLoading: adLoading, showPlaceholder, handlePlaceholderReward, handlePlaceholderClose } = useRewardedAd({
     onRewarded: async (reward) => {
       // Add 10 bonus scans
       await addBonusScans(10);
@@ -275,6 +276,13 @@ export default function UsageScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Placeholder Rewarded Ad Modal */}
+      <PlaceholderRewardedAd
+        visible={showPlaceholder || false}
+        onClose={handlePlaceholderClose}
+        onReward={handlePlaceholderReward}
+      />
     </View>
   );
 }

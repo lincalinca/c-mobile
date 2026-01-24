@@ -1,6 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { Platform, Alert } from 'react-native';
-import * as TrackingTransparency from 'expo-tracking-transparency';
+
+// Lazy import to avoid errors in Expo Go where native module might not be available
+let TrackingTransparency: any;
+try {
+  TrackingTransparency = require('expo-tracking-transparency');
+} catch (error) {
+  // Native module not available (e.g., in Expo Go on some platforms)
+  console.warn('Tracking Transparency module not available:', error);
+  // Provide fallback enum values
+  TrackingTransparency = {
+    AdvertisingTrackingStatus: {
+      NOT_DETERMINED: 0,
+      RESTRICTED: 1,
+      DENIED: 2,
+      AUTHORIZED: 3,
+    },
+    getTrackingPermissionsAsync: async () => ({ status: 2 }), // DENIED
+    requestTrackingPermissionsAsync: async () => ({ status: 2 }), // DENIED
+  };
+}
 
 /**
  * App Tracking Transparency (ATT) Request Component
@@ -18,9 +37,9 @@ import * as TrackingTransparency from 'expo-tracking-transparency';
 interface ATTRequestProps {
   /**
    * Callback when ATT request completes
-   * @param status - The tracking authorization status
+   * @param status - The tracking authorization status (0=NOT_DETERMINED, 1=RESTRICTED, 2=DENIED, 3=AUTHORIZED)
    */
-  onComplete?: (status: TrackingTransparency.AdvertisingTrackingStatus) => void;
+  onComplete?: (status: number) => void;
   
   /**
    * Whether to show the request automatically on mount
@@ -30,11 +49,20 @@ interface ATTRequestProps {
 }
 
 export function ATTRequest({ onComplete, autoRequest = true }: ATTRequestProps) {
-  const [status, setStatus] = useState<TrackingTransparency.AdvertisingTrackingStatus | null>(null);
+  const [status, setStatus] = useState<number | null>(null);
 
   useEffect(() => {
     // Only request on iOS
     if (Platform.OS !== 'ios') {
+      return;
+    }
+
+    // If TrackingTransparency module not available, skip
+    if (!TrackingTransparency || !TrackingTransparency.AdvertisingTrackingStatus) {
+      console.warn('Tracking Transparency module not available');
+      const deniedStatus = TrackingTransparency?.AdvertisingTrackingStatus?.DENIED ?? 2;
+      setStatus(deniedStatus);
+      onComplete?.(deniedStatus as any);
       return;
     }
 
@@ -46,17 +74,17 @@ export function ATTRequest({ onComplete, autoRequest = true }: ATTRequestProps) 
         if (currentStatus === TrackingTransparency.AdvertisingTrackingStatus.NOT_DETERMINED && autoRequest) {
           const { status: newStatus } = await TrackingTransparency.requestTrackingPermissionsAsync();
           setStatus(newStatus);
-          onComplete?.(newStatus);
+          onComplete?.(newStatus as any);
         } else {
           setStatus(currentStatus);
-          onComplete?.(currentStatus);
+          onComplete?.(currentStatus as any);
         }
       } catch (error) {
         console.error('Error requesting tracking permission:', error);
         // Default to denied on error
-        const deniedStatus = TrackingTransparency.AdvertisingTrackingStatus.DENIED;
+        const deniedStatus = TrackingTransparency?.AdvertisingTrackingStatus?.DENIED ?? 2;
         setStatus(deniedStatus);
-        onComplete?.(deniedStatus);
+        onComplete?.(deniedStatus as any);
       }
     };
 
@@ -80,10 +108,16 @@ export function ATTRequest({ onComplete, autoRequest = true }: ATTRequestProps) 
  * ```
  */
 export function useATT() {
-  const [status, setStatus] = useState<TrackingTransparency.AdvertisingTrackingStatus | null>(null);
+  const [status, setStatus] = useState<number | null>(null);
 
   useEffect(() => {
     if (Platform.OS !== 'ios') {
+      return;
+    }
+
+    // If TrackingTransparency module not available, set denied
+    if (!TrackingTransparency || !TrackingTransparency.AdvertisingTrackingStatus) {
+      setStatus(2); // DENIED
       return;
     }
 
@@ -93,7 +127,7 @@ export function useATT() {
         setStatus(currentStatus);
       } catch (error) {
         console.error('Error checking tracking permission:', error);
-        setStatus(TrackingTransparency.AdvertisingTrackingStatus.DENIED);
+        setStatus(TrackingTransparency?.AdvertisingTrackingStatus?.DENIED ?? 2);
       }
     };
 
@@ -102,7 +136,13 @@ export function useATT() {
 
   const requestPermission = async () => {
     if (Platform.OS !== 'ios') {
-      return TrackingTransparency.AdvertisingTrackingStatus.DENIED;
+      return (TrackingTransparency?.AdvertisingTrackingStatus?.DENIED ?? 2) as any;
+    }
+
+    if (!TrackingTransparency || !TrackingTransparency.AdvertisingTrackingStatus) {
+      const deniedStatus = 2; // DENIED
+      setStatus(deniedStatus);
+      return deniedStatus as any;
     }
 
     try {
@@ -111,18 +151,25 @@ export function useATT() {
       return newStatus;
     } catch (error) {
       console.error('Error requesting tracking permission:', error);
-      const deniedStatus = TrackingTransparency.AdvertisingTrackingStatus.DENIED;
+      const deniedStatus = TrackingTransparency?.AdvertisingTrackingStatus?.DENIED ?? 2;
       setStatus(deniedStatus);
-      return deniedStatus;
+      return deniedStatus as any;
     }
+  };
+
+  const AdvertisingTrackingStatus = TrackingTransparency?.AdvertisingTrackingStatus ?? {
+    NOT_DETERMINED: 0,
+    RESTRICTED: 1,
+    DENIED: 2,
+    AUTHORIZED: 3,
   };
 
   return {
     status,
     requestPermission,
-    isAuthorized: status === TrackingTransparency.AdvertisingTrackingStatus.AUTHORIZED,
-    isDenied: status === TrackingTransparency.AdvertisingTrackingStatus.DENIED,
-    isNotDetermined: status === TrackingTransparency.AdvertisingTrackingStatus.NOT_DETERMINED,
-    isRestricted: status === TrackingTransparency.AdvertisingTrackingStatus.RESTRICTED,
+    isAuthorized: status === AdvertisingTrackingStatus.AUTHORIZED,
+    isDenied: status === AdvertisingTrackingStatus.DENIED,
+    isNotDetermined: status === AdvertisingTrackingStatus.NOT_DETERMINED,
+    isRestricted: status === AdvertisingTrackingStatus.RESTRICTED,
   };
 }
