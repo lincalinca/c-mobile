@@ -6,6 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { captureRef } from 'react-native-view-shot';
 import { callSupabaseFunction } from '../lib/supabase';
 import { ProcessingWithAdView } from '../components/processing/ProcessingWithAdView';
 import { TransactionRepository } from '../lib/repository';
@@ -22,10 +23,12 @@ export default function ScanScreen() {
   const [flash, setFlash] = useState<FlashMode>('off');
   const [cameraReady, setCameraReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false); // Separate flag to prevent multiple captures without unmounting camera
   const [processingResults, setProcessingResults] = useState<{ data: any; uri: string } | null>(null);
   const readyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const cameraRef = useRef<any>(null);
+  const cameraContainerRef = useRef<View>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -106,70 +109,202 @@ export default function ScanScreen() {
   };
 
   const handleCapture = async () => {
-    if (!cameraReady || isProcessing) {
+    const captureStartTime = Date.now();
+    // Reduced logging: Only log key milestones and errors to avoid log spam
+    // Full verbose logging can be re-enabled if issues recur
+    
+    if (!cameraReady || isProcessing || isCapturing) {
       if (!cameraReady) {
-        console.warn('[Scan] Camera not ready yet');
+        console.warn('[Scan] ❌ BLOCKED: Camera not ready yet');
+      } else if (isCapturing) {
+        console.warn('[Scan] ❌ BLOCKED: Already capturing');
+      } else {
+        console.warn('[Scan] ❌ BLOCKED: Already processing');
       }
       return;
     }
     
     // Capture camera ref before any async operations
     const currentCameraRef = cameraRef.current;
+    
     if (!currentCameraRef) {
-      console.warn('[Scan] Camera ref not available');
+      console.error('[Scan] ❌ ERROR: Camera ref not available');
       Alert.alert('Camera Error', 'Camera is not ready. Please try again.');
       return;
     }
     
-    setIsProcessing(true);
-    try {
-      // Use the captured ref directly - don't check cameraRef.current again as it might change
-      // On Android: request base64 directly (more reliable than reading from file)
-      // On iOS: also request base64 directly
-      const photo = await currentCameraRef.takePictureAsync({
-        quality: isAndroid ? 0.6 : 0.8,
-        base64: true, // Request base64 directly for all platforms
-        skipProcessing: false,
-      });
-
-      if (!photo) {
-        throw new Error('takePictureAsync returned null');
-      }
-
-      if (!photo.uri) {
-        throw new Error('takePictureAsync returned no uri');
-      }
-
-      // Get base64 - prefer from photo, fallback to reading file
-      let base64 = photo.base64;
+    // Set capturing flag to prevent multiple captures, but don't unmount camera yet
+    // This keeps the camera view mounted so screenshot fallback can work
+    setIsCapturing(true);
+    
+    // Progressive quality reduction: try higher quality first, then reduce if it fails
+    const qualityLevels = isAndroid ? [0.6, 0.4, 0.2, 0.1] : [0.8, 0.6, 0.4, 0.2];
+    let lastError: Error | null = null;
+    const attemptDetails: Array<{ quality: number; error?: string; duration?: number }> = [];
+    
+    // Try camera capture with progressive quality reduction
+    for (let i = 0; i < qualityLevels.length; i++) {
+      const quality = qualityLevels[i];
+      const attemptStartTime = Date.now();
       
-      if (!base64 && photo.uri) {
-        console.log('[Scan] Base64 not in photo, reading from file...');
-        try {
-          base64 = await readAsStringAsync(photo.uri, { encoding: EncodingType.Base64 });
-        } catch (e) {
-          console.error('[Scan] Base64 fallback error:', e);
-          throw new Error(`Failed to read image data: ${e instanceof Error ? e.message : String(e)}`);
+      // Re-check camera ref before each attempt (it might have changed or become null)
+      let activeCameraRef = cameraRef.current;
+      
+      // If ref became null, wait a bit and check again (camera might be remounting)
+      if (!activeCameraRef) {
+        console.warn(`[Scan] ⚠️ Camera ref is null (attempt ${i + 1}), waiting 300ms for camera to remount...`);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        activeCameraRef = cameraRef.current;
+        
+        if (!activeCameraRef) {
+          console.error(`[Scan] ❌ Camera ref still null after wait, skipping attempt ${i + 1}`);
+          attemptDetails.push({ quality, error: 'Camera ref became null', duration: Date.now() - attemptStartTime });
+          if (i < qualityLevels.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            continue;
+          }
+          break;
+        }
+      } else if (activeCameraRef !== currentCameraRef) {
+        console.warn(`[Scan] ⚠️ Camera ref changed (remounted), using new ref for attempt ${i + 1}`);
+      }
+      
+      // Verify the ref has takePictureAsync
+      if (!activeCameraRef || typeof activeCameraRef.takePictureAsync !== 'function') {
+        console.error(`[Scan] ❌ Camera ref invalid or missing takePictureAsync (attempt ${i + 1})`);
+        attemptDetails.push({ quality, error: 'Camera ref invalid', duration: Date.now() - attemptStartTime });
+        if (i < qualityLevels.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+          continue;
+        }
+        break;
+      }
+      
+      try {
+        const photoPromise = activeCameraRef.takePictureAsync({
+          quality,
+          base64: true,
+          skipProcessing: false,
+        });
+        
+        const photo = await photoPromise;
+        const attemptDuration = Date.now() - attemptStartTime;
+        
+        if (!photo) {
+          console.error(`[Scan] ❌ takePictureAsync returned null/undefined (quality ${quality}, attempt ${i + 1})`);
+          attemptDetails.push({ quality, error: 'takePictureAsync returned null', duration: attemptDuration });
+          throw new Error('takePictureAsync returned null');
+        }
+
+        if (!photo.uri) {
+          console.error(`[Scan] ❌ Photo has no URI (quality ${quality}, attempt ${i + 1})`);
+          attemptDetails.push({ quality, error: 'Photo has no uri', duration: attemptDuration });
+          throw new Error('takePictureAsync returned no uri');
+        }
+
+        // Get base64 - prefer from photo, fallback to reading file
+        let base64 = photo.base64;
+        
+        if (!base64 && photo.uri) {
+          try {
+            base64 = await readAsStringAsync(photo.uri, { encoding: EncodingType.Base64 });
+          } catch (e) {
+            console.error('[Scan] ❌ Base64 fallback error:', e instanceof Error ? e.message : String(e));
+            attemptDetails.push({ quality, error: `File read failed: ${e instanceof Error ? e.message : String(e)}`, duration: attemptDuration });
+            throw new Error(`Failed to read image data: ${e instanceof Error ? e.message : String(e)}`);
+          }
+        }
+
+        if (!base64) {
+          console.error(`[Scan] ❌ No base64 data available (quality ${quality}, attempt ${i + 1})`);
+          attemptDetails.push({ quality, error: 'No base64 data', duration: attemptDuration });
+          throw new Error('Could not get image data (no base64 and file read failed)');
+        }
+
+        // Success! Log key info and process
+        const totalDuration = Date.now() - captureStartTime;
+        console.log(`[Scan] ✅ Capture successful: quality ${quality}, ${totalDuration}ms, ${(base64.length / 1024).toFixed(1)}KB`);
+        attemptDetails.push({ quality, duration: attemptDuration });
+        
+        // Now set processing state and process the image
+        setIsProcessing(true);
+        await processImage(photo.uri, base64);
+        return; // Success - exit function
+      } catch (e) {
+        const attemptDuration = Date.now() - attemptStartTime;
+        lastError = e instanceof Error ? e : new Error(String(e));
+        
+        // Only log errors (warnings for retries, errors for final failure)
+        if (i < qualityLevels.length - 1) {
+          console.warn(`[Scan] ⚠️ Attempt ${i + 1} failed (quality ${quality}): ${lastError.message} - retrying...`);
+        } else {
+          console.error(`[Scan] ❌ Attempt ${i + 1} failed (quality ${quality}): ${lastError.message}`);
+        }
+        
+        attemptDetails.push({ 
+          quality, 
+          error: `${lastError.name}: ${lastError.message}`, 
+          duration: attemptDuration 
+        });
+        
+        // If this isn't the last attempt, continue to next quality level
+        if (i < qualityLevels.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+          continue;
         }
       }
-
-      if (!base64) {
-        throw new Error('Could not get image data (no base64 and file read failed)');
-      }
-
-      console.log('[Scan] Image captured successfully, processing...');
-      await processImage(photo.uri, base64);
-    } catch (e) {
-      console.error('[Scan] Capture error:', e);
-      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
-      Alert.alert(
-        'Capture Failed', 
-        `Failed to capture image: ${errorMessage}\n\nPlease try again or use the Upload button to select an image from your gallery.`,
-        [{ text: 'OK' }]
-      );
-      setIsProcessing(false);
-      setProcessingResults(null);
     }
+    
+    // Log failure summary with attempt details
+    const totalDuration = Date.now() - captureStartTime;
+    console.error(`[Scan] ❌ All ${attemptDetails.length} camera attempts failed (${totalDuration}ms)`);
+    console.error(`[Scan] Attempt summary:`, JSON.stringify(attemptDetails, null, 2));
+    
+    // If all camera capture attempts failed, try screenshot fallback
+    console.log('[Scan] Trying screenshot fallback...');
+    try {
+      const containerRef = cameraContainerRef.current;
+      
+      if (containerRef) {
+        const uri = await captureRef(containerRef, {
+          format: 'jpg',
+          quality: 0.8,
+          result: 'tmpfile',
+        });
+        
+        const base64 = await readAsStringAsync(uri, { encoding: EncodingType.Base64 });
+        
+        if (base64) {
+          console.log(`[Scan] ✅ Screenshot fallback successful (${(base64.length / 1024).toFixed(1)}KB)`);
+          
+          // Now set processing state and process the image
+          setIsProcessing(true);
+          await processImage(uri, base64);
+          return; // Success - exit function
+        } else {
+          console.error(`[Scan] ❌ Screenshot captured but base64 read returned empty`);
+        }
+      } else {
+        console.error(`[Scan] ❌ Container ref is null, cannot take screenshot`);
+      }
+    } catch (screenshotError) {
+      console.error('[Scan] ❌ Screenshot fallback failed:', screenshotError instanceof Error ? screenshotError.message : String(screenshotError));
+    }
+    
+    // All attempts failed
+    const errorMessage = lastError?.message || 'Unknown error';
+    console.error(`[Scan] ❌ All capture methods failed. Last error: ${errorMessage}`);
+    
+    // Reset capturing flag so user can try again
+    setIsCapturing(false);
+    
+    Alert.alert(
+      'Capture Failed', 
+      `Failed to capture image after trying multiple methods: ${errorMessage}\n\nPlease try again or use the Upload button to select an image from your gallery.`,
+      [{ text: 'OK' }]
+    );
+    setIsProcessing(false);
+    setProcessingResults(null);
   };
 
   const pickDocument = async () => {
@@ -311,7 +446,11 @@ export default function ScanScreen() {
       </Modal>
 
       {shouldShowCamera ? (
-        <View className='flex-1 bg-black' style={{ paddingTop: insets.top }}>
+        <View 
+          ref={cameraContainerRef}
+          className='flex-1 bg-black' 
+          style={{ paddingTop: insets.top }}
+        >
           {/* CameraView must have no children: it can cause capture to fail on Android. Overlay is absolutely positioned on top. */}
           <CameraView
             style={{ flex: 1 }}
@@ -319,22 +458,29 @@ export default function ScanScreen() {
             flash={flash}
             ref={cameraRef}
             onCameraReady={() => {
-              console.log('[Scan] Camera ready');
+              // Reduced logging: Only log if there's an issue or on first ready
               // On Android, delay before allowing capture so the preview can stabilize (avoids "Failed to capture image" on some devices).
               if (isAndroid) {
-                if (readyTimeoutRef.current) clearTimeout(readyTimeoutRef.current);
+                if (readyTimeoutRef.current) {
+                  clearTimeout(readyTimeoutRef.current);
+                }
                 readyTimeoutRef.current = setTimeout(() => {
                   readyTimeoutRef.current = null;
                   setCameraReady(true);
-                  console.log('[Scan] Camera ready (Android delay complete)');
+                  // Only log if camera ref is missing (indicates a problem)
+                  if (!cameraRef.current) {
+                    console.warn('[Scan] ⚠️ Camera ready but ref is null');
+                  }
                 }, ANDROID_READY_DELAY_MS);
               } else {
                 setCameraReady(true);
-                console.log('[Scan] Camera ready (iOS/Web)');
+                if (!cameraRef.current) {
+                  console.warn('[Scan] ⚠️ Camera ready but ref is null');
+                }
               }
             }}
             onMountError={(error) => {
-              console.error('[Scan] Camera mount error:', error);
+              console.error('[Scan] ❌ Camera mount error:', error);
               Alert.alert('Camera Error', 'Failed to initialize camera. Please try restarting the app.');
             }}
           />

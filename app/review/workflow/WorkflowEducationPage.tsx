@@ -68,7 +68,7 @@ export default function WorkflowEducationPage({
       type: 'education',
       title: item.description || '',
       subtitle: eduDetails.studentName || 'Education',
-      amount: item.totalPrice, // Keep total for main display
+      amount: Math.round((item.totalPrice || 0) * 100), // Convert dollars to cents
       date: workflowState.transactionDate,
       metadata: {
         ...eduDetails,

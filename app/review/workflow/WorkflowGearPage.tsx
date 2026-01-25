@@ -47,12 +47,13 @@ export default function WorkflowGearPage({
   };
 
   // Convert to ResultItem format for cards
+  // Note: BaseCard expects amounts in cents, so convert dollars to cents
   const gearResultItems: ResultItem[] = gearItems.map(item => ({
     id: item.id || '',
     type: 'gear',
     title: item.description || '',
     subtitle: item.brand && item.model ? `${item.brand} ${item.model}` : undefined,
-    amount: item.totalPrice,
+    amount: Math.round((item.totalPrice || 0) * 100), // Convert dollars to cents
     date: workflowState.transactionDate,
     metadata: {},
     receiptId: '',
@@ -63,7 +64,7 @@ export default function WorkflowGearPage({
     type: 'service',
     title: item.description || '',
     subtitle: 'Service',
-    amount: item.totalPrice,
+    amount: Math.round((item.totalPrice || 0) * 100), // Convert dollars to cents
     date: workflowState.transactionDate,
     metadata: {},
     receiptId: '',

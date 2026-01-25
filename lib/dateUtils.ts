@@ -10,16 +10,26 @@ export function getRelativeDateLabel(date: string | Date): string {
   const diffDays = differenceInDays(targetDate, new Date());
   
   if (diffDays > 0) {
+    // Future dates
     if (diffDays < 7) return `Occurs in ${diffDays} days`;
     if (diffDays < 14) return 'Occurs in 1 week';
     const weeks = Math.floor(diffDays / 7);
-    return `Occurs in ${weeks} weeks`;
+    if (weeks < 4) return `Occurs in ${weeks} weeks`;
+    const months = Math.floor(diffDays / 30);
+    if (months < 12) return `Occurs in ${months} ${months === 1 ? 'month' : 'months'}`;
+    const years = Math.floor(diffDays / 365);
+    return `Occurs in ${years} ${years === 1 ? 'year' : 'years'}`;
   } else {
+    // Past dates
     const absDiff = Math.abs(diffDays);
     if (absDiff < 7) return `Occurred ${absDiff} days ago`;
     if (absDiff < 14) return 'Occurred 1 week ago';
     const weeks = Math.floor(absDiff / 7);
-    return `Occurred ${weeks} weeks ago`;
+    if (weeks < 4) return `Occurred ${weeks} weeks ago`;
+    const months = Math.floor(absDiff / 30);
+    if (months < 12) return `Occurred ${months} ${months === 1 ? 'month' : 'months'} ago`;
+    const years = Math.floor(absDiff / 365);
+    return `Occurred ${years} ${years === 1 ? 'year' : 'years'} ago`;
   }
 }
 

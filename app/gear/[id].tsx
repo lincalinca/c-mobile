@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator, Alert, TextInput, Linking } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator, Alert, TextInput, Linking, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import * as Crypto from 'expo-crypto';
@@ -8,7 +8,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatABN } from '../../lib/formatUtils';
 import { ITEM_CATEGORIES } from '../../constants/categories';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import * as MediaLibrary from 'expo-media-library';
 import { callSupabaseFunction } from '../../lib/supabase';
 import { ProcessingView } from '../../components/processing/ProcessingView';
 import { SimpleGearCard } from '../../components/results/SimpleGearCard';
@@ -115,6 +118,7 @@ export default function GearDetailScreen() {
   const [editMerchantState, setEditMerchantState] = useState('');
   const [editMerchantPostcode, setEditMerchantPostcode] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id || typeof id !== 'string') return;
@@ -225,6 +229,145 @@ export default function GearDetailScreen() {
     } catch (e) {
       console.error('Replace image error:', e);
       Alert.alert('Error', 'Failed to replace image. Please try again.');
+    }
+  };
+
+  // Helper function to get the image file URI and generate filename
+  const prepareImageForSave = async (): Promise<{ uri: string; filename: string }> => {
+    if (!receipt?.imageUrl) {
+      throw new Error('No image available');
+    }
+
+    // Generate unique filename: isodate_description_merchant
+    const date = receipt.transactionDate 
+      ? new Date(receipt.transactionDate).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0];
+    
+    // Create a safe description from receipt summary or merchant name
+    const description = receipt.summary 
+      ? receipt.summary.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)
+      : receipt.merchant?.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30) || 'receipt';
+    
+    const merchant = receipt.merchant 
+      ? receipt.merchant.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)
+      : 'merchant';
+    
+    const filename = `${date}_${description}_${merchant}.jpg`;
+    
+    // Read the image and prepare file URI
+    let imageUri = receipt.imageUrl;
+    
+    if (receipt.imageUrl.startsWith('data:')) {
+      // For data URIs, we need to save to a file first
+      const base64 = receipt.imageUrl.split(',')[1] || '';
+      const fileUri = `${FileSystem.documentDirectory}${filename}`;
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      if (!fileInfo.exists) {
+        await FileSystem.makeDirectoryAsync(FileSystem.documentDirectory!, { intermediates: true });
+      }
+      // Write base64 to file
+      await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+      imageUri = fileUri;
+    } else if (receipt.imageUrl.startsWith('file://') || !receipt.imageUrl.startsWith('http')) {
+      imageUri = receipt.imageUrl;
+    } else {
+      // For remote URLs, download first
+      const fileUri = `${FileSystem.documentDirectory}${filename}`;
+      const downloadResult = await FileSystem.downloadAsync(receipt.imageUrl, fileUri);
+      imageUri = downloadResult.uri;
+    }
+
+    return { uri: imageUri, filename };
+  };
+
+  const handleSaveImage = async () => {
+    if (!receipt?.imageUrl) {
+      Alert.alert('Error', 'No image available to save');
+      return;
+    }
+
+    try {
+      // Request media library permissions
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please grant permission to save images to your device.');
+        return;
+      }
+
+      const { uri, filename } = await prepareImageForSave();
+      
+      // On Android, try to save directly to Downloads folder first
+      if (Platform.OS === 'android') {
+        try {
+          // Get Downloads directory path
+          const downloadsPath = `${FileSystem.documentDirectory}../Downloads/`;
+          const downloadsUri = `${downloadsPath}${filename}`;
+          
+          // Ensure Downloads directory exists
+          const dirInfo = await FileSystem.getInfoAsync(downloadsPath);
+          if (!dirInfo.exists) {
+            await FileSystem.makeDirectoryAsync(downloadsPath, { intermediates: true });
+          }
+          
+          // Copy file to Downloads with proper filename
+          await FileSystem.copyAsync({
+            from: uri,
+            to: downloadsUri,
+          });
+          
+          // Also save to media library so it appears in gallery
+          await MediaLibrary.createAssetAsync(uri);
+          
+          Alert.alert('Saved', `Receipt saved as "${filename}" to Downloads`);
+          return;
+        } catch (androidError) {
+          console.log('Android Downloads save failed, falling back to media library:', androidError);
+          // Fall through to media library save
+        }
+      }
+      
+      // Fallback: Save to media library (Pictures folder)
+      // Note: MediaLibrary may not preserve exact filename, but it will save the image
+      const asset = await MediaLibrary.createAssetAsync(uri);
+      
+      // Try to add to Downloads album if it exists
+      const album = await MediaLibrary.getAlbumAsync('Downloads');
+      if (album == null) {
+        await MediaLibrary.createAlbumAsync('Downloads', asset, false);
+      } else {
+        await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+      }
+
+      Alert.alert('Saved', `Receipt saved as "${filename}"`);
+    } catch (error) {
+      console.error('Save error:', error);
+      Alert.alert('Save Failed', `Could not save image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleShareImage = async () => {
+    if (!receipt?.imageUrl) {
+      Alert.alert('Error', 'No image available to share');
+      return;
+    }
+
+    try {
+      const { uri } = await prepareImageForSave();
+      
+      // Share the file
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/jpeg',
+          dialogTitle: 'Share Receipt Image',
+          UTI: 'public.jpeg',
+        });
+      } else {
+        Alert.alert('Sharing not available', 'Sharing is not available on this device.');
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+      Alert.alert('Share Failed', `Could not share image: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -362,13 +505,17 @@ export default function GearDetailScreen() {
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 180 }}>
         {/* Receipt Image */}
         {receipt.imageUrl && (
-          <View className="bg-black/40 h-64 w-full">
+          <TouchableOpacity 
+            onPress={() => setShowImageModal(true)}
+            activeOpacity={0.9}
+            className="bg-black/40 h-64 w-full"
+          >
             <Image
               source={{ uri: receipt.imageUrl }}
               className="w-full h-full"
               resizeMode="contain"
             />
-          </View>
+          </TouchableOpacity>
         )}
 
         {isEditing ? (
@@ -742,7 +889,7 @@ export default function GearDetailScreen() {
             {/* Other Items */}
             {(serviceItems.length > 0 || educationItems.length > 0 || eventItems.length > 0) && (
               <View className="p-6">
-                <Text className="text-crescender-400 font-bold mb-4 uppercase tracking-widest text-sm">Other Items</Text>
+                <Text className="text-crescender-400 font-bold mb-4 uppercase tracking-widest text-sm">Other Items and Services</Text>
                 <View className="flex-row flex-wrap" style={{ marginHorizontal: -4 }}>
                   {[...serviceItems, ...educationItems, ...eventItems].map((item) => {
                     const resultItem = lineItemToResultItem(item, receipt);
@@ -808,6 +955,54 @@ export default function GearDetailScreen() {
           </View>
         </View>
       )}
+
+      {/* Image Fullscreen Modal */}
+      <Modal
+        visible={showImageModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowImageModal(false)}
+      >
+        <View className="flex-1 bg-black/95" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
+          {/* Header */}
+          <View className="flex-row justify-between items-center px-4 py-3">
+            <TouchableOpacity
+              onPress={() => setShowImageModal(false)}
+              className="bg-crescender-800/50 p-3 rounded-full"
+            >
+              <Feather name="x" size={24} color="white" />
+            </TouchableOpacity>
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={handleSaveImage}
+                className="bg-gold/20 px-4 py-3 rounded-full border border-gold/30 flex-row items-center gap-2"
+              >
+                <Feather name="download" size={20} color="#f5c518" />
+                <Text className="text-gold font-semibold text-sm">Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleShareImage}
+                className="bg-crescender-800/50 px-4 py-3 rounded-full border border-crescender-700/50 flex-row items-center gap-2"
+              >
+                <Feather name="share-2" size={20} color="white" />
+                <Text className="text-white font-semibold text-sm">Share</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          {/* Image */}
+          <View className="flex-1 justify-center items-center px-4">
+            {receipt?.imageUrl && (
+              <Image
+                source={{ uri: receipt.imageUrl }}
+                className="w-full"
+                style={{ flex: 1 }}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Date Picker Modal */}
       <DatePickerModal

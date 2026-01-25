@@ -50,7 +50,7 @@ export default function WorkflowServicesPage({
     type: 'service',
     title: item.description || '',
     subtitle: 'Service',
-    amount: item.totalPrice,
+    amount: Math.round((item.totalPrice || 0) * 100), // Convert dollars to cents
     date: workflowState.transactionDate,
     metadata: {},
     receiptId: '',
