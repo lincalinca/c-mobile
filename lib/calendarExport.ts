@@ -45,6 +45,7 @@ export interface CalendarEventData {
   endDate: Date;
   location?: string;
   notes?: string;
+  recurrenceRule?: Calendar.RecurrenceRule;
 }
 
 export function buildCalendarEventFromResultItem(
@@ -95,6 +96,77 @@ function formatDateForNotes(d: string): string {
   return isNaN(t.getTime()) ? d : t.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** Convert day name string to expo-calendar DayOfTheWeek enum. */
+function dayNameToCalendarDay(dayName: string): Calendar.DayOfTheWeek | null {
+  const normalized = dayName.toLowerCase();
+  const map: Record<string, Calendar.DayOfTheWeek> = {
+    sunday: Calendar.DayOfTheWeek.Sunday,
+    monday: Calendar.DayOfTheWeek.Monday,
+    tuesday: Calendar.DayOfTheWeek.Tuesday,
+    wednesday: Calendar.DayOfTheWeek.Wednesday,
+    thursday: Calendar.DayOfTheWeek.Thursday,
+    friday: Calendar.DayOfTheWeek.Friday,
+    saturday: Calendar.DayOfTheWeek.Saturday,
+  };
+  return map[normalized] || null;
+}
+
+/** Build recurrence rule from education series metadata. */
+function buildRecurrenceRule(
+  frequency: string | undefined,
+  daysOfWeek: string[] | undefined,
+  occurrenceCount: number
+): Calendar.RecurrenceRule | undefined {
+  if (!frequency || occurrenceCount <= 1) {
+    return undefined; // No recurrence for one-off events
+  }
+
+  const freqLower = frequency.toLowerCase();
+  let calendarFrequency: Calendar.Frequency;
+
+  // Determine frequency
+  if (freqLower.includes('daily') || freqLower === 'day') {
+    calendarFrequency = Calendar.Frequency.DAILY;
+  } else if (freqLower.includes('weekly') || freqLower === 'week') {
+    calendarFrequency = Calendar.Frequency.WEEKLY;
+  } else if (freqLower.includes('fortnight') || freqLower.includes('biweek')) {
+    calendarFrequency = Calendar.Frequency.WEEKLY;
+    // Fortnightly = every 2 weeks, handled by interval
+  } else if (freqLower.includes('monthly') || freqLower === 'month') {
+    calendarFrequency = Calendar.Frequency.MONTHLY;
+  } else if (freqLower.includes('yearly') || freqLower === 'year') {
+    calendarFrequency = Calendar.Frequency.YEARLY;
+  } else {
+    // Default to weekly for education lessons
+    calendarFrequency = Calendar.Frequency.WEEKLY;
+  }
+
+  // Determine interval (for fortnightly, interval = 2)
+  let interval = 1;
+  if (freqLower.includes('fortnight') || freqLower.includes('every 2 week') || freqLower.includes('biweek')) {
+    interval = 2;
+  }
+
+  // Convert daysOfWeek to calendar format (array of { dayOfTheWeek, weekNumber? } objects)
+  let daysOfTheWeek: Array<{ dayOfTheWeek: Calendar.DayOfTheWeek; weekNumber?: number }> | undefined;
+  if (daysOfWeek && daysOfWeek.length > 0 && calendarFrequency === Calendar.Frequency.WEEKLY) {
+    const calendarDays = daysOfWeek
+      .map(dayNameToCalendarDay)
+      .filter((day): day is Calendar.DayOfTheWeek => day !== null)
+      .map(day => ({ dayOfTheWeek: day }));
+    if (calendarDays.length > 0) {
+      daysOfTheWeek = calendarDays;
+    }
+  }
+
+  return {
+    frequency: calendarFrequency,
+    interval,
+    occurrence: occurrenceCount,
+    daysOfTheWeek,
+  };
+}
+
 /**
  * Build one calendar event for an education lesson series: title with occurrence count,
  * first occurrence's start/end, and notes with "N lessons from [first] to [last]" and canonical link.
@@ -134,12 +206,20 @@ export function buildCalendarEventFromEducationSeries(
   const seriesId = EVENT_SERIES_PREFIX + series.itemId;
   const notes = context.join(' ') + '\n' + getCanonicalEventUrl(seriesId);
 
+  // Build recurrence rule for series
+  const recurrenceRule = buildRecurrenceRule(
+    meta.frequency as string | undefined,
+    meta.daysOfWeek as string[] | undefined,
+    n
+  );
+
   return {
     title: `${series.title} – Lesson series (${n})`,
     startDate,
     endDate,
     location: location || undefined,
     notes,
+    recurrenceRule,
   };
 }
 

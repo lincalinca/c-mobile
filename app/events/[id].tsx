@@ -105,20 +105,8 @@ export default function EventDetailScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <View className="flex-1 bg-crescender-950 justify-center items-center">
-        <ActivityIndicator size="large" color={ACCENT_COLOR} />
-      </View>
-    );
-  }
-
   // Use either the line item or the generated event data
-  const title = eventData?.title || item?.description || 'Event';
-  const subtitle = eventData?.subtitle || 'Scheduled Event';
-  const eventDate = eventData?.date || receipt?.transactionDate || '';
-  const metadata = eventData?.metadata || {};
-
+  // IMPORTANT: All hooks must be called before any conditional returns
   const eventResult: ResultItem | null = useMemo(() => {
     if (eventData) return eventData;
     if (item && receipt) {
@@ -141,6 +129,15 @@ export default function EventDetailScreen() {
     await addEventToDeviceCalendar(eventResult, receipt ?? null);
   }, [eventResult, receipt]);
 
+  // Now safe to have conditional returns after all hooks
+  if (loading) {
+    return (
+      <View className="flex-1 bg-crescender-950 justify-center items-center">
+        <ActivityIndicator size="large" color={ACCENT_COLOR} />
+      </View>
+    );
+  }
+
   if (!receipt && !eventData) {
     return (
       <View className="flex-1 bg-crescender-950 justify-center items-center p-6">
@@ -151,6 +148,11 @@ export default function EventDetailScreen() {
       </View>
     );
   }
+
+  const title = eventResult?.title || item?.description || 'Event';
+  const subtitle = eventResult?.subtitle || 'Scheduled Event';
+  const eventDate = eventResult?.date || receipt?.transactionDate || '';
+  const metadata = eventResult?.metadata || {};
 
   return (
     <View className="flex-1 bg-crescender-950" style={{ paddingTop: insets.top }}>

@@ -80,6 +80,24 @@ export default function GearItemDetailScreen() {
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Hero Section */}
         <View className="p-6 border-b border-crescender-800">
+          {/* Brand Icon/Initial */}
+          {isGear && item.brand && (
+            <View className="mb-4 flex-row items-center gap-3">
+              <View className="w-16 h-16 bg-gold/20 rounded-2xl border-2 border-gold/30 justify-center items-center">
+                <Text className="text-gold font-bold text-2xl" numberOfLines={1} ellipsizeMode="tail">
+                  {item.brand.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View className="flex-1">
+                <Text className="text-crescender-400 text-xs mb-1">Brand</Text>
+                <Text className="text-white font-bold text-lg">{item.brand}</Text>
+                {item.gearCategory && (
+                  <Text className="text-crescender-500 text-xs mt-1">{item.gearCategory}</Text>
+                )}
+              </View>
+            </View>
+          )}
+          
           <Text className="text-gold text-sm font-bold uppercase tracking-widest mb-2">{item.category}</Text>
           <Text className="text-white text-3xl font-bold mb-2">{item.description}</Text>
           {item.brand && (
@@ -119,7 +137,14 @@ export default function GearItemDetailScreen() {
         {/* Granular Details */}
         {isGear && gearDetails && (
           <View className="p-6 border-b border-crescender-800">
-            <Text className="text-gold font-bold mb-4 uppercase tracking-widest text-xs">Specifications</Text>
+            <View className="flex-row items-center justify-between mb-4">
+              <Text className="text-gold font-bold uppercase tracking-widest text-xs">Specifications</Text>
+              {item.gearCategory && (
+                <View className="bg-gold/20 px-3 py-1 rounded-full border border-gold/30">
+                  <Text className="text-gold text-xs font-bold">{item.gearCategory}</Text>
+                </View>
+              )}
+            </View>
             
             <View className="bg-crescender-900/40 rounded-xl overflow-hidden border border-crescender-800/50">
               {/* Manufacturer/Brand info */}
@@ -213,82 +238,91 @@ export default function GearItemDetailScreen() {
           </View>
         )}
 
-        {/* Resources & Links */}
+        {/* Brand Resources & Links */}
         {isGear && gearDetails && (gearDetails.officialUrl || gearDetails.officialManual || gearDetails.warrantyContactDetails) && (
           <View className="p-6 border-b border-crescender-800">
-            <Text className="text-gold font-bold mb-4 uppercase tracking-widest text-xs">Resources</Text>
+            <View className="flex-row items-center gap-2 mb-4">
+              {item.brand && (
+                <View className="w-8 h-8 bg-gold/20 rounded-lg border border-gold/30 justify-center items-center">
+                  <Text className="text-gold font-bold text-sm">
+                    {item.brand.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <Text className="text-gold font-bold uppercase tracking-widest text-xs flex-1">Brand Resources</Text>
+            </View>
             
             <View className="gap-3">
               {gearDetails.officialUrl && (
                 <TouchableOpacity
                   onPress={() => Linking.openURL(gearDetails.officialUrl!.startsWith('http') ? gearDetails.officialUrl! : `https://${gearDetails.officialUrl}`)}
-                  className="bg-crescender-800/30 p-4 rounded-xl flex-row items-center gap-3 border border-crescender-700/30"
+                  className="bg-gold/10 p-4 rounded-xl flex-row items-center gap-3 border border-gold/20"
                 >
-                  <View className="w-10 h-10 bg-crescender-800 rounded-full justify-center items-center">
-                    <Feather name="globe" size={20} color="#f5c518" />
+                  <View className="w-12 h-12 bg-gold/20 rounded-xl justify-center items-center border border-gold/30">
+                    <Feather name="globe" size={22} color="#f5c518" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-white font-medium">Product Page</Text>
+                    <Text className="text-white font-semibold text-base">Brand Website</Text>
                     <Text className="text-crescender-400 text-xs" numberOfLines={1}>{gearDetails.officialUrl}</Text>
                   </View>
-                  <Feather name="external-link" size={16} color="#666" />
+                  <Feather name="external-link" size={18} color="#f5c518" />
                 </TouchableOpacity>
               )}
 
               {gearDetails.officialManual && (
                 <TouchableOpacity
                   onPress={() => Linking.openURL(gearDetails.officialManual!.startsWith('http') ? gearDetails.officialManual! : `https://${gearDetails.officialManual}`)}
-                  className="bg-crescender-800/30 p-4 rounded-xl flex-row items-center gap-3 border border-crescender-700/30"
+                  className="bg-gold/10 p-4 rounded-xl flex-row items-center gap-3 border border-gold/20"
                 >
-                  <View className="w-10 h-10 bg-crescender-800 rounded-full justify-center items-center">
-                    <Feather name="book" size={20} color="#f5c518" />
+                  <View className="w-12 h-12 bg-gold/20 rounded-xl justify-center items-center border border-gold/30">
+                    <Feather name="book" size={22} color="#f5c518" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-white font-medium">User Manual</Text>
+                    <Text className="text-white font-semibold text-base">User Manual</Text>
                     <Text className="text-crescender-400 text-xs" numberOfLines={1}>View Documentation</Text>
                   </View>
-                  <Feather name="external-link" size={16} color="#666" />
+                  <Feather name="external-link" size={18} color="#f5c518" />
                 </TouchableOpacity>
               )}
 
               {gearDetails.warrantyContactDetails && (
-                <View className="bg-crescender-800/30 p-4 rounded-xl border border-crescender-700/30">
+                <View className="bg-gold/10 p-4 rounded-xl border border-gold/20">
                   <View className="flex-row items-center gap-3 mb-3">
-                    <View className="w-10 h-10 bg-crescender-800 rounded-full justify-center items-center">
-                      <Feather name="shield" size={20} color="#f5c518" />
+                    <View className="w-12 h-12 bg-gold/20 rounded-xl justify-center items-center border border-gold/30">
+                      <Feather name="shield" size={22} color="#f5c518" />
                     </View>
-                    <View>
-                      <Text className="text-white font-medium">Warranty Support</Text>
-                      <Text className="text-crescender-400 text-xs">Contact Details</Text>
+                    <View className="flex-1">
+                      <Text className="text-white font-semibold text-base">Warranty Support</Text>
+                      <Text className="text-crescender-400 text-xs">Brand Contact Details</Text>
                     </View>
                   </View>
                   
-                  <View className="gap-2 pl-12">
+                  <View className="gap-2.5 pl-14">
                     {gearDetails.warrantyContactDetails.phone && (
                       <TouchableOpacity 
                         onPress={() => Linking.openURL(`tel:${gearDetails.warrantyContactDetails!.phone!.replace(/\s/g, '')}`)}
-                        className="flex-row items-center gap-2"
+                        className="flex-row items-center gap-3"
                       >
-                        <Feather name="phone" size={14} color="#f5c518" />
-                        <Text className="text-crescender-300 text-sm underline">{gearDetails.warrantyContactDetails.phone}</Text>
+                        <Feather name="phone" size={16} color="#f5c518" />
+                        <Text className="text-gold text-sm font-medium underline">{gearDetails.warrantyContactDetails.phone}</Text>
                       </TouchableOpacity>
                     )}
                     {gearDetails.warrantyContactDetails.email && (
                       <TouchableOpacity 
                         onPress={() => Linking.openURL(`mailto:${gearDetails.warrantyContactDetails!.email}`)}
-                        className="flex-row items-center gap-2"
+                        className="flex-row items-center gap-3"
                       >
-                        <Feather name="mail" size={14} color="#f5c518" />
-                        <Text className="text-crescender-300 text-sm underline">{gearDetails.warrantyContactDetails.email}</Text>
+                        <Feather name="mail" size={16} color="#f5c518" />
+                        <Text className="text-gold text-sm font-medium underline">{gearDetails.warrantyContactDetails.email}</Text>
                       </TouchableOpacity>
                     )}
                     {gearDetails.warrantyContactDetails.website && (
                       <TouchableOpacity 
                         onPress={() => Linking.openURL(`https://${gearDetails.warrantyContactDetails!.website!.replace(/^https?:\/\//, '')}`)}
-                        className="flex-row items-center gap-2"
+                        className="flex-row items-center gap-3"
                       >
-                        <Feather name="globe" size={14} color="#f5c518" />
-                        <Text className="text-crescender-300 text-sm underline">{gearDetails.warrantyContactDetails.website}</Text>
+                        <Feather name="globe" size={16} color="#f5c518" />
+                        <Text className="text-gold text-sm font-medium underline">{gearDetails.warrantyContactDetails.website}</Text>
                       </TouchableOpacity>
                     )}
                   </View>

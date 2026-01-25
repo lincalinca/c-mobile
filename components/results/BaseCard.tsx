@@ -98,7 +98,7 @@ export const BaseCard = ({
         <Text style={[styles.mainValue, { color: accentColor }]}>
           {item.metadata?.duration || '60m'}
         </Text>
-        <Text style={styles.relativeDate}>{displayLabel}</Text>
+        <Text style={styles.relativeDate} numberOfLines={2} ellipsizeMode="tail">{displayLabel}</Text>
       </View>
     ) : item.amount !== undefined ? (
       <Text style={[styles.mainValue, { color: accentColor }]}>

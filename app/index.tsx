@@ -175,6 +175,16 @@ export default function HomeScreen() {
     setShowDateRangePicker(false);
   };
 
+  const handleToggleIconMode = useCallback(async () => {
+    const newValue = !useIconFilters;
+    setUseIconFilters(newValue);
+    try {
+      await AsyncStorage.setItem('useIconFilters', JSON.stringify(newValue));
+    } catch (e) {
+      console.error('Failed to save icon filter setting', e);
+    }
+  }, [useIconFilters]);
+
   if (loading) {
     return (
       <View className="flex-1" style={{ backgroundColor: 'transparent' }}>
@@ -248,6 +258,7 @@ export default function HomeScreen() {
         useIcons={useIconFilters}
         showEventSeries={showEventSeries}
         onToggleEventSeries={() => setShowEventSeries(!showEventSeries)}
+        onToggleIconMode={handleToggleIconMode}
       />
 
       {/* Results Grid */}

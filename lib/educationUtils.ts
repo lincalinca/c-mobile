@@ -57,6 +57,59 @@ export function formatEducationTitle(
 }
 
 /**
+ * Generates an education series title in the format: {focus} lessons for {name} - {term#} {year}
+ * Examples:
+ * - Focus: "Piano", Name: "Claudette", Term: 4, Year: 2025 -> "Piano lessons for Claudette - Term 4 2025"
+ * - Focus: "Violin", Name: "John", Term: 1, Year: 2024 -> "Violin lessons for John - Term 1 2024"
+ */
+export function generateEducationSeriesTitle(
+  metadata: EducationMetadata,
+  startDate?: string
+): string {
+  const focus = metadata.focus || metadata.instrument || metadata.subject || 'Music';
+  const studentName = metadata.studentName || 'Student';
+  
+  // Capitalize first letter of student name
+  const studentDisplayName = studentName.charAt(0).toUpperCase() + studentName.slice(1);
+  
+  // Extract term number and year from startDate or use defaults
+  let termNumber = '';
+  let year = '';
+  
+  if (startDate) {
+    try {
+      const date = new Date(startDate + 'T12:00:00');
+      year = date.getFullYear().toString();
+      
+      // Try to extract term number from startDate month (Australian school terms)
+      // Term 1: Jan-Mar, Term 2: Apr-Jun, Term 3: Jul-Sep, Term 4: Oct-Dec
+      const month = date.getMonth() + 1; // 1-12
+      if (month >= 1 && month <= 3) termNumber = '1';
+      else if (month >= 4 && month <= 6) termNumber = '2';
+      else if (month >= 7 && month <= 9) termNumber = '3';
+      else if (month >= 10 && month <= 12) termNumber = '4';
+    } catch (e) {
+      // If date parsing fails, use current year
+      year = new Date().getFullYear().toString();
+    }
+  } else {
+    year = new Date().getFullYear().toString();
+  }
+  
+  // If we couldn't determine term, try to extract from metadata or use empty
+  if (!termNumber) {
+    // Could try to extract from subtitle or other fields if needed
+    termNumber = '';
+  }
+  
+  if (termNumber) {
+    return `${focus} lessons for ${studentDisplayName} - Term ${termNumber} ${year}`;
+  } else {
+    return `${focus} lessons for ${studentDisplayName} - ${year}`;
+  }
+}
+
+/**
  * Formats education details into a condensed sentence.
  * Examples:
  * - "9x Weekly lessons from 30th January until 30th March"

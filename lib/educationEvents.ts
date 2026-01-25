@@ -114,8 +114,13 @@ export function getEducationSeriesSummary(
   if (events.length === 0) return null;
   const first = events[0];
   const last = events[events.length - 1];
+  
+  // Prefer quantity from item if available and > 0, otherwise use generated events count
+  // This ensures we use the actual lesson count from the receipt/invoice
+  const count = (item.quantity && item.quantity > 0) ? item.quantity : events.length;
+  
   return {
-    count: events.length,
+    count,
     firstDate: first.date ?? '',
     lastDate: last.date ?? '',
     title: item.description,

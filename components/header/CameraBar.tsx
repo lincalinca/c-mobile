@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Platform, Modal } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
@@ -26,6 +26,7 @@ export const CameraBar = ({
 }: CameraBarProps) => {
   const router = useRouter();
   const [showGetMoreScans, setShowGetMoreScans] = useState(false);
+  const [showAddReceiptMenu, setShowAddReceiptMenu] = useState(false);
   
   // Support legacy selectedDate or new start/end range
   const startDate = startProp ?? (selectedDate ?? null);
@@ -98,16 +99,28 @@ export const CameraBar = ({
   };
   const rangeLabelElement = renderRangeLabel();
 
+  const handleAddReceiptPress = () => {
+    if (showGetMoreScans) {
+      router.push('/get-more-scans');
+    } else {
+      setShowAddReceiptMenu(true);
+    }
+  };
+
+  const handleScanPress = () => {
+    setShowAddReceiptMenu(false);
+    router.push('/scan');
+  };
+
+  const handleUploadPress = () => {
+    setShowAddReceiptMenu(false);
+    router.push('/scan');
+  };
+
   return (
     <View className="px-6 py-2 flex-row items-center gap-3">
       <TouchableOpacity
-        onPress={() => {
-          if (showGetMoreScans) {
-            router.push('/get-more-scans');
-          } else {
-            router.push('/scan');
-          }
-        }}
+        onPress={handleAddReceiptPress}
         className={`flex-1 h-14 rounded-2xl flex-row items-center justify-center gap-3 shadow-lg ${
           showGetMoreScans
             ? 'bg-crescender-800 border-2 border-gold/40'
@@ -115,7 +128,7 @@ export const CameraBar = ({
         }`}
       >
         <Feather 
-          name={showGetMoreScans ? 'gift' : 'camera'} 
+          name={showGetMoreScans ? 'gift' : 'plus'} 
           size={24} 
           color={showGetMoreScans ? '#f5c518' : '#2e1065'} 
         />
@@ -125,9 +138,59 @@ export const CameraBar = ({
           }`} 
           style={{ fontFamily: (Platform.OS as any) === 'web' ? 'Bebas Neue, system-ui' : 'System' }}
         >
-          {showGetMoreScans ? 'GET MORE SCANS' : 'SNAP RECEIPT'}
+          {showGetMoreScans ? 'GET MORE SCANS' : 'ADD RECEIPT'}
         </Text>
       </TouchableOpacity>
+
+      {/* Add Receipt Context Menu */}
+      <Modal
+        visible={showAddReceiptMenu}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowAddReceiptMenu(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowAddReceiptMenu(false)}
+          className="flex-1 bg-black/50 justify-center items-center px-6"
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+            className="bg-crescender-900 rounded-2xl p-4 border border-crescender-700 w-full max-w-sm"
+          >
+            <Text className="text-white text-lg font-bold mb-4 text-center">Add Receipt</Text>
+            
+            <TouchableOpacity
+              onPress={handleScanPress}
+              className="flex-row items-center gap-3 p-4 rounded-xl bg-crescender-800/50 border border-crescender-700 mb-3"
+            >
+              <View className="w-10 h-10 rounded-full bg-gold/20 items-center justify-center">
+                <Feather name="camera" size={20} color="#f5c518" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-white text-base font-semibold">Scan</Text>
+                <Text className="text-crescender-400 text-sm">Take a photo of your receipt</Text>
+              </View>
+              <Feather name="chevron-right" size={20} color="#9ca3af" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleUploadPress}
+              className="flex-row items-center gap-3 p-4 rounded-xl bg-crescender-800/50 border border-crescender-700"
+            >
+              <View className="w-10 h-10 rounded-full bg-gold/20 items-center justify-center">
+                <Feather name="upload" size={20} color="#f5c518" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-white text-base font-semibold">Upload</Text>
+                <Text className="text-crescender-400 text-sm">Select from your gallery</Text>
+              </View>
+              <Feather name="chevron-right" size={20} color="#9ca3af" />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Date Filter Button */}
       {onShowDatePicker && (

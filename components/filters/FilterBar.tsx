@@ -10,6 +10,7 @@ interface FilterBarProps {
   useIcons?: boolean;
   showEventSeries?: boolean;
   onToggleEventSeries?: () => void;
+  onToggleIconMode?: () => void;
 }
 
 export const FilterBar = ({ 
@@ -18,6 +19,7 @@ export const FilterBar = ({
   useIcons = false,
   showEventSeries = true,
   onToggleEventSeries,
+  onToggleIconMode,
 }: FilterBarProps) => {
   const filters: { label: string; value: FilterType; color: string; icon?: string }[] = [
     { label: 'ALL', value: 'all', color: '#f5c518', icon: 'grid' },
@@ -40,7 +42,8 @@ export const FilterBar = ({
             <TouchableOpacity
               key={filter.value}
               onPress={() => onFilterChange(filter.value)}
-              className={`px-5 py-2 rounded-xl border flex-row items-center justify-center gap-2 ${
+              onLongPress={filter.value === 'all' && onToggleIconMode ? onToggleIconMode : undefined}
+              className={`px-4 py-3 rounded-xl border flex-row items-center justify-center gap-2 ${
                 activeFilter === filter.value
                   ? 'bg-gold border-gold'
                   : 'bg-crescender-900/40 border-crescender-800'
@@ -50,7 +53,7 @@ export const FilterBar = ({
               {useIcons && filter.icon ? (
                 <Feather
                   name={filter.icon as any}
-                  size={14}
+                  size={21}
                   color={activeFilter === filter.value ? '#2e1065' : filter.color}
                 />
               ) : (
@@ -69,7 +72,7 @@ export const FilterBar = ({
           {onToggleEventSeries && (
             <TouchableOpacity
               onPress={onToggleEventSeries}
-              className={`px-5 py-2 rounded-xl border flex-row items-center justify-center gap-2 ${
+              className={`px-4 py-3 rounded-xl border flex-row items-center justify-center gap-2 ${
                 showEventSeries
                   ? 'bg-crescender-700 border-crescender-600'
                   : 'bg-crescender-900/40 border-crescender-800'
@@ -79,7 +82,7 @@ export const FilterBar = ({
               {useIcons ? (
                 <Feather
                   name="layers"
-                  size={14}
+                  size={21}
                   color={showEventSeries ? '#f5c518' : '#9ca3af'}
                 />
               ) : (

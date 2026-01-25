@@ -52,5 +52,6 @@ const styles = StyleSheet.create({
     fontSize: CARD.infoTextFontSize,
     fontWeight: '500',
     flex: 1,
+    flexWrap: 'wrap',
   },
 });
