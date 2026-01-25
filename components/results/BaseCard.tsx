@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   chipCount: {
-    fontSize: 10,
+    fontSize: 15,  // was 10 → now 15 (+50%)
     fontWeight: 'bold',
   },
   fullDate: {

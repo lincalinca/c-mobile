@@ -142,13 +142,13 @@ export const CameraBar = ({
               {shouldShowYearLine && (
                 <View className="flex-row items-center justify-between gap-2" style={{ minWidth: 120, maxWidth: 200 }}>
                   <Text
-                    className="text-crescender-300 text-[10px] font-bold uppercase tracking-widest text-left flex-1"
+                    className="text-crescender-300 text-xs font-bold uppercase tracking-widest text-left flex-1"
                     numberOfLines={1}
                   >
                     {startYear}
                   </Text>
                   <Text
-                    className="text-crescender-300 text-[10px] font-bold uppercase tracking-widest text-right flex-1"
+                    className="text-crescender-300 text-xs font-bold uppercase tracking-widest text-right flex-1"
                     numberOfLines={1}
                   >
                     {endYear}

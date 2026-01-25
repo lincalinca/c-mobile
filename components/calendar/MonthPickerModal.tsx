@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
   },
   yearText: {
     color: '#c4b5fd',
-    fontSize: 14,
+    fontSize: 21,  // was 14 → now 21 (+50%)
     fontWeight: '600',
   },
   yearTextActive: {
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   },
   monthText: {
     color: '#e9d5ff',
-    fontSize: 13,
+    fontSize: 20,  // was 13 → now 20 (+54%)
   },
   monthTextActive: {
     color: '#f5c518',

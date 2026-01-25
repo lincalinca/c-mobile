@@ -156,14 +156,14 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   adLabel: {
-    fontSize: 10,
+    fontSize: 15,  // was 10 → now 15 (+50%)
     color: '#94a3b8',
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   adDescription: {
-    fontSize: 12,
+    fontSize: 18,  // was 12 → now 18 (+50%)
     color: '#cbd5e1',
     fontWeight: '500',
   },
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   adBadgeText: {
-    fontSize: 10,
+    fontSize: 15,  // was 10 → now 15 (+50%)
     color: '#94a3b8',
     fontWeight: '600',
   },
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#334155',
   },
   interstitialTitle: {
-    fontSize: 16,
+    fontSize: 24,  // was 16 → now 24 (+50%)
     fontWeight: '600',
     color: '#f1f5f9',
   },
@@ -218,16 +218,16 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   interstitialText: {
-    fontSize: 18,
+    fontSize: 27,  // was 18 → now 27 (+50%)
     fontWeight: '600',
     color: '#f1f5f9',
     textAlign: 'center',
   },
   interstitialSubtext: {
-    fontSize: 14,
+    fontSize: 21,  // was 14 → now 21 (+50%)
     color: '#94a3b8',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 28,  // was 20 → now 28 (+40%)
   },
   interstitialFooter: {
     padding: 12,
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   interstitialFooterText: {
-    fontSize: 11,
+    fontSize: 17,  // was 11 → now 17 (+55%)
     color: '#64748b',
     textAlign: 'center',
   },
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   },
   rewardButtonText: {
     color: '#1e293b',
-    fontSize: 16,
+    fontSize: 24,  // was 16 → now 24 (+50%)
     fontWeight: '600',
   },
 });

@@ -196,20 +196,39 @@ export default function UsageScreen() {
             </View>
           </View>
 
-          {/* Earn More Scans - Coming Soon */}
+          {/* Earn More Scans */}
           <View className="bg-crescender-900/40 p-6 rounded-2xl border border-crescender-800 mb-6">
             <View className="flex-row items-center mb-3">
               <Feather name="gift" size={20} color="#f5c518" />
               <Text className="text-white text-lg font-bold ml-2">Earn More Scans</Text>
             </View>
             <Text className="text-crescender-300 text-sm mb-4">
-              Watch a short ad to get 5 additional receipt scans for this week.
+              Watch a short ad to get 10 additional receipt scans for this week.
             </Text>
             <TouchableOpacity
-              className="bg-crescender-800/60 py-3 px-4 rounded-xl border border-crescender-700 items-center"
-              onPress={() => Alert.alert('Coming Soon', 'Ad rewards will be available in a future update.')}
+              className={`py-3 px-4 rounded-xl border-2 items-center ${
+                isLoaded
+                  ? 'bg-gold border-gold'
+                  : adLoading
+                  ? 'bg-crescender-800/60 border-crescender-700'
+                  : 'bg-crescender-800/60 border-crescender-700'
+              }`}
+              onPress={handleWatchAdForBulk}
+              disabled={!isLoaded && !adLoading}
             >
-              <Text className="text-crescender-400 font-semibold">Coming Soon</Text>
+              {adLoading ? (
+                <View className="flex-row items-center gap-2">
+                  <ActivityIndicator size="small" color="#f5c518" />
+                  <Text className="text-crescender-400 font-semibold">Loading Ad...</Text>
+                </View>
+              ) : isLoaded ? (
+                <View className="flex-row items-center gap-2">
+                  <Feather name="play-circle" size={16} color="#2e1065" />
+                  <Text className="text-crescender-950 font-bold">Watch Ad for +10 Scans</Text>
+                </View>
+              ) : (
+                <Text className="text-crescender-400 font-semibold">Ad Not Ready</Text>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -222,45 +241,15 @@ export default function UsageScreen() {
             <Text className="text-crescender-300 text-sm mb-4">
               Upload multiple receipt images at once. They'll be processed in a queue and you'll be notified when ready.
             </Text>
-            <View className="gap-3">
-              <TouchableOpacity
-                className="bg-gold/10 py-3 px-4 rounded-xl border border-gold/40 items-center"
-                onPress={handleBulkUpload}
-              >
-                <View className="flex-row items-center gap-2">
-                  <Feather name="folder" size={16} color="#f5c518" />
-                  <Text className="text-gold font-bold">Select Multiple Images</Text>
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className={`py-3 px-4 rounded-xl border-2 items-center ${
-                  isLoaded
-                    ? 'bg-gold/10 border-gold/40'
-                    : adLoading
-                    ? 'bg-crescender-800/60 border-crescender-700'
-                    : 'bg-crescender-800/60 border-crescender-700'
-                }`}
-                onPress={handleWatchAdForBulk}
-                disabled={!isLoaded && !adLoading}
-              >
-                {adLoading ? (
-                  <View className="flex-row items-center gap-2">
-                    <ActivityIndicator size="small" color="#f5c518" />
-                    <Text className="text-crescender-400 font-semibold">Loading Ad...</Text>
-                  </View>
-                ) : isLoaded ? (
-                  <View className="flex-row items-center gap-2">
-                    <Feather name="play-circle" size={16} color="#f5c518" />
-                    <Text className="text-gold font-bold">Watch Ad for +10 Scans</Text>
-                  </View>
-                ) : (
-                  <Text className="text-crescender-400 font-semibold">Ad Not Ready</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-            <Text className="text-crescender-500 text-xs mt-3 leading-relaxed">
-              Need more scans for bulk upload? Watch an ad to get 10 additional scans that can be used immediately.
-            </Text>
+            <TouchableOpacity
+              className="bg-gold/10 py-3 px-4 rounded-xl border border-gold/40 items-center"
+              onPress={handleBulkUpload}
+            >
+              <View className="flex-row items-center gap-2">
+                <Feather name="folder" size={16} color="#f5c518" />
+                <Text className="text-gold font-bold">Select Multiple Images</Text>
+              </View>
+            </TouchableOpacity>
           </View>
 
           {/* Info Section */}

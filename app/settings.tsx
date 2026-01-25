@@ -5,6 +5,7 @@ import { PersistentHeader } from '../components/header/PersistentHeader';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getReviewApproach, setReviewApproach, type ReviewApproach } from '../lib/reviewConfig';
+import { ICON_SIZES } from '../lib/iconSizes';
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -81,7 +82,7 @@ export default function SettingsScreen() {
             <View className="flex-row items-center justify-between p-4">
               <View className="flex-row items-center gap-3">
                 <View className="w-8 h-8 rounded-full bg-crescender-800 items-center justify-center">
-                  <Feather name="filter" size={18} color="#f5c518" />
+                  <Feather name="filter" size={ICON_SIZES.standard} color="#f5c518" />
                 </View>
                 <Text className="text-white font-medium">Icon Filters</Text>
               </View>
@@ -93,7 +94,7 @@ export default function SettingsScreen() {
               />
             </View>
           </View>
-          <Text className="text-crescender-500 text-[10px] mt-2 ml-1 leading-relaxed">
+          <Text className="text-crescender-500 text-xs mt-2 ml-1 leading-relaxed">
             Display category filters as icons instead of text labels.
           </Text>
         </View>
@@ -106,7 +107,7 @@ export default function SettingsScreen() {
           >
             <View className="flex-row items-center gap-3 flex-1 min-w-0">
               <View className="w-8 h-8 rounded-full bg-crescender-800 items-center justify-center flex-shrink-0">
-                <Feather name="file-text" size={18} color="#f5c518" />
+                <Feather name="file-text" size={ICON_SIZES.standard} color="#f5c518" />
               </View>
               <View className="flex-1 min-w-0">
                 <Text className="text-white font-medium">Review Style</Text>
@@ -124,10 +125,10 @@ export default function SettingsScreen() {
                 {reviewApproach === 'workflow' ? 'Workflow' : 
                  reviewApproach === 'simplified' ? 'Simplified' : 'Full Details'}
               </Text>
-              <Feather name="chevron-right" size={18} color="#6b7280" />
+              <Feather name="chevron-right" size={ICON_SIZES.standard} color="#6b7280" />
             </View>
           </TouchableOpacity>
-          <Text className="text-crescender-500 text-[10px] mt-2 ml-1 leading-relaxed">
+          <Text className="text-crescender-500 text-xs mt-2 ml-1 leading-relaxed">
             Choose your preferred way to review receipts after scanning. You can change this anytime.
           </Text>
         </View>
@@ -140,16 +141,16 @@ export default function SettingsScreen() {
           >
             <View className="flex-row items-center gap-3">
               <View className="w-8 h-8 rounded-full bg-crescender-800 items-center justify-center">
-                <Feather name="calendar" size={18} color="#f5c518" />
+                <Feather name="calendar" size={ICON_SIZES.standard} color="#f5c518" />
               </View>
               <Text className="text-white font-medium">Financial year start month</Text>
             </View>
             <View className="flex-row items-center gap-2">
               <Text className="text-crescender-300">{MONTH_NAMES[financialYearStartMonth - 1]}</Text>
-              <Feather name="chevron-down" size={18} color="#6b7280" />
+              <Feather name="chevron-down" size={ICON_SIZES.standard} color="#6b7280" />
             </View>
           </TouchableOpacity>
-          <Text className="text-crescender-500 text-[10px] mt-2 ml-1 leading-relaxed">
+          <Text className="text-crescender-500 text-xs mt-2 ml-1 leading-relaxed">
             Used for “Last financial year” and “This financial year” in the date picker. Default: July.
           </Text>
         </View>
@@ -160,7 +161,7 @@ export default function SettingsScreen() {
             <View className="flex-row items-center justify-between p-4">
               <View className="flex-row items-center gap-3">
                 <View className="w-8 h-8 rounded-full bg-gold/10 items-center justify-center">
-                  <Feather name="bell" size={18} color="#f5c518" />
+                  <Feather name="bell" size={ICON_SIZES.standard} color="#f5c518" />
                 </View>
                 <Text className="text-white font-medium">Record Analysis Alerts</Text>
               </View>
@@ -172,7 +173,7 @@ export default function SettingsScreen() {
               />
             </View>
           </View>
-          <Text className="text-crescender-500 text-[10px] mt-2 ml-1 leading-relaxed">
+          <Text className="text-crescender-500 text-xs mt-2 ml-1 leading-relaxed">
             Get notified when your receipts have been fully analysed and categorized.
           </Text>
         </View>
@@ -186,28 +187,28 @@ export default function SettingsScreen() {
             >
               <View className="flex-row items-center gap-3">
                 <View className="w-8 h-8 rounded-full bg-crescender-800 items-center justify-center">
-                  <Feather name="shield" size={18} color="#9ca3af" />
+                  <Feather name="shield" size={ICON_SIZES.standard} color="#9ca3af" />
                 </View>
                 <Text className="text-white font-medium">Privacy Policy</Text>
               </View>
-              <Feather name="external-link" size={18} color="#6b7280" />
+              <Feather name="external-link" size={ICON_SIZES.standard} color="#6b7280" />
             </TouchableOpacity>
 
             <TouchableOpacity className="flex-row items-center justify-between p-4">
               <View className="flex-row items-center gap-3">
                 <View className="w-8 h-8 rounded-full bg-crescender-800 items-center justify-center">
-                  <Feather name="help-circle" size={18} color="#9ca3af" />
+                  <Feather name="help-circle" size={ICON_SIZES.standard} color="#9ca3af" />
                 </View>
                 <Text className="text-white font-medium">Support</Text>
               </View>
-              <Feather name="chevron-right" size={18} color="#6b7280" />
+              <Feather name="chevron-right" size={ICON_SIZES.standard} color="#6b7280" />
             </TouchableOpacity>
           </View>
         </View>
 
         <View className="items-center py-10">
-          <Text className="text-crescender-600 text-[10px] mb-1">Crescender Mobile v1.0.0</Text>
-          <Text className="text-crescender-700 text-[10px]">© 2024 Crescender Australia</Text>
+          <Text className="text-crescender-600 text-xs mb-1">Crescender Mobile v1.0.0</Text>
+          <Text className="text-crescender-700 text-xs">© 2024 Crescender Australia</Text>
         </View>
       </ScrollView>
 
@@ -264,7 +265,7 @@ export default function SettingsScreen() {
                     <View className={`w-10 h-10 rounded-full items-center justify-center ${reviewApproach === option.value ? 'bg-gold/20' : 'bg-crescender-800'}`}>
                       <Feather 
                         name={option.icon} 
-                        size={20} 
+                        size={ICON_SIZES.medium} 
                         color={reviewApproach === option.value ? '#f5c518' : '#9ca3af'} 
                       />
                     </View>
@@ -277,7 +278,7 @@ export default function SettingsScreen() {
                       </Text>
                     </View>
                     {reviewApproach === option.value && (
-                      <Feather name="check" size={20} color="#f5c518" />
+                      <Feather name="check" size={ICON_SIZES.medium} color="#f5c518" />
                     )}
                   </View>
                 </TouchableOpacity>

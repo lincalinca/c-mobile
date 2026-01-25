@@ -211,7 +211,7 @@ export function DateRangeCalendarModal({
             enableSwipeMonths
             renderHeader={(date) => (
               <TouchableOpacity onPress={() => setMonthPickerOpen(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={{ color: CRESCENDER_THEME.monthTextColor, fontSize: 18, fontWeight: '600' }}>
+                <Text style={{ color: CRESCENDER_THEME.monthTextColor, fontSize: 27, fontWeight: '600' }}>
                   {date ? date.toString('MMMM yyyy') : ''}
                 </Text>
               </TouchableOpacity>

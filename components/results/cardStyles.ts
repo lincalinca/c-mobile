@@ -17,20 +17,20 @@ export const CARD = {
   footerPaddingTop: 0,
   chipSize: 28,
   chipGap: 8,
-  // Typography
-  titleFontSize: 22,
-  titleLineHeight: 18,
-  subtitleFontSize: 16,
+  // Typography (refined: focus on smallest text, moderate increases for larger)
+  titleFontSize: 26,        // was 22 → now 26 (+18%) MODERATE - maintain hierarchy
+  titleLineHeight: 22,      // was 18 → now 22 (+22%) Proportional
+  subtitleFontSize: 20,     // was 16 → now 20 (+25%) Align with text-base
   subtitleMarginTop: 4,
-  mainValueFontSize: 36,
-  relativeDateFontSize: 14,
+  mainValueFontSize: 40,    // was 36 → now 40 (+11%) MINIMAL - already large
+  relativeDateFontSize: 21, // was 14 → now 21 (+50%) CRITICAL - small text
   relativeDateMarginTop: 6,
-  infoTextFontSize: 12,
-  infoIconSize: 12,
+  infoTextFontSize: 18,     // was 12 → now 18 (+50%) CRITICAL - smallest text
+  infoIconSize: 18,         // was 12 → now 18 (+50%) Match text size
   infoRowGap: 6,
-  fullDateFontSize: 14,
-  chipIconSize: 12,
-  cornerIconIconSize: 20,
+  fullDateFontSize: 21,     // was 14 → now 21 (+50%) CRITICAL - small text
+  chipIconSize: 18,         // was 12 → now 18 (+50%) Match text size
+  cornerIconIconSize: 26,   // was 20 → now 26 (+30%) Proportional increase
   // Colors (some cards override with accent)
   titleColor: '#ffffff',
   subtitleColor: '#9ca3af',

@@ -134,16 +134,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    fontSize: 18,
+    fontSize: 27,  // was 18 → now 27 (+50%)
     fontWeight: 'bold',
     color: '#f5c518',
     marginLeft: 8,
   },
   message: {
-    fontSize: 15,
+    fontSize: 23,  // was 15 → now 23 (+53%)
     color: '#cbd5e1',
     marginBottom: 16,
-    lineHeight: 22,
+    lineHeight: 33,  // was 22 → now 33 (+50%)
   },
   merchantName: {
     fontWeight: 'bold',
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
   },
   updateLabel: {
-    fontSize: 12,
+    fontSize: 18,  // was 12 → now 18 (+50%)
     color: '#94a3b8',
     fontWeight: '600',
     marginBottom: 6,
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   oldValue: {
-    fontSize: 14,
+    fontSize: 21,  // was 14 → now 21 (+50%)
     color: '#64748b',
     textDecorationLine: 'line-through',
     flex: 1,
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   newValue: {
-    fontSize: 14,
+    fontSize: 21,  // was 14 → now 21 (+50%)
     color: '#f5c518',
     fontWeight: '500',
     flex: 1,
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   },
   updateButtonText: {
     color: '#0f172a',
-    fontSize: 16,
+    fontSize: 24,  // was 16 → now 24 (+50%)
     fontWeight: 'bold',
   },
   skipButton: {
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   },
   skipButtonText: {
     color: '#94a3b8',
-    fontSize: 15,
+    fontSize: 23,  // was 15 → now 23 (+53%)
     fontWeight: '600',
   },
 });
