@@ -20,16 +20,14 @@ try {
   };
 }
 
-// TODO: Replace with your production Ad Unit IDs after creating them in AdMob
-// iOS Banner: ca-app-pub-XXXXX/YYYYY
-// Android Banner: ca-app-pub-XXXXX/ZZZZZ
-const IOS_BANNER_AD_UNIT_ID = __DEV__ 
+// Production Ad Unit IDs
+const IOS_BANNER_AD_UNIT_ID = __DEV__
   ? (TestIds?.BANNER || 'ca-app-pub-3940256099942544/6300978111')
-  : 'ca-app-pub-XXXXX/YYYYY'; // Replace with your iOS banner ad unit ID
+  : 'ca-app-pub-5375818323643018/6519980079';
 
 const ANDROID_BANNER_AD_UNIT_ID = __DEV__
   ? (TestIds?.BANNER || 'ca-app-pub-3940256099942544/6300978111')
-  : 'ca-app-pub-XXXXX/ZZZZZ'; // Replace with your Android banner ad unit ID
+  : 'ca-app-pub-5375818323643018/6200415873';
 
 // Platform-specific ad unit ID selection
 const adUnitId = BannerAd ? Platform.select({

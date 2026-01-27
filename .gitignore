@@ -18,6 +18,14 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# Google Play service account key (sensitive!)
+crescender-*.json
+!package.json
+!package-lock.json
+!app.json
+!eas.json
+!tsconfig.json
+
 # Metro
 .metro-health-check*
 

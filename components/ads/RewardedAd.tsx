@@ -20,16 +20,14 @@ try {
   };
 }
 
-// TODO: Replace with your production Ad Unit IDs after creating them in AdMob
-// iOS Rewarded: ca-app-pub-XXXXX/YYYYY
-// Android Rewarded: ca-app-pub-XXXXX/ZZZZZ
+// Production Ad Unit IDs - Rewarded ads grant +10 scans
 const IOS_REWARDED_AD_UNIT_ID = __DEV__
   ? (TestIds?.REWARDED || 'ca-app-pub-3940256099942544/5224354917')
-  : 'ca-app-pub-XXXXX/YYYYY'; // Replace with your iOS rewarded ad unit ID
+  : 'ca-app-pub-5375818323643018/2580735062';
 
 const ANDROID_REWARDED_AD_UNIT_ID = __DEV__
   ? (TestIds?.REWARDED || 'ca-app-pub-3940256099942544/5224354917')
-  : 'ca-app-pub-XXXXX/ZZZZZ'; // Replace with your Android rewarded ad unit ID
+  : 'ca-app-pub-5375818323643018/7833061743';
 
 const adUnitId = RewardedAd ? Platform.select({
   ios: IOS_REWARDED_AD_UNIT_ID,

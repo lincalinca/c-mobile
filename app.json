@@ -9,7 +9,11 @@
     "description": "Track your music gear, lessons, and expenses by scanning receipts. Crescender automatically extracts gear items, lesson details, and transaction data from your receipts.",
     "privacy": "public",
     "extra": {
-      "privacyPolicyUrl": "https://www.crescender.com.au/privacy"
+      "privacyPolicyUrl": "https://www.crescender.com.au/privacy",
+      "router": {},
+      "eas": {
+        "projectId": "623de8c3-270e-4f7d-b2b0-f27b35433dc5"
+      }
     },
     "splash": {
       "image": "./assets/900_1600.png",
@@ -44,7 +48,14 @@
         "resizeMode": "contain",
         "backgroundColor": "#2a0b4c"
       },
-      "package": "com.crescender.mobile.app"
+      "package": "com.crescender.mobile.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "com.google.android.gms.permission.AD_ID",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -61,8 +72,8 @@
       [
         "react-native-google-mobile-ads",
         {
-          "iosAppId": "ca-app-pub-XXXXX~YYYYY",
-          "androidAppId": "ca-app-pub-XXXXX~ZZZZZ"
+          "iosAppId": "ca-app-pub-5375818323643018~2627507539",
+          "androidAppId": "ca-app-pub-5375818323643018~6566752548"
         }
       ],
       "expo-tracking-transparency",
