@@ -7,7 +7,6 @@
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "dark",
     "description": "Track your music gear, lessons, and expenses by scanning receipts. Crescender automatically extracts gear items, lesson details, and transaction data from your receipts.",
-    "privacy": "public",
     "extra": {
       "privacyPolicyUrl": "https://www.crescender.com.au/privacy",
       "router": {},
@@ -26,6 +25,8 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.crescender.mobile.app",
+      "buildNumber": "1",
+      "itsAppUsesNonExemptEncryption": false,
       "icon": "./assets/app-icon.png",
       "splash": {
         "image": "./assets/iPhone_14_-_1170_2536.png",
