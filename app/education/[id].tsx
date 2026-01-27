@@ -585,6 +585,20 @@ export default function EducationDetailScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Raw OCR Data (Debug) */}
+        {receipt.rawOcrData && (
+          <View className="p-6">
+            <TouchableOpacity 
+              onPress={() => {
+                Alert.alert("Raw OCR Data", receipt.rawOcrData || "No data available");
+              }}
+              className="bg-crescender-800/40 p-4 rounded-xl border border-crescender-700 items-center"
+            >
+              <Text className="text-crescender-400 font-bold uppercase tracking-widest text-[10px]">View Raw OCR Data (Debug)</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
 
       {/* First Lesson Date Picker Modal */}

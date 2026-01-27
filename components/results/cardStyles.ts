@@ -7,7 +7,7 @@ export const CARD = {
   // Layout
   cardMargin: 4,
   cardPadding: 16,
-  cardBorderRadius: 20,
+  cardBorderRadius: 22,
   cardMinHeight: 200,
   cornerIconSize: 40,
   headerPaddingRight: 28,
@@ -19,8 +19,9 @@ export const CARD = {
   chipGap: 8,
   // Typography (refined: focus on smallest text, moderate increases for larger)
   titleFontSize: 26,        // was 22 → now 26 (+18%) MODERATE - maintain hierarchy
-  titleLineHeight: 22,      // was 18 → now 22 (+22%) Proportional
-  subtitleFontSize: 20,     // was 16 → now 20 (+25%) Align with text-base
+  titleLineHeight: 30,      // was 22 → now 30 (Better spacing for 26px font)
+  subtitleFontSize: 18,     // was 20 → slightly reduced to fit better
+  subtitleLineHeight: 22,   // Added line height for subtitle
   subtitleMarginTop: 4,
   mainValueFontSize: 40,    // was 36 → now 40 (+11%) MINIMAL - already large
   relativeDateFontSize: 21, // was 14 → now 21 (+50%) CRITICAL - small text

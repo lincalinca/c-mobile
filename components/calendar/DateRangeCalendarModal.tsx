@@ -167,8 +167,9 @@ export function DateRangeCalendarModal({
 
   const handleFinancialYear = (which: 'this' | 'last') => {
     const { start, end } = getFinancialYearRange(financialYearStartMonth, new Date(), which);
-    onApply(start, end);
-    onRequestClose();
+    setTempStart(toDateString(start));
+    setTempEnd(toDateString(end));
+    setDisplayMonth(toDateString(end).slice(0, 7) + '-01');
   };
 
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -228,29 +229,29 @@ export function DateRangeCalendarModal({
             }}
           />
           <View className="flex-row gap-2 mt-3">
-            <TouchableOpacity onPress={() => handleFinancialYear('last')} className="flex-1 py-2.5 rounded-xl bg-crescender-800 border border-crescender-600">
-              <Text className="text-crescender-200 font-semibold text-center text-sm">Last financial year</Text>
+            <TouchableOpacity onPress={() => handleFinancialYear('last')} className="flex-1 py-1.5 rounded-[14px] bg-crescender-800 border border-crescender-600">
+              <Text className="text-crescender-200 font-semibold text-center text-[10px] uppercase tracking-tighter">Last financial year</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleFinancialYear('this')} className="flex-1 py-2.5 rounded-xl bg-crescender-800 border border-crescender-600">
-              <Text className="text-crescender-200 font-semibold text-center text-sm">This financial year</Text>
+            <TouchableOpacity onPress={() => handleFinancialYear('this')} className="flex-1 py-1.5 rounded-[14px] bg-crescender-800 border border-crescender-600">
+              <Text className="text-crescender-200 font-semibold text-center text-[10px] uppercase tracking-tighter">This financial year</Text>
             </TouchableOpacity>
           </View>
           <View className="flex-row justify-between gap-3 mt-2">
             <TouchableOpacity
               onPress={handleClear}
-              className="px-4 py-2.5 rounded-xl bg-crescender-800 border border-crescender-600"
+              className="px-4 py-2.5 rounded-[14px] bg-crescender-800 border border-crescender-600"
             >
               <Text className="text-crescender-200 font-semibold">Clear</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={onRequestClose}
-              className="px-4 py-2.5 rounded-xl bg-crescender-800 border border-crescender-600"
+              className="px-4 py-2.5 rounded-[14px] bg-crescender-800 border border-crescender-600"
             >
               <Text className="text-crescender-200 font-semibold">Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleApply}
-              className="px-4 py-2.5 rounded-xl bg-gold"
+              className="px-4 py-2.5 rounded-[14px] bg-gold"
             >
               <Text className="text-crescender-950 font-bold">Apply</Text>
             </TouchableOpacity>
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: 'rgba(24,9,48,0.97)',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 16,
     width: '100%',
     maxWidth: 448,

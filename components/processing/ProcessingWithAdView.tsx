@@ -8,7 +8,8 @@ import Animated, {
   withTiming,
   withSequence,
   interpolate,
-  Extrapolate
+  Extrapolate,
+  SharedValue
 } from 'react-native-reanimated';
 
 interface ProcessingWithAdViewProps {
@@ -53,7 +54,7 @@ export const ProcessingWithAdView = ({ onReview, resultsReady }: ProcessingWithA
     );
   }, []);
 
-  const createRingStyle = (progress: Animated.SharedValue<number>) => {
+  const createRingStyle = (progress: SharedValue<number>) => {
     return useAnimatedStyle(() => {
       const scale = interpolate(
         progress.value,
@@ -83,7 +84,7 @@ export const ProcessingWithAdView = ({ onReview, resultsReady }: ProcessingWithA
     <View className="flex-1 bg-crescender-950 justify-center items-center px-6">
       <View className="w-64 h-64 justify-center items-center mb-8 relative" style={{ overflow: 'visible' }}>
         {/* Card background */}
-        <View className="w-64 h-64 bg-crescender-900/40 rounded-3xl border border-gold/20 justify-center items-center shadow-xl shadow-gold/10">
+        <View className="w-64 h-64 bg-crescender-900/40 rounded-[26px] border border-gold/20 justify-center items-center shadow-xl shadow-gold/10">
           {/* Lightning icon in centre */}
           <Feather name="zap" size={48} color="#f5c518" />
         </View>
@@ -159,7 +160,7 @@ export const ProcessingWithAdView = ({ onReview, resultsReady }: ProcessingWithA
       <TouchableOpacity
         onPress={onReview}
         disabled={!resultsReady}
-        className={`w-full max-w-sm h-14 rounded-2xl flex-row items-center justify-center gap-3 shadow-lg ${
+        className={`w-full max-w-sm h-14 rounded-[18px] flex-row items-center justify-center gap-3 shadow-lg ${
           resultsReady 
             ? 'bg-gold shadow-gold/20' 
             : 'bg-crescender-800/50 border border-crescender-700'

@@ -37,6 +37,9 @@
   "submit": {
     "production": {
       "ios": {
+        "appleId": "lincoln.maurice@gmail.com",
+        "ascAppId": "6758322025",
+        "appleTeamId": "7BWBV78SAV"
       },
       "android": {
         "serviceAccountKeyPath": "./crescender-1741601264783-479a75393762.json",

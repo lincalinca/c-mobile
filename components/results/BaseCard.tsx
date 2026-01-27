@@ -61,8 +61,8 @@ export const BaseCard = ({
 
   const animatedStyle = useAnimatedStyle(
     () => ({
-      borderColor: isHighlighted ? accentColor : 'rgba(255, 255, 255, 0.05)',
-      borderWidth: 2,
+      borderColor: isHighlighted ? accentColor : (accentColor + '80'), // 50% opacity accent
+      borderWidth: isHighlighted ? 2 : 0.5,
       opacity: isHighlighted ? glow.value : 1,
       shadowColor: accentColor,
       shadowOpacity: isHighlighted ? glow.value : 0,
@@ -88,7 +88,10 @@ export const BaseCard = ({
           shadowRadius: 15,
           elevation: 8,
         }
-      : {};
+      : {
+          borderColor: accentColor + '80', // 50% opacity
+          borderWidth: 0.5,
+        };
 
   const subtitle = subtitleOverride ?? item.subtitle ?? '';
 
@@ -251,6 +254,7 @@ const styles = StyleSheet.create({
   subtitle: {
     color: CARD.subtitleColor,
     fontSize: CARD.subtitleFontSize,
+    lineHeight: (CARD as any).subtitleLineHeight || 22,
     marginTop: CARD.subtitleMarginTop,
   },
   contentArea: {

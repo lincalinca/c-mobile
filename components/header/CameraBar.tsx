@@ -121,7 +121,7 @@ export const CameraBar = ({
     <View className="px-6 py-2 flex-row items-center gap-3">
       <TouchableOpacity
         onPress={handleAddReceiptPress}
-        className={`flex-1 h-14 rounded-2xl flex-row items-center justify-center gap-3 shadow-lg ${
+        className={`flex-1 h-14 rounded-[18px] flex-row items-center justify-center gap-3 shadow-lg ${
           showGetMoreScans
             ? 'bg-crescender-800 border-2 border-gold/40'
             : 'bg-gold shadow-gold/20'
@@ -157,13 +157,13 @@ export const CameraBar = ({
           <TouchableOpacity
             activeOpacity={1}
             onPress={(e) => e.stopPropagation()}
-            className="bg-crescender-900 rounded-2xl p-4 border border-crescender-700 w-full max-w-sm"
+            className="bg-crescender-900 rounded-[18px] p-4 border border-crescender-700 w-full max-w-sm"
           >
             <Text className="text-white text-lg font-bold mb-4 text-center">Add Receipt</Text>
             
             <TouchableOpacity
               onPress={handleScanPress}
-              className="flex-row items-center gap-3 p-4 rounded-xl bg-crescender-800/50 border border-crescender-700 mb-3"
+              className="flex-row items-center gap-3 p-4 rounded-[14px] bg-crescender-800/50 border border-crescender-700 mb-3"
             >
               <View className="w-10 h-10 rounded-full bg-gold/20 items-center justify-center">
                 <Feather name="camera" size={20} color="#f5c518" />
@@ -177,7 +177,7 @@ export const CameraBar = ({
 
             <TouchableOpacity
               onPress={handleUploadPress}
-              className="flex-row items-center gap-3 p-4 rounded-xl bg-crescender-800/50 border border-crescender-700"
+              className="flex-row items-center gap-3 p-4 rounded-[14px] bg-crescender-800/50 border border-crescender-700"
             >
               <View className="w-10 h-10 rounded-full bg-gold/20 items-center justify-center">
                 <Feather name="upload" size={20} color="#f5c518" />
@@ -196,7 +196,7 @@ export const CameraBar = ({
       {onShowDatePicker && (
         <TouchableOpacity
           onPress={onShowDatePicker}
-          className="h-14 bg-crescender-800/40 px-4 rounded-2xl border border-crescender-700/50 flex-row items-center justify-center gap-2"
+          className="h-14 bg-crescender-800/40 px-4 rounded-[18px] border border-crescender-700/50 flex-row items-center justify-center gap-2"
         >
           <Feather name="calendar" size={18} color="#f5c518" />
           {rangeLabelElement && (

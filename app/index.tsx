@@ -1,4 +1,4 @@
-import { View, Text, Platform, TouchableOpacity, ActivityIndicator, FlatList, Modal, BackHandler } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator, Alert, Modal, FlatList, BackHandler, Animated } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { ReceiptRepository } from '../lib/repository';
@@ -28,10 +28,13 @@ export default function HomeScreen() {
   const [showExitModal, setShowExitModal] = useState(false);
   const [useIconFilters, setUseIconFilters] = useState(true);
   const [financialYearStartMonth, setFinancialYearStartMonth] = useState(7);
-  const [showEventSeries, setShowEventSeries] = useState(true); // Default: hide individual events
+  const [showEventSeries, setShowEventSeries] = useState(true);
   const [showGetMoreScans, setShowGetMoreScans] = useState(false);
+  const [hasShownFilterHint, setHasShownFilterHint] = useState(false);
 
   const gridRef = useRef<FlatList>(null);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const [showToast, setShowToast] = useState(false);
 
   const loadData = async () => {
     try {
@@ -169,6 +172,21 @@ export default function HomeScreen() {
     loadData();
   };
 
+  const handleFilterChange = (filter: FilterType) => {
+    setActiveFilter(filter);
+    
+    // Trigger hint toast on first filter use if in icon mode
+    if (useIconFilters && !hasShownFilterHint) {
+      setHasShownFilterHint(true);
+      setShowToast(true);
+      Animated.sequence([
+        Animated.timing(toastOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.delay(4000),
+        Animated.timing(toastOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+      ]).start(() => setShowToast(false));
+    }
+  };
+
   const onDateRangeApply = (start: Date | null, end: Date | null) => {
     setStartDate(start);
     setEndDate(end);
@@ -178,6 +196,7 @@ export default function HomeScreen() {
   const handleToggleIconMode = useCallback(async () => {
     const newValue = !useIconFilters;
     setUseIconFilters(newValue);
+    
     try {
       await AsyncStorage.setItem('useIconFilters', JSON.stringify(newValue));
     } catch (e) {
@@ -254,7 +273,7 @@ export default function HomeScreen() {
       {/* Filter Bar */}
       <FilterBar 
         activeFilter={activeFilter} 
-        onFilterChange={setActiveFilter} 
+        onFilterChange={handleFilterChange} 
         useIcons={useIconFilters}
         showEventSeries={showEventSeries}
         onToggleEventSeries={() => setShowEventSeries(!showEventSeries)}
@@ -275,6 +294,21 @@ export default function HomeScreen() {
       {/* Banner Ad at bottom */}
       <AdBanner position="bottom" />
 
+      {/* Hint Toast */}
+      {showToast && (
+        <Animated.View 
+          className="absolute bottom-24 left-10 right-10 bg-crescender-900/90 border border-crescender-700 p-3 rounded-[18px] items-center"
+          style={{ opacity: toastOpacity, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4.65, elevation: 8 }}
+        >
+          <View className="flex-row items-center gap-2">
+            <View className="w-6 h-6 rounded-[8px] bg-gold items-center justify-center">
+              <Feather name="grid" size={14} color="#2e1065" />
+            </View>
+            <Text className="text-white text-xs font-medium">Hint: Long-press the icon to see labels</Text>
+          </View>
+        </Animated.View>
+      )}
+
       {/* Exit app confirmation modal (Android hardware back on home) */}
       <Modal
         transparent
@@ -283,7 +317,7 @@ export default function HomeScreen() {
         onRequestClose={() => setShowExitModal(false)}
       >
         <View className="flex-1 bg-black/60 justify-center items-center px-8">
-          <View className="bg-crescender-900/95 rounded-2xl p-6 w-full border border-crescender-700">
+          <View className="bg-crescender-900/95 rounded-[18px] p-6 w-full border border-crescender-700">
             <Text className="text-white text-xl font-bold mb-2">
               Exit Crescender?
             </Text>

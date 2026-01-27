@@ -9,14 +9,15 @@ import { useState, useMemo } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { DatePickerModal } from '../calendar/DatePickerModal';
 import { generateEducationEvents } from '../../lib/educationEvents';
-import type { ReceiptItem } from '../../lib/repository';
+import { getLessonCountSuspects } from '../../lib/educationUtils';
+import type { ReceiptItem, EducationDetails } from '../../lib/repository';
 
 export type LessonFrequency = 'weekly' | 'fortnightly' | 'monthly' | 'one-off';
 
 interface LessonDateSelectorProps {
   item: ReceiptItem;
   transactionDate: string;
-  onUpdate: (updates: Partial<ReceiptItem['educationDetails']>) => void;
+  onUpdate: (updates: Partial<EducationDetails & { quantity?: number }>) => void;
 }
 
 const FREQUENCY_OPTIONS: { value: LessonFrequency; label: string; days: number }[] = [
@@ -30,7 +31,7 @@ export function LessonDateSelector({ item, transactionDate, onUpdate }: LessonDa
   const [showDatePicker, setShowDatePicker] = useState(false);
   
   // Parse education details
-  const eduDetails = useMemo(() => {
+  const eduDetails: EducationDetails = useMemo(() => {
     if (!item.educationDetails) return {};
     if (typeof item.educationDetails === 'string') {
       try {
@@ -39,7 +40,7 @@ export function LessonDateSelector({ item, transactionDate, onUpdate }: LessonDa
         return {};
       }
     }
-    return item.educationDetails;
+    return item.educationDetails as any;
   }, [item.educationDetails]);
 
   const startDate = eduDetails.startDate || null;
@@ -54,6 +55,10 @@ export function LessonDateSelector({ item, transactionDate, onUpdate }: LessonDa
     if (f.includes('monthly') || f.includes('month')) return 'monthly';
     return 'one-off';
   }, [frequency]);
+
+  const suspects = useMemo(() => {
+    return getLessonCountSuspects(item, eduDetails);
+  }, [item, eduDetails]);
 
   // Generate preview dates
   const previewDates = useMemo(() => {
@@ -206,6 +211,55 @@ export function LessonDateSelector({ item, transactionDate, onUpdate }: LessonDa
             ))}
           </View>
         </ScrollView>
+      </View>
+
+      {/* Lesson Count Humility UI */}
+      <View className="mb-6">
+        <Text className="text-crescender-500 text-xs mb-2">Number of Lessons</Text>
+        <View className="flex-row flex-wrap gap-2 mb-3">
+          {suspects.map((s, idx) => (
+            <TouchableOpacity
+              key={idx}
+              onPress={() => onUpdate({ quantity: s.count } as any)} // Note: updateState might need to handle quantity at top level if it's item.quantity
+              className={`px-4 py-3 rounded-xl border flex-1 min-w-[100px] ${
+                item.quantity === s.count
+                  ? 'bg-gold border-gold'
+                  : 'bg-crescender-900/60 border-crescender-700'
+              }`}
+            >
+              <Text className={`text-lg font-bold text-center ${item.quantity === s.count ? 'text-crescender-950' : 'text-white'}`}>
+                {s.count}
+              </Text>
+              <Text className={`text-[9px] text-center uppercase tracking-tighter ${item.quantity === s.count ? 'text-crescender-900/70' : 'text-crescender-500'}`}>
+                {s.source === 'quantity' ? 'From QTY column' : s.source === 'description' ? 'From Desc' : 'From Dates'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          
+          {/* Manual input as a fallback */}
+          <View className="flex-1 min-w-[100px] bg-crescender-900/60 border border-crescender-700 rounded-xl px-2">
+            <TextInput
+              className="text-white text-lg font-bold text-center h-full"
+              keyboardType="number-pad"
+              placeholder="Other"
+              placeholderTextColor="#666"
+              defaultValue={item.quantity?.toString() || ''}
+              onEndEditing={(e) => {
+                const val = parseInt(e.nativeEvent.text, 10);
+                if (!isNaN(val)) onUpdate({ quantity: val } as any);
+              }}
+            />
+          </View>
+        </View>
+        
+        {suspects.length > 1 && (
+          <View className="bg-yellow-900/20 p-3 rounded-lg border border-yellow-700/50 flex-row gap-2 items-center">
+            <Feather name="alert-circle" size={14} color="#fbbf24" />
+            <Text className="text-yellow-500/90 text-[10px] flex-1">
+              Multiple possible lesson counts detected. Please confirm which is correct.
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Preview of Calculated Dates */}

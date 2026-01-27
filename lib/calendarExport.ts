@@ -1,5 +1,6 @@
 import { Alert } from 'react-native';
 import * as Calendar from 'expo-calendar';
+import { Platform } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import type { ResultItem } from './results';
 import type { Receipt } from './repository';
@@ -115,7 +116,8 @@ function dayNameToCalendarDay(dayName: string): Calendar.DayOfTheWeek | null {
 function buildRecurrenceRule(
   frequency: string | undefined,
   daysOfWeek: string[] | undefined,
-  occurrenceCount: number
+  occurrenceCount: number,
+  startDate: Date
 ): Calendar.RecurrenceRule | undefined {
   if (!frequency || occurrenceCount <= 1) {
     return undefined; // No recurrence for one-off events
@@ -159,10 +161,26 @@ function buildRecurrenceRule(
     }
   }
 
+  let endDate: Date | undefined;
+  if (Platform.OS === 'ios' && occurrenceCount > 1) {
+    const freqLower = frequency?.toLowerCase() || '';
+    const intervalDays = freqLower.includes('fortnight') || freqLower.includes('every 2 week') || freqLower.includes('biweek') ? 14 : 
+                        (freqLower.includes('weekly') || freqLower === 'week' ? 7 : 
+                        (freqLower.includes('daily') || freqLower === 'day' ? 1 : 7));
+    
+    endDate = new Date(startDate.getTime());
+    if (freqLower.includes('monthly') || freqLower === 'month') {
+      endDate.setMonth(endDate.getMonth() + (occurrenceCount - 1));
+    } else {
+      endDate.setDate(endDate.getDate() + (intervalDays * (occurrenceCount - 1)));
+    }
+  }
+
   return {
     frequency: calendarFrequency,
     interval,
-    occurrence: occurrenceCount,
+    occurrence: Platform.OS === 'android' ? occurrenceCount : undefined,
+    endDate: endDate,
     daysOfTheWeek,
   };
 }
@@ -210,7 +228,8 @@ export function buildCalendarEventFromEducationSeries(
   const recurrenceRule = buildRecurrenceRule(
     meta.frequency as string | undefined,
     meta.daysOfWeek as string[] | undefined,
-    n
+    n,
+    startDate
   );
 
   return {

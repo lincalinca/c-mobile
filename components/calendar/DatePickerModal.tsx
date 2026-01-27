@@ -139,7 +139,7 @@ export function DatePickerModal({
             Choose a transaction date
           </Text>
           {showWarning && (
-            <View className="bg-yellow-900/30 border border-yellow-600 rounded-lg p-3 mb-3">
+            <View className="bg-yellow-900/30 border border-yellow-600 rounded-[10px] p-3 mb-3">
               <Text className="text-yellow-400 text-sm text-center">
                 ⚠️ Future date selected. Are you sure this is correct?
               </Text>
@@ -175,20 +175,20 @@ export function DatePickerModal({
             }}
           />
           <View className="flex-row gap-2 mt-3">
-            <TouchableOpacity onPress={handleToday} className="flex-1 py-2.5 rounded-xl bg-crescender-800 border border-crescender-600">
+            <TouchableOpacity onPress={handleToday} className="flex-1 py-2.5 rounded-[14px] bg-crescender-800 border border-crescender-600">
               <Text className="text-crescender-200 font-semibold text-center text-sm">Today</Text>
             </TouchableOpacity>
           </View>
           <View className="flex-row justify-between gap-3 mt-2">
             <TouchableOpacity
               onPress={onRequestClose}
-              className="px-4 py-2.5 rounded-xl bg-crescender-800 border border-crescender-600"
+              className="px-4 py-2.5 rounded-[14px] bg-crescender-800 border border-crescender-600"
             >
               <Text className="text-crescender-200 font-semibold">Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleConfirm}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-gold"
+              className="flex-1 px-4 py-2.5 rounded-[14px] bg-gold"
             >
               <Text className="text-crescender-950 font-bold">Confirm</Text>
             </TouchableOpacity>
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: 'rgba(24,9,48,0.97)',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 16,
     width: '100%',
     maxWidth: 448,

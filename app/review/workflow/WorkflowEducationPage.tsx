@@ -118,15 +118,23 @@ export default function WorkflowEducationPage({
                         const newItems = [...workflowState.items];
                         const itemIndex = workflowState.items.findIndex(i => i.id === eduItem.id);
                         if (itemIndex >= 0) {
-                          const updatedItem = newItems[itemIndex];
+                          const updatedItem = { ...newItems[itemIndex] };
+                          const { quantity, ...eduUpdates } = updates as any;
+                          
+                          if (quantity !== undefined) {
+                            updatedItem.quantity = quantity;
+                          }
+                          
                           const eduDetails = typeof updatedItem.educationDetails === 'string'
                             ? JSON.parse(updatedItem.educationDetails || '{}')
                             : (updatedItem.educationDetails || {});
                           
                           updatedItem.educationDetails = {
                             ...eduDetails,
-                            ...updates,
+                            ...eduUpdates,
                           };
+                          
+                          newItems[itemIndex] = updatedItem;
                           updateState({ items: newItems });
                         }
                       }}

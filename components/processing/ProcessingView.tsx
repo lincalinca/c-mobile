@@ -8,7 +8,8 @@ import Animated, {
   withTiming,
   withSequence,
   interpolate,
-  Extrapolate
+  Extrapolate,
+  SharedValue
 } from 'react-native-reanimated';
 
 export const ProcessingView = () => {
@@ -48,7 +49,7 @@ export const ProcessingView = () => {
     );
   }, []);
 
-  const createRingStyle = (progress: Animated.SharedValue<number>) => {
+  const createRingStyle = (progress: SharedValue<number>) => {
     return useAnimatedStyle(() => {
       const scale = interpolate(
         progress.value,
@@ -78,7 +79,7 @@ export const ProcessingView = () => {
     <View className="flex-1 bg-transparent justify-center items-center px-6">
       <View className="w-64 h-64 justify-center items-center mb-8 relative" style={{ overflow: 'visible' }}>
         {/* Card background */}
-        <View className="w-64 h-64 bg-crescender-900/40 rounded-3xl border border-gold/20 justify-center items-center shadow-xl shadow-gold/10">
+        <View className="w-64 h-64 bg-crescender-900/40 rounded-[26px] border border-gold/20 justify-center items-center shadow-xl shadow-gold/10">
           {/* Lightning icon in centre */}
           <Feather name="zap" size={48} color="#f5c518" />
         </View>

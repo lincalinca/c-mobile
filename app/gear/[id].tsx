@@ -9,7 +9,7 @@ import { formatABN } from '../../lib/formatUtils';
 import { ITEM_CATEGORIES } from '../../constants/categories';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
-import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
+const FS = FileSystem as any;
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import { callSupabaseFunction } from '../../lib/supabase';
@@ -19,6 +19,7 @@ import { SimpleServiceCard } from '../../components/results/SimpleServiceCard';
 import { SimpleEducationCard } from '../../components/results/SimpleEducationCard';
 import type { ResultItem } from '../../lib/results';
 import { DatePickerModal } from '../../components/calendar/DatePickerModal';
+import { StatePickerModal } from '../../components/common/StatePickerModal';
 
 // Helper to convert line item to ResultItem format for card rendering
 function lineItemToResultItem(item: LineItemWithDetails, receipt: Receipt): ResultItem {
@@ -118,6 +119,7 @@ export default function GearDetailScreen() {
   const [editMerchantState, setEditMerchantState] = useState('');
   const [editMerchantPostcode, setEditMerchantPostcode] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showStatePicker, setShowStatePicker] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -260,20 +262,20 @@ export default function GearDetailScreen() {
     if (receipt.imageUrl.startsWith('data:')) {
       // For data URIs, we need to save to a file first
       const base64 = receipt.imageUrl.split(',')[1] || '';
-      const fileUri = `${FileSystem.documentDirectory}${filename}`;
-      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      const fileUri = `${FS.documentDirectory}${filename}`;
+      const fileInfo = await FS.getInfoAsync(fileUri);
       if (!fileInfo.exists) {
-        await FileSystem.makeDirectoryAsync(FileSystem.documentDirectory!, { intermediates: true });
+        await FS.makeDirectoryAsync(FS.documentDirectory!, { intermediates: true });
       }
       // Write base64 to file
-      await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+      await FS.writeAsStringAsync(fileUri, base64, { encoding: FS.EncodingType.Base64 });
       imageUri = fileUri;
     } else if (receipt.imageUrl.startsWith('file://') || !receipt.imageUrl.startsWith('http')) {
       imageUri = receipt.imageUrl;
     } else {
       // For remote URLs, download first
-      const fileUri = `${FileSystem.documentDirectory}${filename}`;
-      const downloadResult = await FileSystem.downloadAsync(receipt.imageUrl, fileUri);
+      const fileUri = `${FS.documentDirectory}${filename}`;
+      const downloadResult = await FS.downloadAsync(receipt.imageUrl, fileUri);
       imageUri = downloadResult.uri;
     }
 
@@ -300,17 +302,17 @@ export default function GearDetailScreen() {
       if (Platform.OS === 'android') {
         try {
           // Get Downloads directory path
-          const downloadsPath = `${FileSystem.documentDirectory}../Downloads/`;
+          const downloadsPath = `${FS.documentDirectory}../Downloads/`;
           const downloadsUri = `${downloadsPath}${filename}`;
           
           // Ensure Downloads directory exists
-          const dirInfo = await FileSystem.getInfoAsync(downloadsPath);
+          const dirInfo = await FS.getInfoAsync(downloadsPath);
           if (!dirInfo.exists) {
-            await FileSystem.makeDirectoryAsync(downloadsPath, { intermediates: true });
+            await FS.makeDirectoryAsync(downloadsPath, { intermediates: true });
           }
           
           // Copy file to Downloads with proper filename
-          await FileSystem.copyAsync({
+          await FS.copyAsync({
             from: uri,
             to: downloadsUri,
           });
@@ -381,7 +383,7 @@ export default function GearDetailScreen() {
       if (receipt.imageUrl.startsWith('data:')) {
         base64 = receipt.imageUrl.split(',')[1] || '';
       } else if (receipt.imageUrl.startsWith('file://') || !receipt.imageUrl.startsWith('http')) {
-        base64 = await readAsStringAsync(receipt.imageUrl, { encoding: EncodingType.Base64 });
+        base64 = await FS.readAsStringAsync(receipt.imageUrl, { encoding: FS.EncodingType.Base64 });
       } else {
         Alert.alert('Unsupported', 'Reprocess is not available for remote images. Use Replace Image to use a local photo.');
         return;
@@ -749,7 +751,7 @@ export default function GearDetailScreen() {
               />
             </View>
             <View className="flex-row gap-4 mb-4">
-              <View className="flex-1">
+              <View className="flex-[2]">
                 <Text className="text-crescender-400 text-sm mb-1">Suburb</Text>
                 <TextInput
                   className="text-white text-base border-b border-crescender-700 py-1"
@@ -760,15 +762,19 @@ export default function GearDetailScreen() {
               </View>
               <View className="flex-1">
                 <Text className="text-crescender-400 text-sm mb-1">State</Text>
-                <TextInput
-                  className="text-white text-base border-b border-crescender-700 py-1"
-                  value={editMerchantState}
-                  onChangeText={setEditMerchantState}
-                  placeholder="e.g. NSW"
-                  placeholderTextColor="#666"
-                />
+                <TouchableOpacity
+                  onPress={() => setShowStatePicker(true)}
+                  className="border-b border-crescender-700 py-1 h-[34px] justify-center"
+                >
+                  <View className="flex-row items-center justify-between">
+                    <Text className={`text-base ${editMerchantState ? 'text-white' : 'text-crescender-500'}`}>
+                      {editMerchantState || 'NSW...'}
+                    </Text>
+                    <Feather name="chevron-down" size={14} color="#f5c518" />
+                  </View>
+                </TouchableOpacity>
               </View>
-              <View className="w-24">
+              <View className="flex-1">
                 <Text className="text-crescender-400 text-sm mb-1">Postcode</Text>
                 <TextInput
                   className="text-white text-base border-b border-crescender-700 py-1"
@@ -776,6 +782,7 @@ export default function GearDetailScreen() {
                   onChangeText={setEditMerchantPostcode}
                   placeholderTextColor="#666"
                   keyboardType="numeric"
+                  maxLength={4}
                 />
               </View>
             </View>
@@ -1014,6 +1021,12 @@ export default function GearDetailScreen() {
           setShowDatePicker(false);
         }}
         showFutureWarning={true}
+      />
+      <StatePickerModal
+        visible={showStatePicker}
+        onClose={() => setShowStatePicker(false)}
+        selectedState={editMerchantState}
+        onSelect={(code) => setEditMerchantState(code)}
       />
     </View>
   );

@@ -2,7 +2,7 @@
   "expo": {
     "name": "crescender-mobile",
     "slug": "crescender-mobile",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "dark",
@@ -25,8 +25,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.crescender.mobile.app",
-      "buildNumber": "1",
-      "itsAppUsesNonExemptEncryption": false,
+      "buildNumber": "2",
       "icon": "./assets/app-icon.png",
       "splash": {
         "image": "./assets/iPhone_14_-_1170_2536.png",
@@ -51,6 +50,7 @@
         "backgroundColor": "#2a0b4c"
       },
       "package": "com.crescender.mobile.app",
+      "versionCode": 2,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
@@ -84,7 +84,8 @@
         {
           "calendarPermission": "Crescender would like to add events to your calendar so you can view lessons and appointments next to your schedule."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "scheme": "crescender",
     "experiments": {

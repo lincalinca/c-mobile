@@ -154,8 +154,21 @@ export function generateEducationEvents(
 
   const start = edu.startDate ? toDate(edu.startDate) : new Date(receipt.transactionDate + 'T12:00:00');
   let end: Date;
+  
+  // Single lesson or one-off: use quantity or default to 1
+  const lessonCount = (item.quantity && item.quantity > 0) ? item.quantity : (freqDays > 0 ? MAX_SERIES : 1);
+
   if (edu.endDate) {
     end = toDate(edu.endDate);
+  } else if (freqDays > 0 && item.quantity && item.quantity > 0) {
+    // Extrapolate end date based on quantity and frequency
+    const cap = new Date(start);
+    if (freqDays >= 28) { // Monthly
+      cap.setMonth(cap.getMonth() + item.quantity);
+    } else {
+      cap.setDate(cap.getDate() + (freqDays * (item.quantity - 1)));
+    }
+    end = cap;
   } else if (freqDays > 0) {
     const cap = new Date(start);
     cap.setMonth(cap.getMonth() + 12);
@@ -194,7 +207,7 @@ export function generateEducationEvents(
   let cur = new Date(start.getTime());
   let count = 0;
 
-  while (cur <= end && count < MAX_SERIES) {
+  while (cur <= end && count < lessonCount && count < MAX_SERIES) {
     const weekday = cur.getDay();
     const include =
       daysOfWeek.length === 0 ? true : daysOfWeek.includes(weekday);

@@ -56,6 +56,22 @@ export interface EducationDetails {
   subject?: string;
 }
 
+// Service Details Interface (Phase 1)
+export interface ServiceDetails {
+  startDate?: string;
+  endDate?: string;
+  isMultiDay?: boolean;
+  pickupDate?: string;
+  dropoffDate?: string;
+  technicianName?: string;
+  providerName?: string;
+  gearItemId?: string;
+  gearDescription?: string;
+  serviceType?: string;
+  warrantyDetails?: string;
+  notes?: string;
+}
+
 // Warranty Details Interface (Phase 2)
 export interface WarrantyDetails {
   coveragePeriod?: string;
@@ -67,6 +83,7 @@ export interface WarrantyDetails {
 export interface LineItemWithDetails extends LineItem {
   gearDetailsParsed?: GearDetails;
   educationDetailsParsed?: EducationDetails;
+  serviceDetailsParsed?: ServiceDetails;
   warrantyDetailsParsed?: WarrantyDetails;
 }
 
@@ -91,6 +108,16 @@ function parseEducationDetails(educationDetailsJson: string | null): EducationDe
   }
 }
 
+function parseServiceDetails(serviceDetailsJson: string | null): ServiceDetails | undefined {
+  if (!serviceDetailsJson) return undefined;
+  try {
+    return JSON.parse(serviceDetailsJson) as ServiceDetails;
+  } catch (e) {
+    console.warn('[Repository] Failed to parse serviceDetails:', e);
+    return undefined;
+  }
+}
+
 function parseWarrantyDetails(warrantyDetailsJson: string | null): WarrantyDetails | undefined {
   if (!warrantyDetailsJson) return undefined;
   try {
@@ -106,6 +133,7 @@ function enhanceLineItem(item: LineItem): LineItemWithDetails {
     ...item,
     gearDetailsParsed: parseGearDetails(item.gearDetails),
     educationDetailsParsed: parseEducationDetails(item.educationDetails),
+    serviceDetailsParsed: parseServiceDetails(item.serviceDetails),
     warrantyDetailsParsed: parseWarrantyDetails(item.warrantyDetails),
   };
 }

@@ -1,3 +1,5 @@
+import { ReceiptItem } from './repository';
+
 /**
  * Utility functions for formatting education-related data
  */
@@ -224,4 +226,101 @@ export function formatEducationDetailsSentence(metadata: EducationMetadata): str
   if (dateText) parts.push(dateText);
   
   return parts.join(' ');
+}
+
+export interface LessonCountSuspect {
+  count: number;
+  confidence: number; // 0-1
+  source: 'quantity' | 'description' | 'dateRange' | 'other';
+  reason: string;
+}
+
+/**
+ * Analyzes a receipt item and its parsed education details to find suspected lesson counts.
+ * Returns a list of unique candidates sorted by confidence.
+ */
+export function getLessonCountSuspects(item: ReceiptItem, eduDetails: any): LessonCountSuspect[] {
+  const suspects: LessonCountSuspect[] = [];
+  
+  // 1. Line item quantity (99% confidence if > 0)
+  if (item.quantity && item.quantity > 0) {
+    suspects.push({
+      count: item.quantity,
+      confidence: 0.99,
+      source: 'quantity',
+      reason: `Quantity from receipt line item`
+    });
+  }
+
+  // 2. Description text mentions (e.g. "11 weeks", "10 lessons")
+  const desc = (item.description || '').toLowerCase();
+  const weekMatch = desc.match(/(\b\d+)\s*week/);
+  const lessonMatch = desc.match(/(\b\d+)\s*lesson/);
+  
+  if (weekMatch) {
+    const count = parseInt(weekMatch[1], 10);
+    suspects.push({
+      count,
+      confidence: 0.8,
+      source: 'description',
+      reason: `Mentioned "${count} weeks" in description`
+    });
+  }
+  if (lessonMatch) {
+    const count = parseInt(lessonMatch[1], 10);
+    suspects.push({
+      count,
+      confidence: 0.85,
+      source: 'description',
+      reason: `Mentioned "${count} lessons" in description`
+    });
+  }
+
+  // 3. Date range extrapolation (if start/end exist)
+  if (eduDetails && eduDetails.startDate && eduDetails.endDate) {
+    try {
+      const start = new Date(eduDetails.startDate + 'T12:00:00');
+      const end = new Date(eduDetails.endDate + 'T12:00:00');
+      const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      
+      const freq = (eduDetails.frequency || 'weekly').toLowerCase();
+      let steps = 0;
+      if (freq.includes('weekly')) steps = 7;
+      else if (freq.includes('fortnight')) steps = 14;
+      else if (freq.includes('monthly')) steps = 30;
+      
+      if (steps > 0) {
+        const count = Math.floor(daysDiff / steps) + 1;
+        suspects.push({
+          count,
+          confidence: 0.7,
+          source: 'dateRange',
+          reason: `Calculated from dates (${count} occurrences)`
+        });
+      }
+    } catch (e) {}
+  }
+
+  // Deduplicate and sort by confidence
+  const uniqueSuspects: LessonCountSuspect[] = [];
+  const countsSeen = new Set<number>();
+  
+  suspects.sort((a, b) => b.confidence - a.confidence).forEach(s => {
+    if (!countsSeen.has(s.count)) {
+      uniqueSuspects.push(s);
+      countsSeen.add(s.count);
+    }
+  });
+
+  // If no suspects, suggest 1 lesson
+  if (uniqueSuspects.length === 0) {
+    uniqueSuspects.push({
+      count: 1,
+      confidence: 0.5,
+      source: 'other',
+      reason: 'No clear count found, assuming one lesson'
+    });
+  }
+
+  return uniqueSuspects;
 }
