@@ -24,6 +24,18 @@ A running list of future enhancements and options we’d like to support. Not co
 
 ---
 
-## Other ideas (stubs)
+---
 
-_Add more wishlist items below as we go._
+## iPad Support
+
+### Split View & Multitasking
+
+**Status:** Roadmap / Future enhancement
+
+**Context:** The app currently supports iPad (Universal binary) but is locked to `portrait` orientation. This prevents the app from supporting iPadOS Split View and Slide Over features properly.
+
+**Wishlist item:** Enable flexible orientation support to unlock iPad multitasking.
+
+- **Goal:** Allow the app to rotate and resize dynamically.
+- **Task:** Update `app.json` orientation settings and audit layouts (especially the receipt scanner and detailed views) to ensure they work in landscape and narrow split-screen widths.
+- **Benefit:** Provides a premium experience for iPad users who want to use Crescender alongside their calendar or music apps.

@@ -7,6 +7,7 @@ import Animated, {
   withTiming,
   withDelay,
   Easing,
+  SharedValue,
 } from 'react-native-reanimated';
 
 // AnimatedPath allows us to animate path properties via useAnimatedProps
@@ -51,7 +52,7 @@ interface AnimatedLetterProps {
   pathData: string;
   fill: string;
   index: number;
-  phase: Animated.SharedValue<number>;
+  phase: SharedValue<number>;
 }
 
 /**
@@ -59,26 +60,46 @@ interface AnimatedLetterProps {
  * Uses useAnimatedProps to animate translateX based on a shared phase value.
  * The stagger offset is calculated from the letter index.
  */
+/**
+ * Module-level worklet function for letter animation.
+ * Defined outside the component to avoid capturing component-level cyclic objects.
+ */
+const calculateLetterTransform = (
+  phase: number,
+  index: number,
+  letterCount: number,
+  nudgeDistance: number
+) => {
+  'worklet';
+  // Calculate staggered progress for this letter (0 to 1)
+  const staggerOffset = index / letterCount;
+  const localProgress = Math.max(0, Math.min(1, (phase - staggerOffset) * 2));
+
+  // Ease-out curve for smooth deceleration
+  const eased = 1 - Math.pow(1 - localProgress, 3);
+
+  // Start offset, animate to 0 (nudge from left to rest position)
+  const translateX = nudgeDistance * (1 - eased);
+
+  return {
+    transform: [{ translateX }],
+  };
+};
+
+/**
+ * Individual animated letter component.
+ */
 const AnimatedLetter = React.memo(({ pathData, fill, index, phase }: AnimatedLetterProps) => {
-  // useAnimatedProps creates animated props that can be applied to SVG elements.
-  // Only primitives and shared values are referenced in the worklet to avoid serialisation errors.
+  // Capture shared value reference and primitives separately
+  const p = phase;
+  const i = index;
+  const count = LETTER_COUNT;
+  const nudge = NUDGE_DISTANCE_PX;
+
   const animatedProps = useAnimatedProps(() => {
     'worklet';
-    // Calculate staggered progress for this letter (0 to 1)
-    // Each letter starts slightly after the previous one
-    const staggerOffset = index / LETTER_COUNT;
-    const localProgress = Math.max(0, Math.min(1, (phase.value - staggerOffset) * 2));
-
-    // Ease-out curve for smooth deceleration
-    const eased = 1 - Math.pow(1 - localProgress, 3);
-
-    // Start offset, animate to 0 (nudge from left to rest position)
-    const translateX = NUDGE_DISTANCE_PX * (1 - eased);
-
-    return {
-      transform: [{ translateX }],
-    };
-  }, [index]);
+    return calculateLetterTransform(p.value, i, count, nudge);
+  }, [i]);
 
   return (
     <AnimatedPath

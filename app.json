@@ -35,7 +35,8 @@
       },
       "infoPlist": {
         "NSCameraUsageDescription": "Crescender needs access to your camera to scan receipts and extract gear information.",
-        "NSUserTrackingUsageDescription": "This allows us to show you relevant ads and improve your experience."
+        "NSUserTrackingUsageDescription": "This allows us to show you relevant ads and improve your experience.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
