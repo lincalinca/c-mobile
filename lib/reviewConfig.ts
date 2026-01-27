@@ -12,7 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export type ReviewApproach = 'workflow' | 'simplified' | 'monolithic';
 
 const REVIEW_APPROACH_PREFERENCE_KEY = 'user_preference_review_approach';
-const DEFAULT_APPROACH: ReviewApproach = 'monolithic'; // Default to existing approach
+const DEFAULT_APPROACH: ReviewApproach = 'simplified'; // Default to simplified workflow
 
 /**
  * Get the user's preferred review approach

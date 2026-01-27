@@ -5,7 +5,7 @@
  * Only prompts for critical missing information.
  */
 
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useMemo, useCallback } from 'react';
 import * as Crypto from 'expo-crypto';
@@ -13,7 +13,7 @@ import { TransactionRepository } from '../../../lib/repository';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PersistentHeader } from '../../../components/header/PersistentHeader';
-import { useInterstitialAd, usePreloadInterstitialAd } from '../../../components/ads';
+import { useInterstitialAd } from '../../../components/ads';
 import { analyzeMissingData } from '../../../lib/reviewWorkflow';
 import { DatePickerModal } from '../../../components/calendar/DatePickerModal';
 import { generateEducationEvents, getEducationSeriesSummary } from '../../../lib/educationEvents';
@@ -47,8 +47,6 @@ export default function ReviewSimplified() {
   );
   const [total, setTotal] = useState(initialData.financial?.total?.toString() || '0');
 
-  // Preload interstitial ad
-  usePreloadInterstitialAd();
   const { show: showInterstitial } = useInterstitialAd();
 
   // Check for critical missing data
@@ -160,6 +158,18 @@ export default function ReviewSimplified() {
     return null;
   };
 
+  const updateEducationDetail = useCallback((itemIndex: number, field: string, value: string) => {
+    const newItems = [...items];
+    const item = newItems[itemIndex];
+    if (item?.category !== 'education') return;
+    const eduDetails = typeof item.educationDetails === 'string'
+      ? JSON.parse(item.educationDetails || '{}')
+      : (item.educationDetails || {});
+    eduDetails[field] = value.trim() || undefined;
+    item.educationDetails = eduDetails;
+    setItems(newItems);
+  }, [items]);
+
   const hasEducationOrEvents = items.some((item: any) => 
     item.category === 'education' || 
     item.category === 'event' ||
@@ -224,6 +234,15 @@ export default function ReviewSimplified() {
                       </Text>
                       <Feather name="calendar" size={18} color="#f5c518" />
                     </TouchableOpacity>
+                  )}
+                  {(req.field === 'studentName' || req.field === 'teacherName') && (
+                    <TextInput
+                      className="bg-crescender-800 text-white text-base p-3 rounded-xl border border-crescender-700"
+                      value={currentValue ?? ''}
+                      onChangeText={(text) => updateEducationDetail(req.itemIndex, req.field, text)}
+                      placeholder={req.field === 'studentName' ? 'e.g. Alex, Jordan' : 'e.g. Jane Smith'}
+                      placeholderTextColor="#6b7280"
+                    />
                   )}
                 </View>
               );

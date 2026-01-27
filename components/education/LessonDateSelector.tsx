@@ -116,6 +116,37 @@ export function LessonDateSelector({ item, transactionDate, onUpdate }: LessonDa
     <View className="mt-4 pt-4 border-t border-crescender-700">
       <Text className="text-crescender-400 text-sm mb-3 font-semibold">Lesson Schedule</Text>
 
+      {/* Student name – important to capture */}
+      <View className="mb-4">
+        <Text className="text-crescender-500 text-xs mb-2">
+          Student name <Text className="text-yellow-500">(required)</Text>
+        </Text>
+        <TextInput
+          className="text-white text-base border-b border-crescender-700 py-1"
+          value={eduDetails.studentName || ''}
+          onChangeText={(text) => onUpdate({ studentName: text.trim() || undefined })}
+          placeholder="e.g. Alex, Jordan"
+          placeholderTextColor="#666"
+        />
+        {!eduDetails.studentName && (
+          <Text className="text-yellow-500 text-xs mt-1">Student name helps track lessons</Text>
+        )}
+      </View>
+
+      {/* Teacher name */}
+      <View className="mb-4">
+        <Text className="text-crescender-500 text-xs mb-2">
+          Teacher name <Text className="text-crescender-600">(optional)</Text>
+        </Text>
+        <TextInput
+          className="text-white text-base border-b border-crescender-700 py-1"
+          value={eduDetails.teacherName || ''}
+          onChangeText={(text) => onUpdate({ teacherName: text.trim() || undefined })}
+          placeholder="e.g. Jane Smith"
+          placeholderTextColor="#666"
+        />
+      </View>
+
       {/* Focus Field */}
       <View className="mb-4">
         <Text className="text-crescender-500 text-xs mb-2">

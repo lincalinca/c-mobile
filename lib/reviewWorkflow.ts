@@ -86,13 +86,24 @@ export function analyzeMissingData(items: any[]): MissingDataRequirement[] {
         });
       }
       
-      // Important: Student name
+      // Critical: Student name (important for lessons)
       if (!eduDetails.studentName) {
         missing.push({
           type: 'education',
           itemIndex: index,
           field: 'studentName',
           label: 'Student name',
+          required: true,
+        });
+      }
+      
+      // Important: Teacher name
+      if (!eduDetails.teacherName) {
+        missing.push({
+          type: 'education',
+          itemIndex: index,
+          field: 'teacherName',
+          label: 'Teacher name',
           required: false,
         });
       }

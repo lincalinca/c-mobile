@@ -1,6 +1,6 @@
 import { View, Text, Platform, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -10,7 +10,6 @@ import Animated, {
   interpolate,
   Extrapolate
 } from 'react-native-reanimated';
-import { useInterstitialAd } from '../ads';
 
 interface ProcessingWithAdViewProps {
   onReview: () => void;
@@ -18,21 +17,9 @@ interface ProcessingWithAdViewProps {
 }
 
 export const ProcessingWithAdView = ({ onReview, resultsReady }: ProcessingWithAdViewProps) => {
-  const { show: showInterstitial, isLoaded } = useInterstitialAd();
-  const [adShown, setAdShown] = useState(false);
-  
   const ring1Progress = useSharedValue(0);
   const ring2Progress = useSharedValue(0);
   const ring3Progress = useSharedValue(0);
-
-  useEffect(() => {
-    // Show interstitial ad when component mounts (processing starts)
-    // Show immediately if already loaded, otherwise show when it loads
-    if (!adShown && isLoaded) {
-      showInterstitial();
-      setAdShown(true);
-    }
-  }, [isLoaded, adShown, showInterstitial]);
 
   useEffect(() => {
     // Create a staggered ring animation effect

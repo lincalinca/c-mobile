@@ -258,10 +258,10 @@ export default function SettingsScreen() {
             <ScrollView>
               {[
                 { 
-                  value: 'monolithic' as ReviewApproach, 
-                  label: 'Full Details', 
-                  desc: 'See all captured information on a single page. Best for detailed review and editing.',
-                  icon: 'file-text' as const
+                  value: 'simplified' as ReviewApproach, 
+                  label: 'Simplified', 
+                  desc: 'Minimal display, trust AI. Only prompts for critical missing information.',
+                  icon: 'check-circle' as const
                 },
                 { 
                   value: 'workflow' as ReviewApproach, 
@@ -270,10 +270,10 @@ export default function SettingsScreen() {
                   icon: 'layers' as const
                 },
                 { 
-                  value: 'simplified' as ReviewApproach, 
-                  label: 'Simplified', 
-                  desc: 'Minimal display, trust AI. Only prompts for critical missing information.',
-                  icon: 'check-circle' as const
+                  value: 'monolithic' as ReviewApproach, 
+                  label: 'Full Details', 
+                  desc: 'See all captured information on a single page. Best for detailed review and editing.',
+                  icon: 'file-text' as const
                 },
               ].map((option) => (
                 <TouchableOpacity

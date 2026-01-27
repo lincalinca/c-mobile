@@ -1,13 +1,14 @@
 /**
  * Workflow Missing Data Page
  * 
- * Prompts user to enter critical missing data (e.g., lesson start dates)
+ * Prompts user to enter critical missing data (e.g., lesson start dates, student name)
  */
 
+import { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { ReviewWorkflowState, MissingDataRequirement, analyzeMissingData } from '../../../lib/reviewWorkflow';
+import { ReviewWorkflowState, analyzeMissingData } from '../../../lib/reviewWorkflow';
 import { PersistentHeader } from '../../../components/header/PersistentHeader';
 import { LessonDateSelector } from '../../../components/education/LessonDateSelector';
 
@@ -28,6 +29,15 @@ export default function WorkflowMissingDataPage({
   const missingData = analyzeMissingData(workflowState.items);
   const requiredMissing = missingData.filter(m => m.required);
 
+  // Group education requirements by itemIndex – one LessonDateSelector per education item
+  const educationItemIndices = useMemo(() => {
+    const set = new Set<number>();
+    requiredMissing.forEach((m) => {
+      if (m.type === 'education') set.add(m.itemIndex);
+    });
+    return Array.from(set);
+  }, [requiredMissing]);
+
   return (
     <View className="flex-1" style={{ backgroundColor: 'transparent', paddingTop: insets.top }}>
       <PersistentHeader />
@@ -47,37 +57,29 @@ export default function WorkflowMissingDataPage({
             </Text>
           </View>
         ) : (
-          requiredMissing.map((req, idx) => {
-            const item = workflowState.items[req.itemIndex];
-            
+          educationItemIndices.map((itemIndex) => {
+            const item = workflowState.items[itemIndex];
             return (
-              <View key={idx} className="bg-crescender-900/40 p-4 rounded-2xl border border-crescender-800 mb-4">
+              <View key={itemIndex} className="bg-crescender-900/40 p-4 rounded-2xl border border-crescender-800 mb-4">
                 <Text className="text-white text-lg font-semibold mb-1">
-                  {item.description || `${req.type} item ${req.itemIndex + 1}`}
+                  {item.description || `Education item ${itemIndex + 1}`}
                 </Text>
                 <Text className="text-crescender-400 text-sm mb-3">
-                  {req.label}
+                  Student name, teacher (optional), lesson start date, and focus
                 </Text>
-                
-                {req.field === 'startDate' && req.type === 'education' && (
-                  <LessonDateSelector
-                    item={item}
-                    transactionDate={workflowState.transactionDate}
-                    onUpdate={(updates) => {
-                      const newItems = [...workflowState.items];
-                      const updatedItem = newItems[req.itemIndex];
-                      const eduDetails = typeof updatedItem.educationDetails === 'string'
-                        ? JSON.parse(updatedItem.educationDetails || '{}')
-                        : (updatedItem.educationDetails || {});
-                      
-                      updatedItem.educationDetails = {
-                        ...eduDetails,
-                        ...updates,
-                      };
-                      updateState({ items: newItems });
-                    }}
-                  />
-                )}
+                <LessonDateSelector
+                  item={item}
+                  transactionDate={workflowState.transactionDate}
+                  onUpdate={(updates) => {
+                    const newItems = [...workflowState.items];
+                    const updatedItem = newItems[itemIndex];
+                    const eduDetails = typeof updatedItem.educationDetails === 'string'
+                      ? JSON.parse(updatedItem.educationDetails || '{}')
+                      : (updatedItem.educationDetails || {});
+                    updatedItem.educationDetails = { ...eduDetails, ...updates };
+                    updateState({ items: newItems });
+                  }}
+                />
               </View>
             );
           })
