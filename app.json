@@ -87,8 +87,7 @@
           "calendarPermission": "Crescender would like to add events to your calendar so you can view lessons and appointments next to your schedule."
         }
       ],
-      "expo-font",
-      "expo-notifications"
+      "expo-font"
     ],
     "scheme": "crescender",
     "experiments": {

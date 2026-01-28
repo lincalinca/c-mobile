@@ -5,16 +5,25 @@ import { Platform } from 'react-native';
 let RewardedAd: any;
 let RewardedAdEventType: any;
 let TestIds: any;
+let adsModuleLoaded = false;
 
+// Safely load the ads module with comprehensive error handling
 try {
   const adsModule = require('react-native-google-mobile-ads');
-  RewardedAd = adsModule.RewardedAd;
-  RewardedAdEventType = adsModule.RewardedAdEventType;
-  TestIds = adsModule.TestIds;
+  if (adsModule && typeof adsModule === 'object') {
+    RewardedAd = adsModule.RewardedAd;
+    RewardedAdEventType = adsModule.RewardedAdEventType;
+    TestIds = adsModule.TestIds;
+    adsModuleLoaded = true;
+  }
 } catch (error) {
-  // Native module not available (e.g., in Expo Go)
+  // Native module not available (e.g., in Expo Go) or failed to load
   console.warn('Google Mobile Ads module not available:', error);
-  // Provide fallback TestIds object
+  adsModuleLoaded = false;
+}
+
+// Provide fallback TestIds object if module not loaded
+if (!TestIds) {
   TestIds = {
     REWARDED: 'ca-app-pub-3940256099942544/5224354917', // Google test ad unit ID
   };
@@ -29,7 +38,7 @@ const ANDROID_REWARDED_AD_UNIT_ID = __DEV__
   ? (TestIds?.REWARDED || 'ca-app-pub-3940256099942544/5224354917')
   : 'ca-app-pub-5375818323643018/7833061743';
 
-const adUnitId = RewardedAd ? Platform.select({
+const adUnitId = (RewardedAd && adsModuleLoaded) ? Platform.select({
   ios: IOS_REWARDED_AD_UNIT_ID,
   android: ANDROID_REWARDED_AD_UNIT_ID,
   default: TestIds?.REWARDED || 'ca-app-pub-3940256099942544/5224354917',
@@ -65,66 +74,150 @@ export function useRewardedAd(options: UseRewardedAdOptions = {}) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPlaceholder, setShowPlaceholder] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
-  // Check if native module is available
-  const nativeModuleAvailable = RewardedAd && adUnitId;
+  // Store cleanup function from initializeAd
+  const cleanupRef = React.useRef<(() => void) | null>(null);
 
+  // Check if native module is available - add comprehensive checks
+  const nativeModuleAvailable = adsModuleLoaded && RewardedAd && RewardedAdEventType && adUnitId;
+
+  // Mark component as mounted after initial render to prevent crashes during module initialization
   useEffect(() => {
-    // If native module not available, enable placeholder mode
+    setIsMounted(true);
+  }, []);
+
+  // Lazy initialization: Only initialize when user actually wants to watch an ad
+  // This prevents crashes during app startup when native modules might not be ready
+  useEffect(() => {
+    // If native module not available, enable placeholder mode immediately
     if (!nativeModuleAvailable) {
       setIsLoaded(true); // Mark as "loaded" so UI can show placeholder
       return;
     }
 
-    // Create and load the rewarded ad
-    const ad = RewardedAd.createForAdRequest(adUnitId || TestIds?.REWARDED, {
-      requestNonPersonalizedAdsOnly: false,
-      keywords: ['music', 'gear', 'receipt', 'scan', 'reward'],
-    });
+    // Don't auto-initialize - wait for user interaction
+    // This prevents crashes on app startup
+    setIsLoaded(false);
 
-    const unsubscribeLoaded = ad.addAdEventListener(RewardedAdEventType?.LOADED, () => {
-      setIsLoaded(true);
-      setIsLoading(false);
-      console.log('Rewarded ad loaded');
-    });
-
-    const unsubscribeEarned = ad.addAdEventListener(RewardedAdEventType?.EARNED_REWARD, (reward) => {
-      console.log('User earned reward:', reward);
-      setIsLoaded(false);
-      onRewarded?.(reward);
-      // Reload the ad after reward is earned
-      setIsLoading(true);
-      ad.load();
-    });
-
-    const unsubscribeClosed = ad.addAdEventListener(RewardedAdEventType?.CLOSED, () => {
-      setIsLoaded(false);
-      onAdClosed?.();
-      // Reload the ad after it's closed
-      setIsLoading(true);
-      ad.load();
-    });
-
-    const unsubscribeError = ad.addAdEventListener(RewardedAdEventType?.ERROR, (error) => {
-      console.error('Rewarded ad error:', error);
-      setIsLoaded(false);
-      setIsLoading(false);
-      onAdFailedToLoad?.(error);
-    });
-
-    // Load the ad
-    setIsLoading(true);
-    ad.load();
-
-    setRewardedAd(ad);
-
+    // Cleanup on unmount
     return () => {
-      unsubscribeLoaded();
-      unsubscribeEarned();
-      unsubscribeClosed();
-      unsubscribeError();
+      if (cleanupRef.current) {
+        cleanupRef.current();
+        cleanupRef.current = null;
+      }
     };
-  }, [nativeModuleAvailable, onRewarded, onAdClosed, onAdFailedToLoad]);
+  }, [nativeModuleAvailable]);
+
+  const initializeAd = React.useCallback(() => {
+    // Defensive check before creating ad
+    if (!RewardedAd || !RewardedAdEventType || !adUnitId) {
+      console.warn('RewardedAd components not fully initialized, using placeholder mode');
+      setIsLoaded(true);
+      return;
+    }
+
+    // If ad already exists, don't recreate
+    if (rewardedAd) {
+      return;
+    }
+
+    let ad: any = null;
+    let unsubscribeLoaded: (() => void) | null = null;
+    let unsubscribeEarned: (() => void) | null = null;
+    let unsubscribeClosed: (() => void) | null = null;
+    let unsubscribeError: (() => void) | null = null;
+
+    try {
+      // Create and load the rewarded ad with error handling
+      ad = RewardedAd.createForAdRequest(adUnitId, {
+        requestNonPersonalizedAdsOnly: false,
+        keywords: ['music', 'gear', 'receipt', 'scan', 'reward'],
+      });
+
+      if (!ad) {
+        throw new Error('Failed to create rewarded ad instance');
+      }
+
+      unsubscribeLoaded = ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
+        setIsLoaded(true);
+        setIsLoading(false);
+        console.log('Rewarded ad loaded');
+        // If user requested to show ad, show it now that it's loaded
+        if (showRequestedRef.current) {
+          showRequestedRef.current = false;
+          try {
+            ad.show();
+          } catch (e) {
+            console.error('Error showing ad after load:', e);
+          }
+        }
+      });
+
+      unsubscribeEarned = ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, (reward: any) => {
+        console.log('User earned reward:', reward);
+        setIsLoaded(false);
+        onRewarded?.(reward);
+        // Reload the ad after reward is earned
+        setIsLoading(true);
+        try {
+          ad.load();
+        } catch (e) {
+          console.error('Error reloading ad after reward:', e);
+          setIsLoading(false);
+        }
+      });
+
+      unsubscribeClosed = ad.addAdEventListener(RewardedAdEventType.CLOSED, () => {
+        setIsLoaded(false);
+        onAdClosed?.();
+        // Reload the ad after it's closed
+        setIsLoading(true);
+        try {
+          ad.load();
+        } catch (e) {
+          console.error('Error reloading ad after close:', e);
+          setIsLoading(false);
+        }
+      });
+
+      unsubscribeError = ad.addAdEventListener(RewardedAdEventType.ERROR, (error: any) => {
+        console.error('Rewarded ad error:', error);
+        setIsLoaded(false);
+        setIsLoading(false);
+        onAdFailedToLoad?.(error);
+      });
+
+      // Load the ad with error handling
+      setIsLoading(true);
+      ad.load();
+
+      setRewardedAd(ad);
+
+      // Store cleanup function
+      cleanupRef.current = () => {
+        // Safely unsubscribe all listeners
+        try {
+          if (unsubscribeLoaded) unsubscribeLoaded();
+          if (unsubscribeEarned) unsubscribeEarned();
+          if (unsubscribeClosed) unsubscribeClosed();
+          if (unsubscribeError) unsubscribeError();
+        } catch (e) {
+          console.warn('Error cleaning up ad listeners:', e);
+        }
+      };
+    } catch (error) {
+      console.error('Error initializing rewarded ad:', error);
+      setIsLoaded(false);
+      setIsLoading(false);
+      onAdFailedToLoad?.(error as Error);
+      // Fall back to placeholder mode
+      setIsLoaded(true);
+    }
+  }, [rewardedAd, onRewarded, onAdClosed, onAdFailedToLoad]);
+
+  // Track if user wants to show ad (for lazy initialization)
+  const showRequestedRef = React.useRef(false);
 
   const show = () => {
     if (!nativeModuleAvailable) {
@@ -133,15 +226,44 @@ export function useRewardedAd(options: UseRewardedAdOptions = {}) {
       return;
     }
 
-    if (rewardedAd && isLoaded) {
-      rewardedAd.show();
-    } else {
-      console.warn('Rewarded ad not loaded yet');
-      // Try to load if not loaded
-      if (rewardedAd) {
+    // Lazy initialization: Create ad if it doesn't exist yet
+    if (!rewardedAd && isMounted) {
+      try {
+        showRequestedRef.current = true; // Mark that user wants to show ad
         setIsLoading(true);
-        rewardedAd.load();
+        initializeAd();
+        // Ad will be shown automatically when loaded via the LOADED event listener
+        return;
+      } catch (error) {
+        console.error('Error initializing rewarded ad on demand:', error);
+        showRequestedRef.current = false;
+        setIsLoading(false);
+        setShowPlaceholder(true);
+        return;
       }
+    }
+
+    try {
+      if (isLoaded && rewardedAd) {
+        showRequestedRef.current = false;
+        rewardedAd.show();
+      } else {
+        console.warn('Rewarded ad not loaded yet');
+        // Try to load if not loaded
+        showRequestedRef.current = true;
+        setIsLoading(true);
+        if (rewardedAd) {
+          rewardedAd.load();
+        } else {
+          // Initialize if not created yet
+          initializeAd();
+        }
+      }
+    } catch (error) {
+      console.error('Error showing rewarded ad:', error);
+      showRequestedRef.current = false;
+      // Fall back to placeholder
+      setShowPlaceholder(true);
     }
   };
 
@@ -167,8 +289,13 @@ export function useRewardedAd(options: UseRewardedAdOptions = {}) {
     handlePlaceholderClose,
     load: () => {
       if (rewardedAd) {
-        setIsLoading(true);
-        rewardedAd.load();
+        try {
+          setIsLoading(true);
+          rewardedAd.load();
+        } catch (error) {
+          console.error('Error loading rewarded ad:', error);
+          setIsLoading(false);
+        }
       }
     },
   };

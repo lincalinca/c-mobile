@@ -1,6 +1,6 @@
 /**
  * Review Screen Router
- * 
+ *
  * Routes to appropriate review component based on user preference
  */
 
@@ -10,7 +10,7 @@ import { ActivityIndicator, View, Text } from 'react-native';
 import { getReviewApproach } from '../../lib/reviewConfig';
 import ReviewWorkflow from './workflow/WorkflowRouter';
 import ReviewSimplified from './simplified/SimplifiedReview';
-import ReviewMonolithic from '../review-monolithic';
+import ReviewMonolithic from './ReviewMonolithicRefactored';
 
 export default function ReviewRouter() {
   const params = useLocalSearchParams<{ data: string; uri: string }>();

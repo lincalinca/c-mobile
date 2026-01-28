@@ -3,24 +3,49 @@
  * 
  * Abstraction over expo-notifications scheduling.
  * Single Responsibility: scheduling only.
+ * Safe to use in Expo Go - will gracefully skip if module not available.
  */
 
-import * as Notifications from 'expo-notifications';
 import { NotificationEventsRepository } from './NotificationRepository';
 import { getChannelId } from './Channels';
 import type { NotificationCategory, NotificationMetadata, NotificationStatus } from './types';
 import { formatISO, parseISO } from 'date-fns';
 
+// Lazy import - will be loaded when needed
+let Notifications: any = null;
+let notificationsModuleLoaded = false;
+
 /**
- * Configure notification handler
+ * Get the notifications module (lazy loaded)
  */
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+async function getNotificationsModule(): Promise<any> {
+  if (notificationsModuleLoaded && Notifications) {
+    return Notifications;
+  }
+
+  try {
+    Notifications = await import('expo-notifications');
+    notificationsModuleLoaded = true;
+
+    // Configure notification handler (only if module is available)
+    if (Notifications && Notifications.setNotificationHandler) {
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+        }),
+      });
+    }
+
+    return Notifications;
+  } catch (error) {
+    // Native module not available (e.g., in Expo Go)
+    console.warn('expo-notifications not available:', error);
+    notificationsModuleLoaded = true; // Mark as attempted so we don't keep trying
+    return null;
+  }
+}
 
 export interface ScheduleNotificationParams {
   category: NotificationCategory;
@@ -46,10 +71,18 @@ export function generateNotificationKey(
 
 /**
  * Schedule a local notification
+ * Safe to call in Expo Go - will gracefully skip if module not available
  */
 export async function scheduleLocalNotification(
   params: ScheduleNotificationParams
 ): Promise<void> {
+  const NotificationsModule = await getNotificationsModule();
+  
+  if (!NotificationsModule) {
+    console.warn('[Scheduler] expo-notifications not available, skipping notification scheduling');
+    return;
+  }
+
   const { category, title, body, triggerDate, deepLink, metadata } = params;
   
   // Generate stable key
@@ -69,8 +102,12 @@ export async function scheduleLocalNotification(
       }
       
       // If trigger date changed, cancel the old one
-      if (existingEvent.osNotificationId) {
-        await Notifications.cancelScheduledNotificationAsync(existingEvent.osNotificationId);
+      if (existingEvent.osNotificationId && NotificationsModule.cancelScheduledNotificationAsync) {
+        try {
+          await NotificationsModule.cancelScheduledNotificationAsync(existingEvent.osNotificationId);
+        } catch (error) {
+          console.warn(`[Scheduler] Error cancelling old notification:`, error);
+        }
       }
     }
   }
@@ -83,19 +120,25 @@ export async function scheduleLocalNotification(
     date: triggerDate,
   };
   
-  const notificationId = await Notifications.scheduleNotificationAsync({
-    content: {
-      title,
-      body,
-      data: {
-        deepLink,
-        category,
-        ...metadata,
+  let notificationId: string | null = null;
+  try {
+    notificationId = await NotificationsModule.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        data: {
+          deepLink,
+          category,
+          ...metadata,
+        },
+        sound: true,
       },
-      sound: true,
-    },
-    trigger,
-  });
+      trigger,
+    });
+  } catch (error) {
+    console.error('[Scheduler] Error scheduling notification:', error);
+    return;
+  }
   
   // Store in database
   const scheduledAt = new Date().toISOString();
@@ -103,7 +146,7 @@ export async function scheduleLocalNotification(
   
   if (existingEvent) {
     // Update existing event with new notification ID
-    await NotificationEventsRepository.updateEventStatus(key, 'scheduled', notificationId);
+    await NotificationEventsRepository.updateEventStatus(key, 'scheduled', notificationId || undefined);
   } else {
     // Create new event
     const eventId = await NotificationEventsRepository.createEvent({
@@ -116,7 +159,7 @@ export async function scheduleLocalNotification(
     });
     
     // Update with OS notification ID
-    await NotificationEventsRepository.updateEventStatus(key, 'scheduled', notificationId);
+    await NotificationEventsRepository.updateEventStatus(key, 'scheduled', notificationId || undefined);
   }
   
   console.log(`[Scheduler] Scheduled notification: ${key} (OS ID: ${notificationId})`);
@@ -124,12 +167,18 @@ export async function scheduleLocalNotification(
 
 /**
  * Cancel notification by key
+ * Safe to call in Expo Go - will gracefully skip if module not available
  */
 export async function cancelByKey(key: string): Promise<void> {
+  const NotificationsModule = await getNotificationsModule();
   const event = await NotificationEventsRepository.getEventByKey(key);
   
-  if (event && event.osNotificationId) {
-    await Notifications.cancelScheduledNotificationAsync(event.osNotificationId);
+  if (event && event.osNotificationId && NotificationsModule?.cancelScheduledNotificationAsync) {
+    try {
+      await NotificationsModule.cancelScheduledNotificationAsync(event.osNotificationId);
+    } catch (error) {
+      console.warn(`[Scheduler] Error cancelling notification ${key}:`, error);
+    }
   }
   
   await NotificationEventsRepository.updateEventStatus(key, 'cancelled');
@@ -138,6 +187,7 @@ export async function cancelByKey(key: string): Promise<void> {
 
 /**
  * Cancel all notifications for a category
+ * Safe to call in Expo Go - will gracefully skip if module not available
  */
 export async function cancelByCategory(category: NotificationCategory): Promise<void> {
   const events = await NotificationEventsRepository.getEventsByCategory(category);

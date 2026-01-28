@@ -5,6 +5,13 @@ const FUNCTIONS_URL = SUPABASE_URL
   ? `${SUPABASE_URL.replace(/\/+$/, '')}/functions/v1`
   : '';
 
+// Debug: Log config on module load
+console.log('[supabase] Config loaded:', {
+  hasUrl: !!SUPABASE_URL,
+  hasKey: !!SUPABASE_ANON_KEY,
+  functionsUrl: FUNCTIONS_URL || '(not configured)',
+});
+
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.warn(
     '[supabase] Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY. Edge function calls will fail.'
@@ -19,7 +26,10 @@ export async function callSupabaseFunction<TResponse = any>(
     throw new Error('Supabase URL is not configured.');
   }
 
-  const res = await fetch(`${FUNCTIONS_URL}/${name}`, {
+  const url = `${FUNCTIONS_URL}/${name}`;
+  console.log('[supabase] Calling function:', url);
+
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

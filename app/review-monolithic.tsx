@@ -1,3 +1,15 @@
+/**
+ * @deprecated This file is deprecated. Use app/review/ReviewMonolithicRefactored.tsx instead.
+ *
+ * The review screen has been refactored into modular components:
+ * - app/review/config.ts - Data-driven configuration
+ * - app/review/types.ts - TypeScript interfaces
+ * - app/review/useReviewState.ts - State management hook
+ * - app/review/components/ - UI components
+ *
+ * This file is kept for reference and can be safely deleted.
+ */
+
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useMemo, useCallback, useEffect } from 'react';
@@ -55,7 +67,9 @@ export default function ReviewScreen() {
   }, [params.data]);
 
   // Merchant matching state (Phase 3)
-  const merchantIsNew = initialData.financial?.merchantIsNew !== false; // Default to true if not specified
+  const [merchantIsNew, setMerchantIsNew] = useState(
+    initialData.financial?.merchantIsNew !== false // Default to true if not specified
+  );
   const matchedMerchantId = initialData.financial?.merchantId || null;
 
   // Transaction (document) state
@@ -395,93 +409,127 @@ export default function ReviewScreen() {
           <Feather name="map-pin" size={12} color="#f5c518" /> Merchant Details
         </Text>
         <View className="bg-crescender-900/40 p-4 rounded-2xl border border-crescender-800 mb-6">
-          {/* Phone & Email Row */}
-          <View className="flex-row gap-4 mb-4">
-            <View className="flex-1">
-              <Text className="text-crescender-400 text-sm mb-1">Phone</Text>
-              <TextInput
-                className="text-white text-base border-b border-crescender-700 py-1"
-                value={merchantPhone}
-                onChangeText={setMerchantPhone}
-                placeholder="(02) 1234 5678"
-                placeholderTextColor="#666"
-                keyboardType="phone-pad"
-              />
+          {!merchantIsNew ? (
+            /* Matched Merchant - Compact View */
+            <View className="flex-row items-center justify-between">
+              <View className="flex-1">
+                <View className="flex-row items-center gap-2">
+                  <Feather name="check-circle" size={16} color="#22c55e" />
+                  <Text className="text-green-400 text-sm font-semibold">Matched</Text>
+                </View>
+                <Text className="text-white text-lg font-bold mt-1">{merchant}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert(
+                    'Wrong Merchant?',
+                    'This will let you enter merchant details manually.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Enter Manually',
+                        onPress: () => setMerchantIsNew(true)
+                      }
+                    ]
+                  );
+                }}
+                className="bg-crescender-800 px-3 py-2 rounded-lg border border-crescender-700"
+              >
+                <Text className="text-crescender-300 text-sm">Not correct?</Text>
+              </TouchableOpacity>
             </View>
-            <View className="flex-1">
-              <Text className="text-crescender-400 text-sm mb-1">Email</Text>
-              <TextInput
-                className="text-white text-base border-b border-crescender-700 py-1"
-                value={merchantEmail}
-                onChangeText={setMerchantEmail}
-                placeholder="info@merchant.com"
-                placeholderTextColor="#666"
-                keyboardType="email-address"
-              />
-            </View>
-          </View>
+          ) : (
+            /* New Merchant - Full Form */
+            <>
+              {/* Phone & Email Row */}
+              <View className="flex-row gap-4 mb-4">
+                <View className="flex-1">
+                  <Text className="text-crescender-400 text-sm mb-1">Phone</Text>
+                  <TextInput
+                    className="text-white text-base border-b border-crescender-700 py-1"
+                    value={merchantPhone}
+                    onChangeText={setMerchantPhone}
+                    placeholder="(02) 1234 5678"
+                    placeholderTextColor="#666"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-crescender-400 text-sm mb-1">Email</Text>
+                  <TextInput
+                    className="text-white text-base border-b border-crescender-700 py-1"
+                    value={merchantEmail}
+                    onChangeText={setMerchantEmail}
+                    placeholder="info@merchant.com"
+                    placeholderTextColor="#666"
+                    keyboardType="email-address"
+                  />
+                </View>
+              </View>
 
-          {/* Website */}
-          <View className="mb-4">
-            <Text className="text-crescender-400 text-sm mb-1">Website</Text>
-            <TextInput
-              className="text-white text-base border-b border-crescender-700 py-1"
-              value={merchantWebsite}
-              onChangeText={setMerchantWebsite}
-              placeholder="https://www.merchant.com.au"
-              placeholderTextColor="#666"
-              keyboardType="url"
-            />
-          </View>
+              {/* Website */}
+              <View className="mb-4">
+                <Text className="text-crescender-400 text-sm mb-1">Website</Text>
+                <TextInput
+                  className="text-white text-base border-b border-crescender-700 py-1"
+                  value={merchantWebsite}
+                  onChangeText={setMerchantWebsite}
+                  placeholder="https://www.merchant.com.au"
+                  placeholderTextColor="#666"
+                  keyboardType="url"
+                />
+              </View>
 
-          {/* Address */}
-          <View className="mb-4">
-            <Text className="text-crescender-400 text-sm mb-1">Street Address</Text>
-            <TextInput
-              className="text-white text-base border-b border-crescender-700 py-1"
-              value={merchantAddress}
-              onChangeText={setMerchantAddress}
-              placeholder="123 Main Street"
-              placeholderTextColor="#666"
-            />
-          </View>
+              {/* Address */}
+              <View className="mb-4">
+                <Text className="text-crescender-400 text-sm mb-1">Street Address</Text>
+                <TextInput
+                  className="text-white text-base border-b border-crescender-700 py-1"
+                  value={merchantAddress}
+                  onChangeText={setMerchantAddress}
+                  placeholder="123 Main Street"
+                  placeholderTextColor="#666"
+                />
+              </View>
 
-          {/* Suburb, State, Postcode Row */}
-          <View className="flex-row gap-4">
-            <View className="flex-1">
-              <Text className="text-crescender-400 text-sm mb-1">Suburb</Text>
-              <TextInput
-                className="text-white text-base border-b border-crescender-700 py-1"
-                value={merchantSuburb}
-                onChangeText={setMerchantSuburb}
-                placeholder="Sydney"
-                placeholderTextColor="#666"
-              />
-            </View>
-            <View style={{ width: 80 }}>
-              <Text className="text-crescender-400 text-sm mb-1">State</Text>
-              <TextInput
-                className="text-white text-base border-b border-crescender-700 py-1"
-                value={merchantState}
-                onChangeText={setMerchantState}
-                placeholder="NSW"
-                placeholderTextColor="#666"
-                maxLength={3}
-              />
-            </View>
-            <View style={{ width: 80 }}>
-              <Text className="text-crescender-400 text-sm mb-1">Postcode</Text>
-              <TextInput
-                className="text-white text-base border-b border-crescender-700 py-1"
-                value={merchantPostcode}
-                onChangeText={setMerchantPostcode}
-                placeholder="2000"
-                placeholderTextColor="#666"
-                keyboardType="numeric"
-                maxLength={4}
-              />
-            </View>
-          </View>
+              {/* Suburb, State, Postcode Row */}
+              <View className="flex-row gap-4">
+                <View className="flex-1">
+                  <Text className="text-crescender-400 text-sm mb-1">Suburb</Text>
+                  <TextInput
+                    className="text-white text-base border-b border-crescender-700 py-1"
+                    value={merchantSuburb}
+                    onChangeText={setMerchantSuburb}
+                    placeholder="Sydney"
+                    placeholderTextColor="#666"
+                  />
+                </View>
+                <View style={{ width: 80 }}>
+                  <Text className="text-crescender-400 text-sm mb-1">State</Text>
+                  <TextInput
+                    className="text-white text-base border-b border-crescender-700 py-1"
+                    value={merchantState}
+                    onChangeText={setMerchantState}
+                    placeholder="NSW"
+                    placeholderTextColor="#666"
+                    maxLength={3}
+                  />
+                </View>
+                <View style={{ width: 80 }}>
+                  <Text className="text-crescender-400 text-sm mb-1">Postcode</Text>
+                  <TextInput
+                    className="text-white text-base border-b border-crescender-700 py-1"
+                    value={merchantPostcode}
+                    onChangeText={setMerchantPostcode}
+                    placeholder="2000"
+                    placeholderTextColor="#666"
+                    keyboardType="numeric"
+                    maxLength={4}
+                  />
+                </View>
+              </View>
+            </>
+          )}
         </View>
 
         {/* SECTION: Payment Details */}

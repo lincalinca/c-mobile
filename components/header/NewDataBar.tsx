@@ -60,7 +60,7 @@ export const NewDataBar = ({
     if (isSingleDate) {
       return (
         <Text
-          className="text-crescender-200 text-sm font-bold uppercase tracking-widest"
+          className="text-crescender-200 text-sm uppercase tracking-widest"
           numberOfLines={1}
         >
           {formatDayMonth(startDate!)}
@@ -72,25 +72,23 @@ export const NewDataBar = ({
     const endLabel = endDate ? formatDayMonth(endDate) : '…';
 
     return (
-      <View className="flex-row items-center justify-center gap-1" style={{ minWidth: 120, maxWidth: 200 }}>
+      <View className="flex-row items-center justify-center gap-1">
         <Text
-          className="text-crescender-200 text-sm font-bold uppercase tracking-widest"
+          className="text-crescender-200 text-sm uppercase tracking-widest"
           numberOfLines={1}
-          style={{ flex: 1, textAlign: 'left' }}
         >
           {startLabel}
         </Text>
         <Text
-          className="text-crescender-200 text-sm font-bold uppercase tracking-widest"
+          className="text-crescender-200 text-sm uppercase tracking-widest"
           numberOfLines={1}
           style={{ lineHeight: 16 }}
         >
           –
         </Text>
         <Text
-          className="text-crescender-200 text-sm font-bold uppercase tracking-widest"
+          className="text-crescender-200 text-sm uppercase tracking-widest"
           numberOfLines={1}
-          style={{ flex: 1, textAlign: 'right' }}
         >
           {endLabel}
         </Text>
@@ -222,15 +220,15 @@ export const NewDataBar = ({
             <View className="items-center justify-center gap-[2px]">
               {rangeLabelElement}
               {shouldShowYearLine && (
-                <View className="flex-row items-center justify-between gap-2" style={{ minWidth: 120, maxWidth: 200 }}>
+                <View className="flex-row items-center justify-between self-stretch">
                   <Text
-                    className="text-crescender-300 text-xs font-bold uppercase tracking-widest text-left flex-1"
+                    className="text-crescender-400 text-[10px] uppercase tracking-widest"
                     numberOfLines={1}
                   >
                     {startYear}
                   </Text>
                   <Text
-                    className="text-crescender-300 text-xs font-bold uppercase tracking-widest text-right flex-1"
+                    className="text-crescender-400 text-[10px] uppercase tracking-widest"
                     numberOfLines={1}
                   >
                     {endYear}
