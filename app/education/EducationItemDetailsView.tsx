@@ -23,10 +23,6 @@ interface DetailsData {
 
 const DETAIL_FIELDS: DetailFieldConfig[] = [
   {
-    label: 'Student',
-    getValue: (d) => d.eduDetails?.studentName,
-  },
-  {
     label: 'Focus',
     getValue: (d) => d.eduDetails?.focus,
   },
@@ -122,3 +118,6 @@ export function EducationItemDetailsView({
     </View>
   );
 }
+
+// Default export to prevent expo-router from treating this as a route
+export default null;

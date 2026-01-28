@@ -109,7 +109,7 @@ export default function SettingsScreen() {
 
       <ScrollView className="flex-1 px-6">
         <View className="mt-8 mb-6">
-          <View className="flex-row items-center gap-2 mb-2">
+          <View className="flex-row items-center justify-between mb-2">
             <Text className="text-gold font-bold uppercase tracking-widest text-xs ml-1">Display</Text>
             <TouchableOpacity
               onPress={() => setActiveTooltip(activeTooltip === 'display' ? null : 'display')}
@@ -137,7 +137,7 @@ export default function SettingsScreen() {
         </View>
 
         <View className="mb-6">
-          <View className="flex-row items-center gap-2 mb-2">
+          <View className="flex-row items-center justify-between mb-2">
             <Text className="text-gold font-bold uppercase tracking-widest text-xs ml-1">Receipt Review</Text>
             <TouchableOpacity
               onPress={() => setActiveTooltip(activeTooltip === 'review' ? null : 'review')}
@@ -176,7 +176,7 @@ export default function SettingsScreen() {
         </View>
 
         <View className="mb-6">
-          <View className="flex-row items-center gap-2 mb-2">
+          <View className="flex-row items-center justify-between mb-2">
             <Text className="text-gold font-bold uppercase tracking-widest text-xs ml-1">Financial year</Text>
             <TouchableOpacity
               onPress={() => setActiveTooltip(activeTooltip === 'financial-year' ? null : 'financial-year')}
@@ -203,7 +203,7 @@ export default function SettingsScreen() {
         </View>
 
         <View className="mb-6">
-          <View className="flex-row items-center gap-2 mb-2">
+          <View className="flex-row items-center justify-between mb-2">
             <Text className="text-gold font-bold uppercase tracking-widest text-xs ml-1">Notifications</Text>
             <TouchableOpacity
               onPress={() => setActiveTooltip(activeTooltip === 'notifications' ? null : 'notifications')}
@@ -231,7 +231,7 @@ export default function SettingsScreen() {
         </View>
 
         <View className="mb-6">
-          <View className="flex-row items-center gap-2 mb-2">
+          <View className="flex-row items-center justify-between mb-2">
             <Text className="text-gold font-bold uppercase tracking-widest text-xs ml-1">Data Management</Text>
             <TouchableOpacity
               onPress={() => setActiveTooltip(activeTooltip === 'data' ? null : 'data')}
@@ -256,13 +256,26 @@ export default function SettingsScreen() {
 
             <TouchableOpacity 
               onPress={handleImportBackup}
-              className="flex-row items-center justify-between p-4"
+              className="flex-row items-center justify-between p-4 border-b border-crescender-800"
             >
               <View className="flex-row items-center gap-3">
                 <View className="w-8 h-8 rounded-full bg-crescender-800 items-center justify-center">
                   <Feather name="upload-cloud" size={ICON_SIZES.standard} color="#9ca3af" />
                 </View>
                 <Text className="text-white text-base font-medium">Restore Data</Text>
+              </View>
+              <Feather name="chevron-right" size={ICON_SIZES.standard} color="#6b7280" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => Alert.alert('Cloud Backup', 'Coming soon. Will require login to Crescender Cloud.')}
+              className="flex-row items-center justify-between p-4"
+            >
+              <View className="flex-row items-center gap-3">
+                <View className="w-8 h-8 rounded-full bg-crescender-800 items-center justify-center">
+                  <Feather name="cloud" size={ICON_SIZES.standard} color="#9ca3af" />
+                </View>
+                <Text className="text-white text-base font-medium">Cloud Backup</Text>
               </View>
               <Feather name="chevron-right" size={ICON_SIZES.standard} color="#6b7280" />
             </TouchableOpacity>

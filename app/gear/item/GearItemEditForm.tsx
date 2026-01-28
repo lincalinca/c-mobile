@@ -191,3 +191,6 @@ export function GearItemEditForm({ editState, onUpdateField }: GearItemEditFormP
     </View>
   );
 }
+
+// Default export to prevent expo-router from treating this as a route
+export default null;

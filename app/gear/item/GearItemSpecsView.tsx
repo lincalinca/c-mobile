@@ -84,3 +84,6 @@ export function GearItemSpecsView({ gearDetails, serialNumber }: GearItemSpecsVi
     </View>
   );
 }
+
+// Default export to prevent expo-router from treating this as a route
+export default null;

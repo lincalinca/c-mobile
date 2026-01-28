@@ -12,6 +12,7 @@ export const PersistentHeader = () => {
 
   const menuItems = [
     { label: 'HOME', icon: 'grid', path: '/' },
+    { label: 'PEOPLE', icon: 'users', path: '/people' },
     { label: 'HISTORY', icon: 'clock', path: '/history' },
     { label: 'USAGE', icon: 'activity', path: '/usage' },
     { label: 'SETTINGS', icon: 'settings', path: '/settings' },

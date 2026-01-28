@@ -1,6 +1,6 @@
-import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import * as Crypto from 'expo-crypto';
 import * as Clipboard from 'expo-clipboard';
 import { TransactionRepository } from '../lib/repository';
@@ -11,6 +11,7 @@ import { useInterstitialAd, usePreloadInterstitialAd } from '../components/ads';
 import { generateEducationEvents, getEducationSeriesSummary } from '../lib/educationEvents';
 import { addEducationSeriesToDeviceCalendar, addEventToDeviceCalendar } from '../lib/calendarExport';
 import { LessonDateSelector } from '../components/education/LessonDateSelector';
+import { detectNewPeople } from '../lib/peopleDetection';
 
 // Document type options
 const DOCUMENT_TYPES = [
@@ -104,6 +105,8 @@ export default function ReviewScreen() {
   // Line items state
   const [items, setItems] = useState<any[]>(initialData.items || []);
   const [isSaving, setIsSaving] = useState(false);
+  const [detectedPersonName, setDetectedPersonName] = useState<string | null>(null);
+  const [showPersonPrompt, setShowPersonPrompt] = useState(false);
 
   // Debug state
   const [showRawData, setShowRawData] = useState(false);
@@ -111,6 +114,28 @@ export default function ReviewScreen() {
   // Preload interstitial ad early
   usePreloadInterstitialAd();
   const { show: showInterstitial } = useInterstitialAd();
+
+  // Detect new people from events/education items
+  useEffect(() => {
+    const checkForNewPeople = async () => {
+      if (items.length === 0) return;
+      
+      try {
+        const newNames = await detectNewPeople(items);
+        if (newNames.length > 0) {
+          // Show prompt for the first detected name
+          setDetectedPersonName(newNames[0]);
+          setShowPersonPrompt(true);
+        }
+      } catch (e) {
+        console.error('Failed to detect new people', e);
+      }
+    };
+
+    // Delay detection slightly to allow items to settle
+    const timeout = setTimeout(checkForNewPeople, 500);
+    return () => clearTimeout(timeout);
+  }, [items]);
 
   // Check if there are education or event items for conditional save buttons
   const hasEducationOrEvents = useMemo(() => {
@@ -129,6 +154,17 @@ export default function ReviewScreen() {
       router.replace('/');
     }
   }, [router]);
+
+  const handlePersonPromptResponse = async (isNewPerson: boolean) => {
+    setShowPersonPrompt(false);
+    
+    if (isNewPerson && detectedPersonName) {
+      // Navigate to create new person with pre-filled name
+      router.push(`/people/new?name=${encodeURIComponent(detectedPersonName)}`);
+    }
+    
+    setDetectedPersonName(null);
+  };
 
   const performSave = async (): Promise<string | null> => {
     const transactionId = Crypto.randomUUID();
@@ -819,6 +855,37 @@ export default function ReviewScreen() {
         {/* Bottom padding for scroll */}
         <View className="h-4" />
       </ScrollView>
+
+      {/* New Person Detection Prompt */}
+      <Modal
+        visible={showPersonPrompt}
+        transparent
+        animationType="fade"
+        onRequestClose={() => handlePersonPromptResponse(false)}
+      >
+        <View className="flex-1 bg-black/60 justify-center items-center px-6">
+          <View className="bg-crescender-900 rounded-2xl p-6 border border-crescender-700 max-w-md w-full">
+            <Text className="text-white text-xl font-bold mb-2">New Person Detected</Text>
+            <Text className="text-crescender-300 text-base mb-6">
+              We detected "{detectedPersonName}" in this transaction. Is this a new person you'd like to add?
+            </Text>
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={() => handlePersonPromptResponse(false)}
+                className="flex-1 bg-crescender-800 px-4 py-3 rounded-xl"
+              >
+                <Text className="text-crescender-200 font-semibold text-center">Skip</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handlePersonPromptResponse(true)}
+                className="flex-1 bg-gold px-4 py-3 rounded-xl"
+              >
+                <Text className="text-black font-bold text-center">Add Person</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Save Buttons */}
       <View

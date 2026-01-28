@@ -104,6 +104,20 @@ export const lineItems = sqliteTable('line_items', {
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
+/**
+ * Students table - profiles for students with their instruments and learning paths
+ */
+export const students = sqliteTable('students', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  relationship: text('relationship'), // 'self' | 'child' | 'student' | 'spouse' | 'other'
+  instrument: text('instrument'), // Primary instrument (e.g., "Violin", "Piano")
+  startedLessonsDate: text('started_lessons_date'), // YYYY-MM-DD format
+  notes: text('notes'), // Additional profile information
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
 // Legacy aliases for backward compatibility during migration
 export const receipts = transactions;
 export const receiptItems = lineItems;

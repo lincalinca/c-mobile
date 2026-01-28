@@ -1,5 +1,5 @@
 import { db, waitForDb } from '../db/client';
-import { transactions, lineItems } from '../db/schema';
+import { transactions, lineItems, students } from '../db/schema';
 import { desc, eq } from 'drizzle-orm';
 
 // Types
@@ -326,3 +326,61 @@ export const TransactionRepository = {
 
 // Legacy alias for backward compatibility
 export const ReceiptRepository = TransactionRepository;
+
+// Student Types
+export type Student = typeof students.$inferSelect;
+export type NewStudent = typeof students.$inferInsert;
+
+/**
+ * Student Repository - handles student profiles
+ */
+export const StudentRepository = {
+  async getAll() {
+    await waitForDb();
+    return await db.select().from(students).orderBy(desc(students.createdAt));
+  },
+
+  async getById(id: string) {
+    await waitForDb();
+    const result = await db.select().from(students).where(eq(students.id, id));
+    return result[0] || null;
+  },
+
+  async create(student: NewStudent) {
+    await waitForDb();
+    try {
+      await db.insert(students).values(student);
+      console.log('[Repository] Created student:', student.id);
+      return student;
+    } catch (e) {
+      console.error('[Repository] Error creating student:', e);
+      throw e;
+    }
+  },
+
+  async update(id: string, updates: Partial<Omit<Student, 'id' | 'createdAt'>>) {
+    await waitForDb();
+    const updateData = { ...updates, updatedAt: new Date().toISOString() };
+    await db.update(students).set(updateData).where(eq(students.id, id));
+    console.log('[Repository] Updated student:', id);
+  },
+
+  async delete(id: string) {
+    await waitForDb();
+    await db.delete(students).where(eq(students.id, id));
+    console.log('[Repository] Deleted student:', id);
+  },
+
+  /**
+   * Get all students with their names and instruments for OpenAI prompt context
+   * Returns array of { name, instrument } for matching
+   */
+  async getAllForPrompt() {
+    await waitForDb();
+    const allStudents = await db.select({
+      name: students.name,
+      instrument: students.instrument,
+    }).from(students);
+    return allStudents;
+  },
+};

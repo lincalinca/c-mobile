@@ -13,6 +13,12 @@ interface EducationLearningPathViewProps {
   onItemChange: (index: number, itemId: string) => void;
   showInfoModal: boolean;
   onShowInfoModal: (show: boolean) => void;
+  /**
+   * Layout variant:
+   * - 'standalone': Component has its own padding (default, for education detail page)
+   * - 'nested': Component is inside a padded container (for person detail page)
+   */
+  variant?: 'standalone' | 'nested';
 }
 
 export function EducationLearningPathView({
@@ -21,9 +27,16 @@ export function EducationLearningPathView({
   onItemChange,
   showInfoModal,
   onShowInfoModal,
+  variant = 'standalone',
 }: EducationLearningPathViewProps) {
   const { width } = useWindowDimensions();
   const flatListRef = useRef<FlatList>(null);
+  
+  // Calculate actual item width based on variant
+  // In standalone mode: full width (component has its own padding)
+  // In nested mode: width minus container padding (24px on each side = 48px total)
+  const containerPadding = variant === 'nested' ? 48 : 0; // 24px * 2
+  const itemWidth = width - containerPadding;
 
   // Scroll to current item when chain loads
   useEffect(() => {
@@ -38,7 +51,6 @@ export function EducationLearningPathView({
   }, [currentChainIndex]);
 
   const handleScrollEnd = (event: any) => {
-    const itemWidth = width - 48;
     const newIndex = Math.round(event.nativeEvent.contentOffset.x / itemWidth);
     if (newIndex !== currentChainIndex && newIndex >= 0 && newIndex < chain.items.length) {
       const newItem = chain.items[newIndex];
@@ -48,10 +60,15 @@ export function EducationLearningPathView({
 
   if (chain.items.length <= 1) return null;
 
+  // Apply padding based on variant
+  const containerClassName = variant === 'standalone' 
+    ? 'p-6 border-b border-crescender-800'
+    : 'py-6 border-b border-crescender-800';
+
   return (
-    <View className="p-6 border-b border-crescender-800">
-      <View className="flex-row items-center gap-2 mb-3">
-        <Text className="font-bold uppercase tracking-widest text-xs flex-1" style={{ color: ACCENT_COLOR }}>
+    <View className={containerClassName}>
+      <View className="flex-row items-center justify-between mb-3">
+        <Text className="font-bold uppercase tracking-widest text-xs" style={{ color: ACCENT_COLOR }}>
           Learning Path
         </Text>
         <TouchableOpacity onPress={() => onShowInfoModal(true)} className="p-1">
@@ -65,7 +82,12 @@ export function EducationLearningPathView({
         </Text>
       </View>
 
-      <View style={{ height: 120 }}>
+      <View 
+        style={{ 
+          height: 120, 
+          marginHorizontal: variant === 'standalone' ? -24 : 0 
+        }}
+      >
         <FlatList
           ref={flatListRef}
           data={chain.items}
@@ -75,9 +97,12 @@ export function EducationLearningPathView({
           nestedScrollEnabled
           keyExtractor={(ci) => ci.item.id}
           initialScrollIndex={currentChainIndex >= 0 ? currentChainIndex : 0}
+          contentContainerStyle={{ 
+            paddingHorizontal: variant === 'standalone' ? 24 : 0 
+          }}
           getItemLayout={(_, index) => ({
-            length: width - 48,
-            offset: (width - 48) * index,
+            length: itemWidth,
+            offset: itemWidth * index,
             index,
           })}
           onMomentumScrollEnd={handleScrollEnd}
@@ -89,7 +114,7 @@ export function EducationLearningPathView({
           renderItem={({ item: chainItem }) => {
             const currentSeries = getEducationSeriesSummary(chainItem.item, chainItem.receipt);
             return (
-              <View style={{ width: width - 48 }} className="px-2">
+              <View style={{ width: itemWidth }} className={variant === 'standalone' ? 'px-6' : ''}>
                 <View className="bg-crescender-900/40 p-4 rounded-xl">
                   <View className="flex-row justify-between items-start mb-2">
                     <View className="flex-1 min-w-0">
@@ -117,14 +142,16 @@ export function EducationLearningPathView({
       </View>
 
       {/* Page Indicators */}
-      <View className="flex-row justify-center gap-2 mt-3">
-        {chain.items.map((_, idx) => (
-          <View
-            key={idx}
-            className={`h-1.5 rounded-full ${idx === currentChainIndex ? 'bg-gold' : 'bg-crescender-700'}`}
-            style={{ width: idx === currentChainIndex ? 24 : 8 }}
-          />
-        ))}
+      <View className="mt-3">
+        <View className="flex-row justify-center items-center gap-2">
+          {chain.items.map((_, idx) => (
+            <View
+              key={idx}
+              className={`h-1.5 rounded-full ${idx === currentChainIndex ? 'bg-gold' : 'bg-crescender-700'}`}
+              style={{ width: idx === currentChainIndex ? 24 : 8 }}
+            />
+          ))}
+        </View>
       </View>
 
       {/* Info Modal */}
@@ -159,3 +186,6 @@ export function EducationLearningPathView({
     </View>
   );
 }
+
+// Default export to prevent expo-router from treating this as a route
+export default null;

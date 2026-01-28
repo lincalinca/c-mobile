@@ -1,11 +1,11 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Modal,
   StyleSheet,
-  ScrollView,
+  FlatList,
   Pressable,
   Platform,
 } from 'react-native';
@@ -34,6 +34,11 @@ const YEAR_END = 2035;
 const ROW_HEIGHT = 36;
 const YEAR_BLOCK_HEIGHT = 2 * ROW_HEIGHT + 4; // 2 rows + margin
 
+interface YearData {
+  year: number;
+  isCurrentYear: boolean;
+}
+
 export function MonthPickerModal({
   visible,
   onRequestClose,
@@ -41,21 +46,89 @@ export function MonthPickerModal({
   month,
   onSelect,
 }: MonthPickerModalProps) {
-  const scrollRef = useRef<ScrollView>(null);
-  const yearIndex = Math.max(0, year - YEAR_START);
+  const flatListRef = useRef<FlatList<YearData>>(null);
+  
+  // Memoize years array to avoid recreating on every render
+  const yearsData = useMemo(() => {
+    return Array.from({ length: YEAR_END - YEAR_START + 1 }, (_, i) => ({
+      year: YEAR_START + i,
+      isCurrentYear: YEAR_START + i === year,
+    }));
+  }, [year]);
 
   useEffect(() => {
-    if (visible && scrollRef.current) {
+    if (visible && flatListRef.current) {
+      const yearIndex = Math.max(0, year - YEAR_START);
       const y = Math.max(0, yearIndex * YEAR_BLOCK_HEIGHT - YEAR_BLOCK_HEIGHT);
       requestAnimationFrame(() => {
-        scrollRef.current?.scrollTo({ y, animated: false });
+        flatListRef.current?.scrollToOffset({ offset: y, animated: false });
       });
     }
-  }, [visible, yearIndex]);
+  }, [visible, year]);
 
   const handleSelect = (y: number, m: number) => {
     onSelect(y, m);
     onRequestClose();
+  };
+
+  const renderYearBlock = ({ item }: { item: YearData }) => {
+    const y = item.year;
+    const isCurrentYear = item.isCurrentYear;
+    
+    return (
+      <View style={styles.yearBlock}>
+        <View style={[styles.yearCell, isCurrentYear && styles.yearCellActive]}>
+          <Text
+            style={[styles.yearText, isCurrentYear && styles.yearTextActive]}
+            numberOfLines={1}
+          >
+            {y}
+          </Text>
+        </View>
+        <View style={styles.monthsGrid}>
+          {MONTHS.map(([top, bottom], col) => (
+            <View key={col} style={styles.monthColumn}>
+              <TouchableOpacity
+                style={[
+                  styles.monthCell,
+                  isCurrentYear && month === col + 1 && styles.monthCellActive,
+                ]}
+                onPress={() => handleSelect(y, col + 1)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.monthText,
+                    isCurrentYear && month === col + 1 && styles.monthTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {top}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.monthCell,
+                  isCurrentYear && month === col + 7 && styles.monthCellActive,
+                ]}
+                onPress={() => handleSelect(y, col + 7)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.monthText,
+                    isCurrentYear && month === col + 7 && styles.monthTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {bottom}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
   };
 
   return (
@@ -74,71 +147,25 @@ export function MonthPickerModal({
           >
             Pick a month
           </Text>
-          <ScrollView
-            ref={scrollRef}
+          <FlatList
+            ref={flatListRef}
+            data={yearsData}
+            renderItem={renderYearBlock}
+            keyExtractor={(item) => `year-${item.year}`}
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator
-          >
-            {Array.from({ length: YEAR_END - YEAR_START + 1 }, (_, i) => {
-              const y = YEAR_START + i;
-              const isCurrentYear = y === year;
-              return (
-                <View key={y} style={styles.yearBlock}>
-                  <View style={[styles.yearCell, isCurrentYear && styles.yearCellActive]}>
-                    <Text
-                      style={[styles.yearText, isCurrentYear && styles.yearTextActive]}
-                      numberOfLines={1}
-                    >
-                      {y}
-                    </Text>
-                  </View>
-                  <View style={styles.monthsGrid}>
-                    {MONTHS.map(([top, bottom], col) => (
-                      <View key={col} style={styles.monthColumn}>
-                        <TouchableOpacity
-                          style={[
-                            styles.monthCell,
-                            isCurrentYear && month === col + 1 && styles.monthCellActive,
-                          ]}
-                          onPress={() => handleSelect(y, col + 1)}
-                          activeOpacity={0.7}
-                        >
-                          <Text
-                            style={[
-                              styles.monthText,
-                              isCurrentYear && month === col + 1 && styles.monthTextActive,
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {top}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.monthCell,
-                            isCurrentYear && month === col + 7 && styles.monthCellActive,
-                          ]}
-                          onPress={() => handleSelect(y, col + 7)}
-                          activeOpacity={0.7}
-                        >
-                          <Text
-                            style={[
-                              styles.monthText,
-                              isCurrentYear && month === col + 7 && styles.monthTextActive,
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {bottom}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              );
+            getItemLayout={(data, index) => ({
+              length: YEAR_BLOCK_HEIGHT,
+              offset: YEAR_BLOCK_HEIGHT * index,
+              index,
             })}
-          </ScrollView>
+            initialScrollIndex={Math.max(0, year - YEAR_START)}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={10}
+            updateCellsBatchingPeriod={50}
+            windowSize={10}
+          />
           <TouchableOpacity
             onPress={onRequestClose}
             className="mt-3 py-2 rounded-xl bg-crescender-800 border border-crescender-600"

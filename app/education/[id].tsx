@@ -1,7 +1,7 @@
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ReceiptRepository, type LineItemWithDetails, type Receipt } from '../../lib/repository';
+import { ReceiptRepository, StudentRepository, type LineItemWithDetails, type Receipt } from '../../lib/repository';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getEducationSeriesSummary } from '../../lib/educationEvents';
@@ -52,6 +52,7 @@ export default function EducationDetailScreen() {
   const [continuityGaps, setContinuityGaps] = useState<ContinuityGap[]>([]);
   const [showFirstLessonDatePicker, setShowFirstLessonDatePicker] = useState(false);
   const [showLearningPathInfo, setShowLearningPathInfo] = useState(false);
+  const [personId, setPersonId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -79,6 +80,22 @@ export default function EducationDetailScreen() {
           setChain(educationChain);
           setCurrentChainIndex(getChainIndex(id, educationChain));
           setContinuityGaps(detectContinuityGaps(educationChain.items));
+        }
+
+        // Find person by student name
+        const eduDetails = foundItem.educationDetailsParsed;
+        if (eduDetails?.studentName) {
+          try {
+            const allPeople = await StudentRepository.getAll();
+            const matchingPerson = allPeople.find(
+              p => p.name.toLowerCase().trim() === eduDetails.studentName.toLowerCase().trim()
+            );
+            if (matchingPerson) {
+              setPersonId(matchingPerson.id);
+            }
+          } catch (e) {
+            console.error('Failed to find person', e);
+          }
         }
       }
     } catch (e) {
@@ -245,6 +262,64 @@ export default function EducationDetailScreen() {
 
         {!isEditing && (
           <>
+            {/* Person Link or Missing Student Prompt */}
+            {item.educationDetailsParsed?.studentName && (
+              <View className="p-6 border-b border-crescender-800">
+                {personId ? (
+                  <TouchableOpacity
+                    onPress={() => router.push(`/people/${personId}`)}
+                    className="flex-row items-center gap-3 bg-crescender-900/40 p-4 rounded-xl border border-crescender-800"
+                  >
+                    <View className="w-10 h-10 bg-crescender-800 rounded-full justify-center items-center">
+                      <Feather name="user" size={20} color={ACCENT_COLOR} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-crescender-400 text-xs mb-1 uppercase tracking-widest" style={{ color: ACCENT_COLOR }}>
+                        Student
+                      </Text>
+                      <Text className="text-white text-base font-medium">
+                        {item.educationDetailsParsed.studentName}
+                      </Text>
+                    </View>
+                    <Feather name="chevron-right" size={20} color="#6b7280" />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => {
+                      const eduDetails = item.educationDetailsParsed;
+                      const chainFocus = chain?.focus || '';
+                      const firstDate = seriesSummary?.firstDate;
+                      
+                      // Build query params for pre-populated form
+                      const params = new URLSearchParams();
+                      params.set('name', eduDetails?.studentName || '');
+                      if (chainFocus) params.set('instrument', chainFocus);
+                      if (firstDate) params.set('startedLessonsDate', firstDate);
+                      
+                      router.push(`/people/new?${params.toString()}`);
+                    }}
+                    className="flex-row items-center gap-3 bg-yellow/10 border-2 border-yellow/30 p-4 rounded-xl"
+                  >
+                    <View className="w-10 h-10 bg-yellow/20 rounded-full justify-center items-center">
+                      <Feather name="alert-triangle" size={20} color="#f5c518" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-yellow text-xs mb-1 uppercase tracking-widest font-semibold">
+                        Student Not Found
+                      </Text>
+                      <Text className="text-white text-base font-medium mb-1">
+                        {item.educationDetailsParsed.studentName}
+                      </Text>
+                      <Text className="text-crescender-400 text-xs">
+                        Tap to add this student to People
+                      </Text>
+                    </View>
+                    <Feather name="chevron-right" size={20} color="#f5c518" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
             <EducationItemDetailsView
               item={item}
               receipt={receipt}

@@ -69,3 +69,6 @@ export function GearItemHeroView({ item, receipt, onReceiptPress }: GearItemHero
     </View>
   );
 }
+
+// Default export to prevent expo-router from treating this as a route
+export default null;

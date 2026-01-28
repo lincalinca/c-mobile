@@ -91,3 +91,6 @@ export function useServiceItemEdit(itemId: string | undefined, item: LineItemWit
     handleSave,
   };
 }
+
+// Default export to prevent expo-router from treating this as a route
+export default null;

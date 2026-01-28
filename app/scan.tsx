@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { captureRef } from 'react-native-view-shot';
 import { callSupabaseFunction } from '../lib/supabase';
 import { ProcessingWithAdView } from '../components/processing/ProcessingWithAdView';
-import { TransactionRepository } from '../lib/repository';
+import { TransactionRepository, StudentRepository } from '../lib/repository';
 import { recordScan, hasScansRemaining } from '../lib/usageTracking';
 
 const isAndroid = Platform.OS === 'android';
@@ -365,6 +365,10 @@ export default function ScanScreen() {
       const existingMerchants = await TransactionRepository.getUniqueMerchants();
       console.log(`[Scan] Found ${existingMerchants.length} existing merchants for matching`);
 
+      // Fetch existing people for name/instrument matching
+      const existingPeople = await StudentRepository.getAllForPrompt();
+      console.log(`[Scan] Found ${existingPeople.length} existing people for matching`);
+
       const receiptData = await callSupabaseFunction<any>('analyze-receipt', {
         imageBase64: base64,
         existingMerchants: existingMerchants.map(m => ({
@@ -374,6 +378,10 @@ export default function ScanScreen() {
           phone: m.phone,
           suburb: m.suburb,
           abn: m.abn,
+        })),
+        existingStudents: existingPeople.map(s => ({
+          name: s.name,
+          instrument: s.instrument || null,
         })),
       });
       if (!receiptData || !receiptData.financial) throw new Error('Incomplete data');

@@ -78,6 +78,18 @@ const initTablesSQL = `
     created_at text DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (transaction_id) REFERENCES transactions(id)
   );
+
+  -- Students table (people/student profiles)
+  CREATE TABLE IF NOT EXISTS students (
+    id text PRIMARY KEY NOT NULL,
+    name text NOT NULL,
+    relationship text,
+    instrument text,
+    started_lessons_date text,
+    notes text,
+    created_at text DEFAULT CURRENT_TIMESTAMP,
+    updated_at text DEFAULT CURRENT_TIMESTAMP
+  );
 `;
 
 // In-memory storage for web platform
@@ -220,6 +232,25 @@ export async function initDatabase(): Promise<void> {
         console.log('[DB] Migration: Added images to line_items');
       } catch (e) {
         // Column already exists, ignore
+      }
+
+      // Phase 5: Students table (people/student profiles)
+      try {
+        expoDb.execSync(`
+          CREATE TABLE IF NOT EXISTS students (
+            id text PRIMARY KEY NOT NULL,
+            name text NOT NULL,
+            relationship text,
+            instrument text,
+            started_lessons_date text,
+            notes text,
+            created_at text DEFAULT CURRENT_TIMESTAMP,
+            updated_at text DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+        console.log('[DB] Migration: Created students table');
+      } catch (e) {
+        // Table already exists, ignore
       }
 
       dbInstance = drizzle(expoDb, { schema });

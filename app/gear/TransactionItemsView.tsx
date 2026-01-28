@@ -125,3 +125,6 @@ export function TransactionItemsView({ items, receipt }: TransactionItemsViewPro
     </>
   );
 }
+
+// Default export to prevent expo-router from treating this as a route
+export default null;

@@ -41,9 +41,13 @@ function parseDateString(s: string): Date {
 
 interface DatePickerModalProps {
   visible: boolean;
-  onRequestClose: () => void;
-  selectedDate: string | null; // YYYY-MM-DD format
-  onDateSelect: (date: string) => void;
+  onRequestClose?: () => void; // Legacy API
+  onClose?: () => void; // New API (preferred)
+  selectedDate?: string | null; // YYYY-MM-DD format (legacy API)
+  initialDate?: string; // YYYY-MM-DD format (new API)
+  onDateSelect?: (date: string) => void; // Legacy API
+  onConfirm?: (date: string) => void; // New API (preferred)
+  title?: string; // Optional title (new API)
   /** Optional max date (default: none) */
   maxDate?: string;
   /** Show warning when future date selected */
@@ -53,8 +57,12 @@ interface DatePickerModalProps {
 export function DatePickerModal({
   visible,
   onRequestClose,
+  onClose,
   selectedDate,
+  initialDate,
   onDateSelect,
+  onConfirm,
+  title,
   maxDate,
   showFutureWarning = true,
 }: DatePickerModalProps) {
@@ -62,17 +70,28 @@ export function DatePickerModal({
   const [displayMonth, setDisplayMonth] = useState<string>('');
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const initialMonth = selectedDate || toDateString(new Date());
+  // Support both APIs: prefer new API (onClose/onConfirm/initialDate) over legacy (onRequestClose/onDateSelect/selectedDate)
+  const handleClose = onClose || onRequestClose || (() => {});
+  const handleDateSelect = onConfirm || onDateSelect || (() => {});
+  const dateValue = initialDate || selectedDate || null;
 
-  // Sync from props when modal becomes visible
+  const initialMonth = dateValue || toDateString(new Date());
+
+  // Sync from props when modal becomes visible - only when modal opens
   useEffect(() => {
-    if (visible) {
-      setTempDate(selectedDate);
-      setDisplayMonth(selectedDate || initialMonth);
+    if (visible && !isInitialized) {
+      const currentDate = dateValue || toDateString(new Date());
+      setTempDate(dateValue);
+      setDisplayMonth(currentDate);
       setShowWarning(false);
+      setIsInitialized(true);
+    } else if (!visible) {
+      setIsInitialized(false);
     }
-  }, [visible, selectedDate, initialMonth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]); // Only depend on visible, not dateValue to prevent loops
 
   const onDayPress = (day: { dateString: string }) => {
     const today = toDateString(new Date());
@@ -99,9 +118,9 @@ export function DatePickerModal({
 
   const handleConfirm = () => {
     if (tempDate) {
-      onDateSelect(tempDate);
+      handleDateSelect(tempDate);
     }
-    onRequestClose();
+    handleClose();
   };
 
   const handleToday = () => {
@@ -120,12 +139,12 @@ export function DatePickerModal({
   })();
 
   return (
-    <Modal
-      transparent
-      visible={visible}
-      animationType="fade"
-      onRequestClose={onRequestClose}
-    >
+      <Modal
+        transparent
+        visible={visible}
+        animationType="fade"
+        onRequestClose={handleClose}
+      >
       <View style={[styles.overlay, styles.overlayCenter]}>
         {Platform.OS !== 'web' && (
           <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill} />
@@ -133,11 +152,13 @@ export function DatePickerModal({
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.7)' }]} />
         <View style={styles.card}>
           <Text className="text-gold text-lg font-bold mb-2 text-center" style={{ fontFamily: (Platform.OS as string) === 'web' ? 'Bebas Neue, system-ui' : undefined }}>
-            Select Date
+            {title || 'Select Date'}
           </Text>
-          <Text className="text-crescender-300 text-sm mb-3 text-center">
-            Choose a transaction date
-          </Text>
+          {!title && (
+            <Text className="text-crescender-300 text-sm mb-3 text-center">
+              Choose a transaction date
+            </Text>
+          )}
           {showWarning && (
             <View className="bg-yellow-900/30 border border-yellow-600 rounded-[10px] p-3 mb-3">
               <Text className="text-yellow-400 text-sm text-center">
@@ -146,10 +167,16 @@ export function DatePickerModal({
             </View>
           )}
           <Calendar
-            key={visible ? 'open' : 'closed'}
+            key={`calendar-${visible ? 'open' : 'closed'}-${displayMonth || initialMonth}`}
             initialDate={displayMonth || initialMonth}
+            current={displayMonth || initialMonth}
             onDayPress={onDayPress}
-            onMonthChange={(d) => setDisplayMonth((d.dateString || '').slice(0, 7) + '-01')}
+            onMonthChange={(d) => {
+              const newMonth = (d.dateString || '').slice(0, 7) + '-01';
+              if (newMonth !== displayMonth) {
+                setDisplayMonth(newMonth);
+              }
+            }}
             markedDates={buildMarkedDates()}
             theme={CRESCENDER_THEME}
             firstDay={1}
@@ -181,7 +208,7 @@ export function DatePickerModal({
           </View>
           <View className="flex-row justify-between gap-3 mt-2">
             <TouchableOpacity
-              onPress={onRequestClose}
+              onPress={handleClose}
               className="px-4 py-2.5 rounded-[14px] bg-crescender-800 border border-crescender-600"
             >
               <Text className="text-crescender-200 font-semibold">Cancel</Text>
