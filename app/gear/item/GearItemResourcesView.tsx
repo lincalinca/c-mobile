@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { GearDetails } from '../../../lib/repository';
+import { AutoSizingText } from '../../../components/common/AutoSizingText';
 
 type IconName = 'external-link' | 'book-open' | 'phone' | 'mail' | 'globe';
 
@@ -29,7 +30,13 @@ function ResourceLink({ label, value, icon, onPress }: ResourceLinkProps) {
       <Feather name={icon} size={18} color="#f5c518" />
       <View className="flex-1">
         <Text className="text-crescender-400 text-xs">{label}</Text>
-        <Text className="text-white text-sm">{value}</Text>
+        <AutoSizingText
+          value={value}
+          baseFontSize={14}
+          minFontSize={10}
+          className="text-white"
+          style={{ flex: 1 }}
+        />
       </View>
     </TouchableOpacity>
   );
@@ -48,7 +55,13 @@ function WarrantyContactLink({ icon, value, onPress }: WarrantyContactLinkProps)
       className="flex-row items-center gap-3 mb-2"
     >
       <Feather name={icon} size={14} color="#666" />
-      <Text className="text-white text-sm underline">{value}</Text>
+      <AutoSizingText
+        value={value}
+        baseFontSize={14}
+        minFontSize={10}
+        className="text-white underline"
+        style={{ flex: 1 }}
+      />
     </TouchableOpacity>
   );
 }

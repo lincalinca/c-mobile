@@ -7,6 +7,7 @@ import { findBestMatch } from '../../lib/fuzzyMatcher';
 import { DatePickerModal } from '../../components/calendar/DatePickerModal';
 import { callSupabaseFunction } from '../../lib/supabase';
 import { recordScan } from '../../lib/usageTracking';
+import { getFlow, getQuestion, type CategoryType } from '../../lib/chat/flows';
 
 interface Message {
   id: string;
@@ -16,7 +17,6 @@ interface Message {
   data?: any;
 }
 
-type CategoryType = 'education' | 'gear' | 'event' | 'service' | 'transaction';
 
 export default function AssistantScreen() {
   const router = useRouter();
@@ -112,83 +112,76 @@ export default function AssistantScreen() {
   // --- Logic Helpers ---
 
   const nextQuestion = (type: CategoryType, step: number) => {
-    // EDUCATION FLOW
-    if (type === 'education') {
-      if (step === 0) { // If merchant not already found fuzzy
-         if (draftItem.merchant) return nextQuestion(type, 1); // Skip if found
-         addBotMessage("Who is the teacher or school?");
-      }
-      else if (step === 1) addBotMessage("How many lessons are you adding?");
-      else if (step === 2) addBotMessage("When do these start?", 'date-picker');
-      else if (step === 3) addBotMessage("Are you charged by the lesson or by the term?", 'choice', { choices: ['Lesson', 'Term'] });
-      else finishFlow();
+    const flow = getFlow(type);
+    if (!flow) {
+      addBotMessage("I didn't quite catch that category. Is this for Gear, Education, an Event, or a Service?", 'choice', {
+        choices: ['Gear', 'Education', 'Event', 'Service']
+      });
+      return;
     }
 
-    // GEAR FLOW
-    else if (type === 'gear') {
-      if (step === 0) addBotMessage("What is the brand and model?");
-      else if (step === 1) addBotMessage("Did you buy it at a store or privately?", 'choice', { choices: ['Store', 'Private'] });
-      else if (step === 2) addBotMessage("How much did it cost?");
-      else if (step === 3) addBotMessage("Is it New or Used?", 'choice', { choices: ['New', 'Used'] });
-      else if (step === 4) addBotMessage("When did you get it?", 'date-picker');
-      else finishFlow();
+    const question = getQuestion(flow, step);
+    if (!question) {
+      finishFlow();
+      return;
     }
 
-    // EVENT FLOW
-    else if (type === 'event') {
-       if (step === 0) {
-         if (draftItem.merchant) return nextQuestion(type, 1);
-         addBotMessage("Who are you seeing?");
-       }
-       else if (step === 1) addBotMessage("When is the show?", 'date-picker');
-       else if (step === 2) addBotMessage("Total cost for tickets?");
-       else finishFlow();
+    // Check if we should skip this question
+    if (question.skipIf && question.skipIf(draftItem)) {
+      nextQuestion(type, step + 1);
+      return;
     }
 
-    // SERVICE FLOW
-    else if (type === 'service') {
-      if (step === 0) {
-         if (draftItem.merchant) return nextQuestion(type, 1);
-         addBotMessage("Who did the work?");
-      }
-      else if (step === 1) addBotMessage("What work was done? (e.g. Restring, Refret)");
-      else if (step === 2) addBotMessage("How complex was it?", 'choice', { choices: ['Simple (DIY)', 'Medium (Maintenance)', 'Expert (Repair)'] });
-      else if (step === 3) addBotMessage("Total cost?");
-      else finishFlow();
-    }
+    // Add the question message
+    addBotMessage(question.text, question.type, {
+      choices: question.choices,
+    });
   };
 
   const saveAnswer = (type: CategoryType, step: number, text: string) => {
+    const flow = getFlow(type);
+    if (!flow) return;
+
+    const question = getQuestion(flow, step);
+    if (!question) return;
+
+    // Validate answer if validator exists
+    if (question.validator && !question.validator(text)) {
+      addBotMessage(`Please provide a valid ${question.id}.`);
+      return;
+    }
+
     setDraftItem(prev => {
       const newDraft = { ...prev };
       
+      // Map question IDs to draft fields
       if (type === 'education') {
-        if (step === 0) newDraft.merchant = text;
-        if (step === 1) newDraft.details = { ...newDraft.details, count: parseInt(text) || 1 };
-        if (step === 2) newDraft.date = new Date(text);
-        if (step === 3) newDraft.details = { ...newDraft.details, billing: text };
+        if (question.id === 'teacher') newDraft.merchant = text;
+        if (question.id === 'count') newDraft.details = { ...newDraft.details, count: parseInt(text) || 1 };
+        if (question.id === 'startDate') newDraft.date = new Date(text);
+        if (question.id === 'billing') newDraft.details = { ...newDraft.details, billing: text };
       }
       else if (type === 'gear') {
-        if (step === 0) {
-           const parts = text.split(' ');
-           newDraft.title = text;
-           if (parts.length > 0) newDraft.details = { ...newDraft.details, brand: parts[0] };
+        if (question.id === 'brandModel') {
+          const parts = text.split(' ');
+          newDraft.title = text;
+          if (parts.length > 0) newDraft.details = { ...newDraft.details, brand: parts[0] };
         }
-        if (step === 1) newDraft.details = { ...newDraft.details, purchaseSource: text };
-        if (step === 2) newDraft.amount = parseFloat(text.replace(/[^0-9.]/g, '')) || 0;
-        if (step === 3) newDraft.details = { ...newDraft.details, condition: text };
-        if (step === 4) newDraft.date = new Date(text);
+        if (question.id === 'purchaseSource') newDraft.details = { ...newDraft.details, purchaseSource: text };
+        if (question.id === 'cost') newDraft.amount = parseFloat(text.replace(/[^0-9.]/g, '')) || 0;
+        if (question.id === 'condition') newDraft.details = { ...newDraft.details, condition: text };
+        if (question.id === 'date') newDraft.date = new Date(text);
       }
       else if (type === 'event') {
-        if (step === 0) newDraft.merchant = text;
-        if (step === 1) newDraft.date = new Date(text);
-        if (step === 2) newDraft.amount = parseFloat(text.replace(/[^0-9.]/g, '')) || 0;
+        if (question.id === 'artist') newDraft.merchant = text;
+        if (question.id === 'date') newDraft.date = new Date(text);
+        if (question.id === 'cost') newDraft.amount = parseFloat(text.replace(/[^0-9.]/g, '')) || 0;
       }
       else if (type === 'service') {
-        if (step === 0) newDraft.merchant = text;
-        if (step === 1) newDraft.details = { ...newDraft.details, workDone: text };
-        if (step === 2) newDraft.details = { ...newDraft.details, complexity: text };
-        if (step === 3) newDraft.amount = parseFloat(text.replace(/[^0-9.]/g, '')) || 0;
+        if (question.id === 'technician') newDraft.merchant = text;
+        if (question.id === 'workDone') newDraft.details = { ...newDraft.details, workDone: text };
+        if (question.id === 'complexity') newDraft.details = { ...newDraft.details, complexity: text };
+        if (question.id === 'cost') newDraft.amount = parseFloat(text.replace(/[^0-9.]/g, '')) || 0;
       }
       
       return newDraft;

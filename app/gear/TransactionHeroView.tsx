@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { Receipt } from '../../lib/repository';
 import { formatABN } from '../../lib/formatUtils';
+import { AutoSizingText } from '../../components/common/AutoSizingText';
 
 interface TransactionHeroViewProps {
   receipt: Receipt;
@@ -53,7 +54,13 @@ export function TransactionHeroView({ receipt }: TransactionHeroViewProps) {
               className="flex-row items-center gap-2 mb-1"
             >
               <Feather name="phone" size={12} color="#f5c518" />
-              <Text className="text-gold text-sm underline">{receipt.merchantPhone}</Text>
+              <AutoSizingText
+                value={receipt.merchantPhone}
+                baseFontSize={14}
+                minFontSize={10}
+                className="text-gold underline"
+                style={{ flex: 1 }}
+              />
             </TouchableOpacity>
           )}
           {receipt.merchantEmail && (
@@ -62,7 +69,13 @@ export function TransactionHeroView({ receipt }: TransactionHeroViewProps) {
               className="flex-row items-center gap-2 mb-1"
             >
               <Feather name="mail" size={12} color="#f5c518" />
-              <Text className="text-gold text-sm underline">{receipt.merchantEmail}</Text>
+              <AutoSizingText
+                value={receipt.merchantEmail}
+                baseFontSize={14}
+                minFontSize={10}
+                className="text-gold underline"
+                style={{ flex: 1 }}
+              />
             </TouchableOpacity>
           )}
           {receipt.merchantWebsite && (
@@ -71,7 +84,13 @@ export function TransactionHeroView({ receipt }: TransactionHeroViewProps) {
               className="flex-row items-center gap-2 mb-1"
             >
               <Feather name="globe" size={12} color="#f5c518" />
-              <Text className="text-gold text-sm underline">{receipt.merchantWebsite}</Text>
+              <AutoSizingText
+                value={receipt.merchantWebsite}
+                baseFontSize={14}
+                minFontSize={10}
+                className="text-gold underline"
+                style={{ flex: 1 }}
+              />
             </TouchableOpacity>
           )}
           {receipt.merchantAddress && (

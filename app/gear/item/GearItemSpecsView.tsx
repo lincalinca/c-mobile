@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import type { GearDetails } from '../../../lib/repository';
+import { AutoSizingText } from '../../../components/common/AutoSizingText';
 
 interface FieldConfig {
   label: string;
@@ -15,12 +16,24 @@ interface DetailFieldProps {
 }
 
 function DetailField({ label, value, format = 'default' }: DetailFieldProps) {
+  // Serial numbers should never wrap
+  const isSingleLine = format === 'mono';
+  
   return (
     <View className="mb-3">
       <Text className="text-crescender-400 text-xs mb-1">{label}</Text>
-      <Text className={`text-white text-base ${format === 'mono' ? 'font-mono' : ''}`}>
-        {value}
-      </Text>
+      {isSingleLine ? (
+        <AutoSizingText
+          value={value}
+          baseFontSize={16}
+          minFontSize={10}
+          className={`text-white ${format === 'mono' ? 'font-mono' : ''}`}
+        />
+      ) : (
+        <Text className={`text-white text-base ${format === 'mono' ? 'font-mono' : ''}`}>
+          {value}
+        </Text>
+      )}
     </View>
   );
 }

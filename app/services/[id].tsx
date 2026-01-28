@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import { ReceiptRepository, type LineItemWithDetails, type Receipt } from '../../lib/repository';
@@ -10,6 +11,11 @@ import { RelatedItemsGrid } from '../../components/common/RelatedItemsGrid';
 import { ItemImage } from '../../lib/repository';
 import { reshapeToResults, type ResultItem } from '../../lib/results';
 import { formatFullDate } from '../../lib/dateUtils';
+import { useServiceItemEdit } from './useServiceItemEdit';
+import { ServiceItemEditForm } from './ServiceItemEditForm';
+import { DatePickerModal } from '../../components/calendar/DatePickerModal';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const ACCENT_COLOR = '#f97316'; // Orange for services
 
@@ -83,6 +89,12 @@ export default function ServiceDetailScreen() {
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [relatedItems, setRelatedItems] = useState<ResultItem[]>([]);
   const [images, setImages] = useState<ItemImage[]>([]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerKey, setDatePickerKey] = useState<string>('');
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareTextContent, setShareTextContent] = useState('');
+
+  const { isEditing, setIsEditing, isSaving, editState, setEditState, handleSave } = useServiceItemEdit(id, item);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -129,6 +141,126 @@ export default function ServiceDetailScreen() {
     router.canGoBack() ? router.back() : router.replace('/');
   }, [router]);
 
+  const formatItemForSharing = useCallback((item: LineItemWithDetails, receipt: Receipt): string => {
+    const sd = item.serviceDetailsParsed;
+    const lines: string[] = [];
+    
+    lines.push(`🔧 ${item.description || 'Service'}`);
+    lines.push('');
+    lines.push(`Merchant: ${receipt.merchant || 'N/A'}`);
+    lines.push(`Cost: $${(item.totalPrice / 100).toFixed(2)}`);
+    lines.push(`Date: ${formatFullDate(receipt.transactionDate)}`);
+    
+    if (sd?.serviceType) lines.push(`Service Type: ${sd.serviceType}`);
+    if (sd?.technicianName) lines.push(`Technician: ${sd.technicianName}`);
+    if (sd?.providerName) lines.push(`Provider: ${sd.providerName}`);
+    if (sd?.startDate) lines.push(`Start Date: ${sd.startDate}`);
+    if (sd?.endDate) lines.push(`End Date: ${sd.endDate}`);
+    if (sd?.pickupDate) lines.push(`Pickup Date: ${sd.pickupDate}`);
+    if (sd?.dropoffDate) lines.push(`Dropoff Date: ${sd.dropoffDate}`);
+    
+    if (item.notes) {
+      lines.push('');
+      lines.push(`Notes: ${item.notes}`);
+    }
+    
+    if (receipt.merchantPhone || receipt.merchantEmail || receipt.merchantAddress) {
+      lines.push('');
+      lines.push('Contact Details:');
+      if (receipt.merchantPhone) lines.push(`Phone: ${receipt.merchantPhone}`);
+      if (receipt.merchantEmail) lines.push(`Email: ${receipt.merchantEmail}`);
+      if (receipt.merchantAddress) {
+        const addressParts = [
+          receipt.merchantAddress,
+          receipt.merchantSuburb,
+          receipt.merchantState,
+          receipt.merchantPostcode,
+        ].filter(Boolean);
+        if (addressParts.length > 0) {
+          lines.push(`Address: ${addressParts.join(', ')}`);
+        }
+      }
+    }
+    
+    return lines.join('\n');
+  }, []);
+
+  const handleShareImage = useCallback(async (imageUri: string) => {
+    try {
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(imageUri, {
+          mimeType: 'image/jpeg',
+          dialogTitle: 'Share Image',
+          UTI: 'public.jpeg',
+        });
+      } else {
+        Alert.alert('Sharing not available', 'Sharing is not available on this device.');
+      }
+    } catch (error) {
+      console.error('Share image error:', error);
+      Alert.alert('Share Failed', `Could not share image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }, []);
+
+  const handleShareItem = useCallback(async () => {
+    if (!item || !receipt) return;
+    
+    try {
+      const textContent = formatItemForSharing(item, receipt);
+      const isAvailable = await Sharing.isAvailableAsync();
+      
+      if (!isAvailable) {
+        Alert.alert('Sharing not available', 'Sharing is not available on this device.');
+        return;
+      }
+      
+      // Share images if available
+      if (images.length > 0) {
+        // Show modal with text content first
+        setShareTextContent(textContent);
+        setShowShareModal(true);
+      } else {
+        // No images, share text only
+        const textFileUri = FileSystem.cacheDirectory + `service_${Date.now()}.txt`;
+        await FileSystem.writeAsStringAsync(textFileUri, textContent);
+        await Sharing.shareAsync(textFileUri, {
+          mimeType: 'text/plain',
+          dialogTitle: 'Share Service Details',
+        });
+      }
+    } catch (error) {
+      console.error('Share item error:', error);
+      Alert.alert('Share Failed', `Could not share service: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }, [item, receipt, images, formatItemForSharing]);
+
+  const handleShareWithImage = useCallback(async () => {
+    if (!images.length) return;
+    
+    try {
+      // Copy text to clipboard
+      await Clipboard.setStringAsync(shareTextContent);
+      
+      // Close modal
+      setShowShareModal(false);
+      
+      // Small delay to ensure clipboard is set
+      setTimeout(async () => {
+        // Share the first image
+        // The text is now in clipboard - user can paste it into the share dialog
+        await Sharing.shareAsync(images[0].uri, {
+          mimeType: 'image/jpeg',
+          dialogTitle: 'Share Service',
+          UTI: 'public.jpeg',
+        });
+      }, 100);
+    } catch (error) {
+      console.error('Share with image error:', error);
+      Alert.alert('Share Failed', `Could not share: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }, [images, shareTextContent]);
+
   if (loading) {
     return (
       <View className="flex-1 bg-crescender-950 justify-center items-center">
@@ -166,16 +298,46 @@ export default function ServiceDetailScreen() {
     <View className="flex-1 bg-crescender-950" style={{ paddingTop: insets.top }}>
       {/* Header */}
       <View className="px-6 py-4 flex-row justify-between items-center border-b border-crescender-800">
-        <TouchableOpacity onPress={handleBack} className="p-2 -ml-2">
-          <Feather name="arrow-left" size={24} color="white" />
+        <TouchableOpacity onPress={isEditing ? () => setIsEditing(false) : handleBack} className="p-2 -ml-2">
+          <Feather name={isEditing ? "x" : "arrow-left"} size={24} color="white" />
         </TouchableOpacity>
-        <Text className="text-white text-lg font-bold">Service Details</Text>
-        <View className="w-10" />
+        <Text className="text-white text-lg font-bold">{isEditing ? 'Edit Service' : 'Service Details'}</Text>
+        {!isEditing ? (
+          <View className="flex-row gap-2">
+            <TouchableOpacity onPress={handleShareItem} className="p-2">
+              <Feather name="share-2" size={20} color={ACCENT_COLOR} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setIsEditing(true)} className="p-2">
+              <Feather name="edit-2" size={20} color={ACCENT_COLOR} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity onPress={() => handleSave(loadData)} disabled={isSaving} className="p-2">
+            <Feather name={isSaving ? "loader" : "check"} size={20} color={ACCENT_COLOR} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}>
-        <ItemImageGallery images={images} onImagesChange={handleImagesChange} category="service" />
-        <ServiceItemHeroView item={item} receipt={receipt} />
+        <ItemImageGallery 
+          images={images} 
+          onImagesChange={handleImagesChange} 
+          category="service"
+          onShareImage={handleShareImage}
+          onShareItem={handleShareItem}
+        />
+        {isEditing ? (
+          <ServiceItemEditForm
+            editState={editState}
+            onUpdateField={(field, value) => setEditState({ ...editState, [field]: value })}
+            onDatePress={(key) => {
+              setDatePickerKey(key);
+              setShowDatePicker(true);
+            }}
+          />
+        ) : (
+          <ServiceItemHeroView item={item} receipt={receipt} />
+        )}
         <ContactDetailsSection data={contactData} accentColor={ACCENT_COLOR} />
 
         {item.notes && (
@@ -187,8 +349,65 @@ export default function ServiceDetailScreen() {
           </View>
         )}
 
-        <RelatedItemsGrid items={relatedItems} accentColor={ACCENT_COLOR} />
+        {!isEditing && <RelatedItemsGrid items={relatedItems} accentColor={ACCENT_COLOR} />}
       </ScrollView>
+
+      <DatePickerModal
+        visible={showDatePicker}
+        onRequestClose={() => setShowDatePicker(false)}
+        onDateSelect={(date) => {
+          if (datePickerKey) {
+            setEditState({ ...editState, [datePickerKey]: date });
+          }
+          setShowDatePicker(false);
+        }}
+        selectedDate={datePickerKey ? editState[datePickerKey as keyof typeof editState] || '' : ''}
+      />
+
+      {/* Share Modal */}
+      <Modal visible={showShareModal} transparent animationType="fade">
+        <View className="flex-1 bg-black/80 justify-center items-center p-6">
+          <View className="bg-crescender-900 w-full rounded-2xl p-6 border border-crescender-700 max-h-[80%]">
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-white text-lg font-bold">Share Service</Text>
+              <TouchableOpacity onPress={() => setShowShareModal(false)}>
+                <Feather name="x" size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text className="text-crescender-300 text-sm mb-4">
+              The text below will be copied to your clipboard. After sharing the image, paste it as the caption/description.
+            </Text>
+            
+            <ScrollView className="bg-crescender-950 rounded-xl p-4 mb-4 max-h-64">
+              <Text className="text-white text-sm font-mono" selectable>
+                {shareTextContent}
+              </Text>
+            </ScrollView>
+            
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={() => {
+                  Clipboard.setStringAsync(shareTextContent);
+                  Alert.alert('Copied!', 'Text copied to clipboard');
+                }}
+                className="flex-1 bg-crescender-800 p-4 rounded-xl items-center border border-crescender-700"
+              >
+                <Feather name="copy" size={20} color="white" />
+                <Text className="text-white font-bold mt-2">Copy Text</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={handleShareWithImage}
+                className="flex-1 bg-gold p-4 rounded-xl items-center"
+              >
+                <Feather name="share-2" size={20} color="#2e1065" />
+                <Text className="text-crescender-950 font-bold mt-2">Share Image</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

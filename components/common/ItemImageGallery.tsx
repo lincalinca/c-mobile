@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Image, Modal, ScrollView, Alert, Platform } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, TouchableOpacity, Image, Modal, ScrollView, Alert, Platform, Animated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -13,14 +13,18 @@ interface ItemImageGalleryProps {
   images: ItemImage[];
   onImagesChange: (newImages: ItemImage[]) => void;
   category: 'gear' | 'service';
+  onShareImage?: (imageUri: string) => void;
+  onShareItem?: () => void;
 }
 
-export const ItemImageGallery: React.FC<ItemImageGalleryProps> = ({ images, onImagesChange, category }) => {
+export const ItemImageGallery: React.FC<ItemImageGalleryProps> = ({ images, onImagesChange, category, onShareImage, onShareItem }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [showExifModal, setShowExifModal] = useState(false);
   const [editingImage, setEditingImage] = useState<ItemImage | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
 
   const gearTags = ['Manufacturer image', 'Performance Image', 'Still image', 'Serial Number', 'Damage/Condition', 'Action Shot'];
   const serviceTags = ['Before', 'Work in Progress', 'After', 'In-situ', 'Issue Found'];
@@ -66,7 +70,18 @@ export const ItemImageGallery: React.FC<ItemImageGalleryProps> = ({ images, onIm
         date: new Date().toISOString().split('T')[0],
       };
 
+      const wasFirstImage = images.length === 0;
       onImagesChange([...images, newImage]);
+      
+      // Show toast after first image is loaded
+      if (wasFirstImage) {
+        setShowToast(true);
+        Animated.sequence([
+          Animated.timing(toastOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+          Animated.delay(3000),
+          Animated.timing(toastOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+        ]).start(() => setShowToast(false));
+      }
     }
   };
 
@@ -100,6 +115,18 @@ export const ItemImageGallery: React.FC<ItemImageGalleryProps> = ({ images, onIm
     setEditingIndex(index);
   };
 
+  const handleImagePress = (index: number) => {
+    if (onShareImage) {
+      Alert.alert('Image Options', 'What would you like to do?', [
+        { text: 'Edit/Tag', onPress: () => openEditModal(index) },
+        { text: 'Share Image', onPress: () => onShareImage(images[index].uri) },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    } else {
+      openEditModal(index);
+    }
+  };
+
   return (
     <View>
       <View className="flex-row w-full bg-black h-48">
@@ -109,25 +136,31 @@ export const ItemImageGallery: React.FC<ItemImageGalleryProps> = ({ images, onIm
 
           if (img) {
             return (
-              <TouchableOpacity 
+              <View 
                 key={index} 
                 className="flex-1 border-r border-crescender-800 relative"
-                onPress={() => openEditModal(index)}
               >
-                <Image source={{ uri: img.uri }} className="w-full h-full" resizeMode="cover" />
-                <View className="absolute top-2 left-2 bg-black/60 px-2 py-0.5 rounded">
+                <TouchableOpacity 
+                  className="w-full h-full"
+                  onPress={() => handleImagePress(index)}
+                  activeOpacity={0.8}
+                >
+                  <Image source={{ uri: img.uri }} className="w-full h-full" resizeMode="cover" />
+                </TouchableOpacity>
+                <View className="absolute top-2 left-2 bg-black/60 px-2 py-0.5 rounded pointer-events-none">
                   <Text className="text-white text-[10px] font-bold">{img.tag}</Text>
                 </View>
                 <TouchableOpacity 
-                  className="absolute bottom-2 right-2 bg-black/60 w-6 h-6 rounded-full justify-center items-center"
+                  className="absolute bottom-2 right-2 px-2 py-1 rounded-full justify-center items-center"
+                  style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
                   onPress={() => {
                     setSelectedImageIndex(index);
                     setShowExifModal(true);
                   }}
                 >
-                  <Feather name="info" size={14} color="white" />
+                  <Text className="text-white text-[10px] font-bold">EXIF</Text>
                 </TouchableOpacity>
-              </TouchableOpacity>
+              </View>
             );
           }
 
@@ -144,8 +177,8 @@ export const ItemImageGallery: React.FC<ItemImageGalleryProps> = ({ images, onIm
                   ]);
                 }}
               >
-                <Feather name="plus" size={32} color="#444" />
-                <Text className="text-crescender-600 text-[10px] mt-1 font-bold">ADD {index + 1}</Text>
+                <Feather name="plus" size={32} color="#f5c518" />
+                <Text className="text-gold text-[10px] mt-1 font-bold">ADD {index + 1}</Text>
               </TouchableOpacity>
             );
           }
@@ -252,6 +285,27 @@ export const ItemImageGallery: React.FC<ItemImageGalleryProps> = ({ images, onIm
           </View>
         </View>
       </Modal>
+
+      {/* Toast Message */}
+      {showToast && (
+        <View className="absolute bottom-20 left-0 right-0 items-center pointer-events-none">
+          <Animated.View
+            className="bg-crescender-900 px-4 py-3 rounded-xl border border-crescender-700"
+            style={{ 
+              opacity: toastOpacity, 
+              shadowColor: '#000', 
+              shadowOffset: { width: 0, height: 4 }, 
+              shadowOpacity: 0.3, 
+              shadowRadius: 4.65, 
+              elevation: 8 
+            }}
+          >
+            <Text className="text-white text-sm font-medium text-center">
+              Press the image to re-tag or edit
+            </Text>
+          </Animated.View>
+        </View>
+      )}
     </View>
   );
 };

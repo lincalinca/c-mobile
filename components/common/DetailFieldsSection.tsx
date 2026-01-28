@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { AutoSizingText } from './AutoSizingText';
 
 type IconName = React.ComponentProps<typeof Feather>['name'];
 
@@ -14,6 +15,7 @@ export interface DetailFieldConfig<T> {
   icon?: IconName;
   iconColor?: string;
   condition?: (data: T) => boolean;
+  singleLine?: boolean; // For emails, URLs, phone numbers that should never wrap
 }
 
 interface DetailFieldProps {
@@ -25,14 +27,33 @@ interface DetailFieldProps {
   iconColor?: string;
 }
 
-function DetailField({ label, value, numberOfLines = 1, onPress, icon, iconColor }: DetailFieldProps) {
+interface DetailFieldProps {
+  label: string;
+  value: string;
+  numberOfLines?: number;
+  onPress?: () => void;
+  icon?: IconName;
+  iconColor?: string;
+  singleLine?: boolean;
+}
+
+function DetailField({ label, value, numberOfLines = 1, onPress, icon, iconColor, singleLine }: DetailFieldProps) {
   const content = (
     <>
       <Text className="text-crescender-400 text-sm mb-1">{label}</Text>
       <View className="flex-row items-center justify-between">
-        <Text className="text-white text-base flex-1" numberOfLines={numberOfLines}>
-          {value}
-        </Text>
+        {singleLine ? (
+          <AutoSizingText
+            value={value}
+            baseFontSize={16}
+            minFontSize={10}
+            className="text-white flex-1"
+          />
+        ) : (
+          <Text className="text-white text-base flex-1" numberOfLines={numberOfLines}>
+            {value}
+          </Text>
+        )}
         {icon && <Feather name={icon} size={16} color={iconColor || '#9ca3af'} />}
       </View>
     </>
@@ -94,6 +115,7 @@ export function DetailFieldsSection<T>({ data, fields, accentColor, sectionTitle
             onPress={field.onPress ? () => field.onPress!(data) : undefined}
             icon={field.icon}
             iconColor={field.iconColor}
+            singleLine={field.singleLine}
           />
         );
       })}

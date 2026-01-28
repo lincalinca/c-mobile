@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { AutoSizingText } from './AutoSizingText';
 
 type IconName = 'phone' | 'mail' | 'globe' | 'map-pin';
 
@@ -95,11 +96,21 @@ export function ContactDetailsSection({ data, accentColor, iconSize = 16 }: Cont
                 color={accentColor}
                 style={field.key === 'address' ? { marginTop: 2 } : undefined}
               />
-              <Text
-                className={`text-${isClickable ? 'white' : 'crescender-300'} text-sm flex-1 ${isClickable ? 'underline' : ''}`}
-              >
-                {value}
-              </Text>
+              {(field.key === 'email' || field.key === 'website' || field.key === 'phone') ? (
+                <AutoSizingText
+                  value={value}
+                  baseFontSize={14}
+                  minFontSize={10}
+                  className={`text-${isClickable ? 'white' : 'crescender-300'} ${isClickable ? 'underline' : ''}`}
+                  style={{ flex: 1 }}
+                />
+              ) : (
+                <Text
+                  className={`text-${isClickable ? 'white' : 'crescender-300'} text-sm flex-1 ${isClickable ? 'underline' : ''}`}
+                >
+                  {value}
+                </Text>
+              )}
             </Container>
           );
         })}
