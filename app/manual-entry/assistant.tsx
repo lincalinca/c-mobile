@@ -1,11 +1,12 @@
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useState, useRef, useEffect } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { findBestMatch } from '../../lib/fuzzyMatcher';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { DatePickerModal } from '../../components/calendar/DatePickerModal';
 import { callSupabaseFunction } from '../../lib/supabase';
+import { recordScan } from '../../lib/usageTracking';
 
 interface Message {
   id: string;
@@ -126,9 +127,10 @@ export default function AssistantScreen() {
     // GEAR FLOW
     else if (type === 'gear') {
       if (step === 0) addBotMessage("What is the brand and model?");
-      else if (step === 1) addBotMessage("How much did it cost?");
-      else if (step === 2) addBotMessage("Is it New or Used?", 'choice', { choices: ['New', 'Used'] });
-      else if (step === 3) addBotMessage("When did you get it?", 'date-picker');
+      else if (step === 1) addBotMessage("Did you buy it at a store or privately?", 'choice', { choices: ['Store', 'Private'] });
+      else if (step === 2) addBotMessage("How much did it cost?");
+      else if (step === 3) addBotMessage("Is it New or Used?", 'choice', { choices: ['New', 'Used'] });
+      else if (step === 4) addBotMessage("When did you get it?", 'date-picker');
       else finishFlow();
     }
 
@@ -163,6 +165,7 @@ export default function AssistantScreen() {
       if (type === 'education') {
         if (step === 0) newDraft.merchant = text;
         if (step === 1) newDraft.details = { ...newDraft.details, count: parseInt(text) || 1 };
+        if (step === 2) newDraft.date = new Date(text);
         if (step === 3) newDraft.details = { ...newDraft.details, billing: text };
       }
       else if (type === 'gear') {
@@ -171,11 +174,14 @@ export default function AssistantScreen() {
            newDraft.title = text;
            if (parts.length > 0) newDraft.details = { ...newDraft.details, brand: parts[0] };
         }
-        if (step === 1) newDraft.amount = parseFloat(text.replace(/[^0-9.]/g, '')) || 0;
-        if (step === 2) newDraft.details = { ...newDraft.details, condition: text };
+        if (step === 1) newDraft.details = { ...newDraft.details, purchaseSource: text };
+        if (step === 2) newDraft.amount = parseFloat(text.replace(/[^0-9.]/g, '')) || 0;
+        if (step === 3) newDraft.details = { ...newDraft.details, condition: text };
+        if (step === 4) newDraft.date = new Date(text);
       }
       else if (type === 'event') {
         if (step === 0) newDraft.merchant = text;
+        if (step === 1) newDraft.date = new Date(text);
         if (step === 2) newDraft.amount = parseFloat(text.replace(/[^0-9.]/g, '')) || 0;
       }
       else if (type === 'service') {
@@ -192,29 +198,74 @@ export default function AssistantScreen() {
   const finishFlow = async () => {
     setConversationState('REVIEW');
     setIsTyping(true);
-    addBotMessage("Got it! I'm organizing those details for you...", 'text');
+    addBotMessage("Got it! I'm organising those details for you...", 'text');
+    
+    // Deduct a scan as per manual entry rules (each gear/item counts as a scan)
+    try {
+      await recordScan();
+    } catch (e) {
+      console.error("[Assistant] Failed to record scan usage:", e);
+    }
     
     try {
       // Transcript for AI context
       const history = messages.map(m => `${m.sender.toUpperCase()}: ${m.text}`);
       
       // Call the NEW Enrichment function
-      const result = await callSupabaseFunction('enrich-manual-entry', { 
+      const result = await callSupabaseFunction<any>('enrich-manual-entry', { 
         draft: draftItem,
         history 
       });
 
       console.log("[Assistant] Enrichment Result:", result);
       
-      // Navigate to success
+      // Reshape the result into the standard ReceiptData format expected by /review
+      const reshapedData = {
+        summary: result.summary,
+        financial: {
+          merchant: result.merchant.name,
+          merchantAbn: result.merchant.abn,
+          date: draftItem.date ? draftItem.date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          total: result.item.totalPrice,
+          subtotal: result.item.totalPrice,
+          tax: 0,
+          merchantDetails: {
+            name: result.merchant.name,
+            suburb: result.merchant.suburb,
+            address: result.merchant.address,
+            phone: result.merchant.phone,
+            email: result.merchant.email,
+            website: result.merchant.website
+          }
+        },
+        items: [{
+          description: result.item.description,
+          category: result.item.category,
+          brand: result.item.brand || result.item.gearDetails?.brand,
+          model: result.item.model || result.item.gearDetails?.modelName,
+          quantity: 1,
+          unitPrice: result.item.totalPrice,
+          totalPrice: result.item.totalPrice,
+          // Map category-specific details
+          gearDetails: result.item.category === 'gear' ? result.item.gearDetails : undefined,
+          educationDetails: result.item.category === 'education' ? result.item.educationDetails : undefined,
+          serviceDetails: result.item.category === 'service' ? result.item.serviceDetails : undefined,
+          notes: `Added via Crescender Assistant${draftItem.details?.purchaseSource ? ` (${draftItem.details.purchaseSource} purchase)` : ''}`
+        }]
+      };
+
+      // Navigate to standard review screen, forcing monolithic style for manual AI entries
       router.replace({
-        pathname: '/manual-entry/success',
-        params: { result: JSON.stringify(result) }
+        pathname: '/review',
+        params: { 
+          data: JSON.stringify(reshapedData),
+          uri: undefined, // Manual entry has no image
+          forceMonolithic: 'true'
+        }
       });
     } catch (error) {
       console.error("[Assistant] Enrichment failed:", error);
-      // Fallback: proceed anyway but maybe with less confidence
-      router.replace('/manual-entry/success');
+      Alert.alert("Enrichment Issue", "I couldn't perfectly organise your details. Try again?");
     } finally {
       setIsTyping(false);
     }
@@ -246,163 +297,171 @@ export default function AssistantScreen() {
 
   return (
     <View className="flex-1 bg-crescender-950">
-      {/* Header */}
-      <View style={{ paddingTop: insets.top + 10 }} className="px-4 pb-4 border-b border-crescender-800 flex-row items-center justify-between bg-crescender-950">
-        <TouchableOpacity onPress={() => router.back()} className="p-2">
-          <Feather name="chevron-left" size={24} color="#f5c518" />
-        </TouchableOpacity>
-        <View className="flex-row items-center gap-2">
-          <Image 
-            source={require('../../assets/images/logo.png')} 
-            style={{ width: 24, height: 24, tintColor: '#f5c518' }} 
-            resizeMode="contain"
-          />
-          <Text className="text-white font-bold text-lg">Assistant</Text>
-        </View>
-        <View className="w-10" />
-      </View>
-
-      {/* Chat Area */}
-      <ScrollView 
-        ref={scrollViewRef}
-        className="flex-1 px-4"
-        contentContainerStyle={{ paddingVertical: 20, gap: 16 }}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} // Modals often handle their own offset or need 0
       >
-        {messages.map((msg) => (
-          <View 
-            key={msg.id} 
-            className={`flex-row ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            {msg.sender === 'bot' && (
-              <View className="w-8 h-8 rounded-full bg-gold/10 items-center justify-center mr-2 mt-auto">
-                 <Image 
-                    source={require('../../assets/images/logo.png')} 
-                    style={{ width: 14, height: 14, tintColor: '#f5c518' }} 
-                    resizeMode="contain"
-                  />
-              </View>
-            )}
-            
-            <View className={`max-w-[85%]`}>
-              <View 
-                className={`p-4 rounded-2xl ${
-                  msg.sender === 'user' 
-                    ? 'bg-crescender-700/80 rounded-br-none' 
-                    : 'bg-crescender-800/80 rounded-bl-none'
-                }`}
-              >
-                <Text className="text-white text-base leading-snug">{msg.text}</Text>
-              </View>
-
-              {/* Interactive Elements */}
-              {msg.type === 'confirmation' && msg.data && (
-                  <View className="mt-2 flex-row gap-2">
-                    <TouchableOpacity 
-                      onPress={() => {
-                        setDraftItem(prev => ({ ...prev, merchant: msg.data.match }));
-                        const nextStep = 1;
-                        setDetailStep(nextStep);
-                        nextQuestion(conversationState === 'IDLE' ? 'education' : draftItem.type!, nextStep); // Fix typing 
-                      }}
-                      className="bg-gold px-4 py-2 rounded-full"
-                    >
-                      <Text className="text-crescender-950 font-bold">Yes</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      onPress={() => {
-                        handleSend("No");
-                        setTimeout(() => nextQuestion(draftItem.type!, 0), 500);
-                      }} 
-                      className="bg-black/30 px-4 py-2 rounded-full"
-                    >
-                      <Text className="text-white">No</Text>
-                    </TouchableOpacity>
-                  </View>
-              )}
-
-              {msg.type === 'choice' && msg.data?.choices && (
-                <View className="mt-2 flex-row flex-wrap gap-2">
-                  {msg.data.choices.map((choice: string) => (
-                    <TouchableOpacity
-                      key={choice}
-                      onPress={() => handleSend(choice)}
-                      className="bg-crescender-700 border border-crescender-600 px-4 py-2 rounded-full"
-                    >
-                      <Text className="text-crescender-100">{choice}</Text>
-                    </TouchableOpacity>
-                  ))}
+        {/* Header */}
+        <View style={{ paddingTop: insets.top + 10 }} className="px-4 pb-4 border-b border-crescender-800 flex-row items-center justify-between bg-crescender-950">
+          <TouchableOpacity onPress={() => router.back()} className="p-2">
+            <Feather name="chevron-left" size={24} color="#f5c518" />
+          </TouchableOpacity>
+          <View className="flex-row items-center gap-2">
+            <Image 
+              source={require('../../public/logo.png')} 
+              style={{ width: 28, height: 28 }} 
+              resizeMode="contain"
+            />
+            <Text className="text-white font-bold text-lg">Assistant</Text>
+          </View>
+          <View className="w-10" />
+        </View>
+  
+        {/* Chat Area */}
+        <ScrollView 
+          ref={scrollViewRef}
+          className="flex-1 px-4"
+          contentContainerStyle={{ paddingVertical: 20, gap: 16 }}
+        >
+          {messages.map((msg) => (
+            <View 
+              key={msg.id} 
+              className={`flex-row ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              {msg.sender === 'bot' && (
+                <View className="w-8 h-8 rounded-full bg-transparent items-center justify-center mr-2 mt-auto">
+                   <Image 
+                      source={require('../../public/logo.png')} 
+                      style={{ width: 28, height: 28 }} 
+                      resizeMode="contain"
+                    />
                 </View>
               )}
-
-              {msg.type === 'date-picker' && (
-                 <TouchableOpacity 
-                   onPress={() => setShowDatePicker(true)}
-                   className="mt-2 bg-crescender-800 border border-gold/30 px-4 py-3 rounded-xl flex-row items-center gap-2"
-                 >
-                   <Feather name="calendar" size={18} color="#f5c518" />
-                   <Text className="text-gold font-bold">Select Date</Text>
-                 </TouchableOpacity>
-              )}
+              
+              <View className={`max-w-[85%]`}>
+                <View 
+                  className={`p-4 rounded-2xl ${
+                    msg.sender === 'user' 
+                      ? 'bg-crescender-700/80 rounded-br-none' 
+                      : 'bg-crescender-800/80 rounded-bl-none'
+                  }`}
+                >
+                  <Text className="text-white text-base leading-snug">{msg.text}</Text>
+                </View>
+  
+                {/* Interactive Elements */}
+                {msg.type === 'confirmation' && msg.data && (
+                    <View className="mt-2 flex-row gap-2">
+                      <TouchableOpacity 
+                        onPress={() => {
+                          setDraftItem(prev => ({ ...prev, merchant: msg.data.match }));
+                          const nextStep = 1;
+                          setDetailStep(nextStep);
+                          nextQuestion(conversationState === 'IDLE' ? 'education' : draftItem.type!, nextStep); // Fix typing 
+                        }}
+                        className="bg-gold px-4 py-2 rounded-full"
+                      >
+                        <Text className="text-crescender-950 font-bold">Yes</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        onPress={() => {
+                          handleSend("No");
+                          setTimeout(() => nextQuestion(draftItem.type!, 0), 500);
+                        }} 
+                        className="bg-black/30 px-4 py-2 rounded-full"
+                      >
+                        <Text className="text-white">No</Text>
+                      </TouchableOpacity>
+                    </View>
+                )}
+  
+                {msg.type === 'choice' && msg.data?.choices && (
+                  <View className="mt-2 flex-row flex-wrap gap-2">
+                    {msg.data.choices.map((choice: string) => (
+                      <TouchableOpacity
+                        key={choice}
+                        onPress={() => handleSend(choice)}
+                        className="bg-crescender-700 border border-crescender-600 px-4 py-2 rounded-full"
+                      >
+                        <Text className="text-crescender-100">{choice}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+  
+                {msg.type === 'date-picker' && (
+                   <TouchableOpacity 
+                     onPress={() => setShowDatePicker(true)}
+                     className="mt-2 bg-crescender-800 border border-gold/30 px-4 py-3 rounded-xl flex-row items-center gap-2"
+                   >
+                     <Feather name="calendar" size={18} color="#f5c518" />
+                     <Text className="text-gold font-bold">Select Date</Text>
+                   </TouchableOpacity>
+                )}
+              </View>
             </View>
-          </View>
-        ))}
-        
-        {isTyping && (
-          <View className="flex-row justify-start items-center ml-10">
-            <View className="flex-row gap-1 bg-crescender-800/40 p-3 rounded-xl rounded-bl-none">
-              <View className="w-2 h-2 bg-crescender-400 rounded-full animate-pulse" />
-              <View className="w-2 h-2 bg-crescender-400 rounded-full animate-pulse delay-75" />
-              <View className="w-2 h-2 bg-crescender-400 rounded-full animate-pulse delay-150" />
+          ))}
+          
+          {isTyping && (
+            <View className="flex-row justify-start items-center ml-10">
+              <View className="flex-row gap-1 bg-crescender-800/40 p-3 rounded-xl rounded-bl-none">
+                <View className="w-2 h-2 bg-crescender-400 rounded-full animate-pulse" />
+                <View className="w-2 h-2 bg-crescender-400 rounded-full animate-pulse delay-75" />
+                <View className="w-2 h-2 bg-crescender-400 rounded-full animate-pulse delay-150" />
+              </View>
             </View>
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Input Area */}
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-        className="p-4 bg-crescender-900 border-t border-crescender-800"
-      >
-        <View className="flex-row items-center gap-2">
-          <TextInput
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder="Type a message..."
-            placeholderTextColor="#6b7280"
-            className="flex-1 bg-crescender-950 text-white p-3 rounded-full border border-crescender-700 text-base px-5 h-12"
-            onSubmitEditing={() => handleSend()}
-            returnKeyType="send"
-          />
-          <TouchableOpacity 
-            onPress={() => handleSend()}
-            disabled={!inputText.trim()}
-            className={`w-12 h-12 rounded-full items-center justify-center ${
-              inputText.trim() ? 'bg-gold' : 'bg-crescender-800'
-            }`}
-          >
-            <Feather 
-              name="send" 
-              size={20} 
-              color={inputText.trim() ? '#2e1065' : '#4b5563'} 
-              style={{ marginLeft: 2 }} 
+          )}
+        </ScrollView>
+  
+        {/* Input Area */}
+        <View 
+          style={{ paddingBottom: Platform.OS === 'ios' ? insets.bottom + 10 : 10 }}
+          className="p-4 bg-crescender-900 border-t border-crescender-800"
+        >
+          <View className="flex-row items-center gap-2">
+            <TextInput
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder="Type a message..."
+              placeholderTextColor="#6b7280"
+              className="flex-1 bg-crescender-950 text-white px-5 rounded-full border border-crescender-700 text-base"
+              style={{ 
+                height: 54,
+                textAlignVertical: 'center',
+                paddingVertical: 10
+              }}
+              onSubmitEditing={() => handleSend()}
+              returnKeyType="send"
             />
-          </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => handleSend()}
+              disabled={!inputText.trim()}
+              className={`w-12 h-12 rounded-full items-center justify-center ${
+                inputText.trim() ? 'bg-gold' : 'bg-crescender-800'
+              }`}
+            >
+              <Feather 
+                name="send" 
+                size={20} 
+                color={inputText.trim() ? '#2e1065' : '#4b5563'} 
+                style={{ marginLeft: 2 }} 
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
 
       {/* Modal Date Picker */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={new Date()}
-          mode="date"
-          display="spinner"
-          onChange={(event, date) => {
-            setShowDatePicker(false);
-            if (date) handleSend(date.toLocaleDateString());
-          }}
-        />
-      )}
+      <DatePickerModal
+        visible={showDatePicker}
+        onRequestClose={() => setShowDatePicker(false)}
+        selectedDate={null}
+        onDateSelect={(dateStr) => {
+          setShowDatePicker(false);
+          handleSend(dateStr);
+        }}
+      />
     </View>
   );
 }

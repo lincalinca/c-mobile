@@ -33,8 +33,8 @@ export default function ManualEntryIndex() {
           <View className="flex-row items-center justify-between mb-4">
             <View className="w-12 h-12 rounded-full bg-gold/20 items-center justify-center">
               <Image 
-                source={require('../../assets/images/logo.png')} 
-                style={{ width: 24, height: 24, tintColor: '#f5c518' }}
+                source={require('../../public/logo.png')} 
+                style={{ width: 32, height: 32 }}
                 resizeMode="contain"
               />
             </View>

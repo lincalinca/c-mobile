@@ -1,18 +1,25 @@
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Linking, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import { ReceiptRepository, type LineItemWithDetails, type Receipt } from '../../../lib/repository';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ItemImageGallery } from '../../../components/common/ItemImageGallery';
+import { ItemImage } from '../../../lib/repository';
+import { useGearItemEdit } from './useGearItemEdit';
+import { GearItemEditForm } from './GearItemEditForm';
+import { GearItemHeroView } from './GearItemHeroView';
+import { GearItemSpecsView } from './GearItemSpecsView';
+import { GearItemResourcesView } from './GearItemResourcesView';
 
 export default function GearItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
   const [item, setItem] = useState<LineItemWithDetails | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [images, setImages] = useState<ItemImage[]>([]);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -26,7 +33,7 @@ export default function GearItemDetailScreen() {
         }
       }
     } catch (e) {
-      console.error('Failed to load gear item details', e);
+      console.error('Failed to load gear item', e);
     } finally {
       setLoading(false);
     }
@@ -36,6 +43,30 @@ export default function GearItemDetailScreen() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (item?.imagesParsed) {
+      setImages(item.imagesParsed);
+    } else {
+      setImages([]);
+    }
+  }, [item]);
+
+  const { isEditing, setIsEditing, isSaving, editState, setEditState, handleSave } = useGearItemEdit(id, item);
+
+  const handleImagesChange = async (newImages: ItemImage[]) => {
+    setImages(newImages);
+    if (id) {
+      try {
+        await ReceiptRepository.updateLineItem(id, {
+          images: JSON.stringify(newImages),
+        });
+      } catch (e) {
+        console.error('Failed to save images', e);
+        Alert.alert('Error', 'Failed to save images. Please try again.');
+      }
+    }
+  };
+
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {
       router.back();
@@ -43,6 +74,12 @@ export default function GearItemDetailScreen() {
       router.replace('/');
     }
   }, [router]);
+
+  const handleReceiptPress = () => {
+    if (receipt) {
+      router.push(`/gear/${receipt.id}` as any);
+    }
+  };
 
   if (loading) {
     return (
@@ -64,282 +101,59 @@ export default function GearItemDetailScreen() {
   }
 
   const gearDetails = item.gearDetailsParsed;
-  const isGear = item.category === 'gear';
 
   return (
     <View className="flex-1 bg-crescender-950" style={{ paddingTop: insets.top }}>
       {/* Header */}
       <View className="px-6 py-4 flex-row justify-between items-center border-b border-crescender-800">
-        <TouchableOpacity onPress={handleBack} className="p-2 -ml-2">
-          <Feather name="arrow-left" size={24} color="white" />
+        <TouchableOpacity onPress={isEditing ? () => setIsEditing(false) : handleBack} className="p-2 -ml-2">
+          <Feather name={isEditing ? "x" : "arrow-left"} size={24} color="white" />
         </TouchableOpacity>
-        <Text className="text-white text-lg font-bold">Item Details</Text>
-        <View className="w-8" />
+        <Text className="text-white text-lg font-bold">{isEditing ? 'Edit Item' : 'Item Details'}</Text>
+        {!isEditing ? (
+          <TouchableOpacity onPress={() => setIsEditing(true)} className="p-2">
+            <Feather name="edit-2" size={20} color="#f5c518" />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity onPress={() => handleSave(loadData)} disabled={isSaving} className="p-2">
+            <Feather name={isSaving ? "loader" : "check"} size={20} color="#f5c518" />
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* Item Images Gallery */}
+        <ItemImageGallery 
+          images={images} 
+          onImagesChange={handleImagesChange} 
+          category="gear" 
+        />
+
         {/* Hero Section */}
         <View className="p-6 border-b border-crescender-800">
-          {/* Brand Icon/Initial */}
-          {isGear && item.brand && (
-            <View className="mb-4 flex-row items-center gap-3">
-              <View className="w-16 h-16 bg-gold/20 rounded-2xl border-2 border-gold/30 justify-center items-center">
-                <Text className="text-gold font-bold text-2xl" numberOfLines={1} ellipsizeMode="tail">
-                  {item.brand.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-              <View className="flex-1">
-                <Text className="text-crescender-400 text-xs mb-1">Brand</Text>
-                <Text className="text-white font-bold text-lg">{item.brand}</Text>
-                {item.gearCategory && (
-                  <Text className="text-crescender-500 text-xs mt-1">{item.gearCategory}</Text>
-                )}
-              </View>
-            </View>
-          )}
-          
-          <Text className="text-gold text-sm font-bold uppercase tracking-widest mb-2">{item.category}</Text>
-          <Text className="text-white text-3xl font-bold mb-2">{item.description}</Text>
-          {item.brand && (
-            <Text className="text-crescender-300 text-xl mb-4">{item.brand} {item.model}</Text>
-          )}
-          
-          <View className="flex-row items-center gap-2 mb-6">
-            <View className="bg-crescender-800 px-3 py-1 rounded-full">
-              <Text className="text-white font-bold text-lg">${(item.totalPrice / 100).toFixed(2)}</Text>
-            </View>
-            {item.quantity > 1 && (
-              <Text className="text-crescender-400 text-sm">({item.quantity} x ${(item.unitPrice / 100).toFixed(2)})</Text>
-            )}
-          </View>
-
-          {/* Context: Receipt Link */}
-          {receipt && (
-            <TouchableOpacity 
-              onPress={() => router.push(`/gear/${receipt.id}` as any)}
-              className="bg-crescender-900/40 p-4 rounded-xl border border-crescender-800 flex-row items-center gap-3"
-            >
-              <View className="w-10 h-10 bg-crescender-800 rounded-full justify-center items-center">
-                <Feather name="shopping-bag" size={18} color="#f5c518" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-crescender-400 text-xs">Purchased from</Text>
-                <Text className="text-white font-bold">{receipt.merchant}</Text>
-                <Text className="text-crescender-400 text-xs">
-                  {new Date(receipt.transactionDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
-                </Text>
-              </View>
-              <Feather name="chevron-right" size={20} color="#666" />
-            </TouchableOpacity>
+          {isEditing ? (
+            <GearItemEditForm 
+              editState={editState}
+              onUpdateField={(field, value) => setEditState({ ...editState, [field]: value })}
+            />
+          ) : (
+            <GearItemHeroView 
+              item={item}
+              receipt={receipt}
+              onReceiptPress={handleReceiptPress}
+            />
           )}
         </View>
 
-        {/* Granular Details */}
-        {isGear && gearDetails && (
-          <View className="p-6 border-b border-crescender-800">
-            <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-gold font-bold uppercase tracking-widest text-xs">Specifications</Text>
-              {item.gearCategory && (
-                <View className="bg-gold/20 px-3 py-1 rounded-full border border-gold/30">
-                  <Text className="text-gold text-xs font-bold">{item.gearCategory}</Text>
-                </View>
-              )}
-            </View>
-            
-            <View className="bg-crescender-900/40 rounded-xl overflow-hidden border border-crescender-800/50">
-              {/* Manufacturer/Brand info */}
-              {(gearDetails.manufacturer || gearDetails.brand) && (
-                <View className="p-4 border-b border-crescender-800/50 flex-row">
-                  <View className="flex-1">
-                    <Text className="text-crescender-500 text-xs mb-1">Manufacturer</Text>
-                    <Text className="text-white font-medium">{gearDetails.manufacturer || gearDetails.brand}</Text>
-                  </View>
-                  {gearDetails.makeYear && (
-                    <View className="flex-1">
-                      <Text className="text-crescender-500 text-xs mb-1">Year</Text>
-                      <Text className="text-white font-medium">{gearDetails.makeYear}</Text>
-                    </View>
-                  )}
-                </View>
-              )}
 
-              {/* Model info */}
-              {(gearDetails.modelName || gearDetails.modelNumber) && (
-                <View className="p-4 border-b border-crescender-800/50 flex-row">
-                  <View className="flex-1">
-                    <Text className="text-crescender-500 text-xs mb-1">Model</Text>
-                    <Text className="text-white font-medium">{gearDetails.modelName || '-'}</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-crescender-500 text-xs mb-1">Model #</Text>
-                    <Text className="text-crescender-300 font-mono text-sm">{gearDetails.modelNumber || '-'}</Text>
-                  </View>
-                </View>
-              )}
-
-              {/* Serial, Colour & Size */}
-              {(gearDetails.serialNumber || gearDetails.colour || gearDetails.size) && (
-                <View className="p-4 border-b border-crescender-800/50 flex-row">
-                  {gearDetails.serialNumber && (
-                    <View className="flex-1">
-                      <Text className="text-crescender-500 text-xs mb-1">Serial Number</Text>
-                      <Text className="text-gold font-mono font-bold">{gearDetails.serialNumber}</Text>
-                    </View>
-                  )}
-                  {gearDetails.colour && (
-                    <View className="flex-1">
-                      <Text className="text-crescender-500 text-xs mb-1">Colour</Text>
-                      <Text className="text-white font-medium">{gearDetails.colour}</Text>
-                    </View>
-                  )}
-                  {gearDetails.size && (
-                    <View className="flex-1">
-                      <Text className="text-crescender-500 text-xs mb-1">Size</Text>
-                      <Text className="text-white font-medium">{gearDetails.size}</Text>
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {/* Condition & Tier */}
-              {(gearDetails.condition || gearDetails.tier) && (
-                <View className="p-4 flex-row gap-4">
-                  {gearDetails.condition && (
-                    <View className="bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20">
-                      <Text className="text-blue-400 text-xs font-bold uppercase">{gearDetails.condition}</Text>
-                    </View>
-                  )}
-                  {gearDetails.tier && (
-                    <View className="bg-purple-500/10 px-3 py-1.5 rounded-lg border border-purple-500/20">
-                      <Text className="text-purple-400 text-xs font-bold uppercase">{gearDetails.tier}</Text>
-                    </View>
-                  )}
-                </View>
-              )}
-            </View>
-
-            {/* Other details */}
-            {(gearDetails.uniqueDetail || gearDetails.notedDamage) && (
-              <View className="mt-4 gap-3">
-                {gearDetails.uniqueDetail && (
-                  <View>
-                    <Text className="text-crescender-500 text-xs mb-1">Unique Details</Text>
-                    <Text className="text-crescender-200 italic leading-relaxed">{gearDetails.uniqueDetail}</Text>
-                  </View>
-                )}
-                {gearDetails.notedDamage && (
-                  <View className="bg-red-900/20 p-3 rounded-lg border border-red-900/30">
-                    <Text className="text-red-400 text-xs font-bold mb-1">Noted Damage</Text>
-                    <Text className="text-red-200 text-sm">{gearDetails.notedDamage}</Text>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
+        {/* Gear Details Section - Only show in view mode */}
+        {!isEditing && gearDetails && (
+          <GearItemSpecsView gearDetails={gearDetails} serialNumber={item.serialNumber} />
         )}
 
-        {/* Brand Resources & Links */}
-        {isGear && gearDetails && (gearDetails.officialUrl || gearDetails.officialManual || gearDetails.warrantyContactDetails) && (
-          <View className="p-6 border-b border-crescender-800">
-            <View className="flex-row items-center gap-2 mb-4">
-              {item.brand && (
-                <View className="w-8 h-8 bg-gold/20 rounded-lg border border-gold/30 justify-center items-center">
-                  <Text className="text-gold font-bold text-sm">
-                    {item.brand.charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-              )}
-              <Text className="text-gold font-bold uppercase tracking-widest text-xs flex-1">Brand Resources</Text>
-            </View>
-            
-            <View className="gap-3">
-              {gearDetails.officialUrl && (
-                <TouchableOpacity
-                  onPress={() => Linking.openURL(gearDetails.officialUrl!.startsWith('http') ? gearDetails.officialUrl! : `https://${gearDetails.officialUrl}`)}
-                  className="bg-gold/10 p-4 rounded-xl flex-row items-center gap-3 border border-gold/20"
-                >
-                  <View className="w-12 h-12 bg-gold/20 rounded-xl justify-center items-center border border-gold/30">
-                    <Feather name="globe" size={22} color="#f5c518" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-white font-semibold text-base">Brand Website</Text>
-                    <Text className="text-crescender-400 text-xs" numberOfLines={1}>{gearDetails.officialUrl}</Text>
-                  </View>
-                  <Feather name="external-link" size={18} color="#f5c518" />
-                </TouchableOpacity>
-              )}
-
-              {gearDetails.officialManual && (
-                <TouchableOpacity
-                  onPress={() => Linking.openURL(gearDetails.officialManual!.startsWith('http') ? gearDetails.officialManual! : `https://${gearDetails.officialManual}`)}
-                  className="bg-gold/10 p-4 rounded-xl flex-row items-center gap-3 border border-gold/20"
-                >
-                  <View className="w-12 h-12 bg-gold/20 rounded-xl justify-center items-center border border-gold/30">
-                    <Feather name="book" size={22} color="#f5c518" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-white font-semibold text-base">User Manual</Text>
-                    <Text className="text-crescender-400 text-xs" numberOfLines={1}>View Documentation</Text>
-                  </View>
-                  <Feather name="external-link" size={18} color="#f5c518" />
-                </TouchableOpacity>
-              )}
-
-              {gearDetails.warrantyContactDetails && (
-                <View className="bg-gold/10 p-4 rounded-xl border border-gold/20">
-                  <View className="flex-row items-center gap-3 mb-3">
-                    <View className="w-12 h-12 bg-gold/20 rounded-xl justify-center items-center border border-gold/30">
-                      <Feather name="shield" size={22} color="#f5c518" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-white font-semibold text-base">Warranty Support</Text>
-                      <Text className="text-crescender-400 text-xs">Brand Contact Details</Text>
-                    </View>
-                  </View>
-                  
-                  <View className="gap-2.5 pl-14">
-                    {gearDetails.warrantyContactDetails.phone && (
-                      <TouchableOpacity 
-                        onPress={() => Linking.openURL(`tel:${gearDetails.warrantyContactDetails!.phone!.replace(/\s/g, '')}`)}
-                        className="flex-row items-center gap-3"
-                      >
-                        <Feather name="phone" size={16} color="#f5c518" />
-                        <Text className="text-gold text-sm font-medium underline">{gearDetails.warrantyContactDetails.phone}</Text>
-                      </TouchableOpacity>
-                    )}
-                    {gearDetails.warrantyContactDetails.email && (
-                      <TouchableOpacity 
-                        onPress={() => Linking.openURL(`mailto:${gearDetails.warrantyContactDetails!.email}`)}
-                        className="flex-row items-center gap-3"
-                      >
-                        <Feather name="mail" size={16} color="#f5c518" />
-                        <Text className="text-gold text-sm font-medium underline">{gearDetails.warrantyContactDetails.email}</Text>
-                      </TouchableOpacity>
-                    )}
-                    {gearDetails.warrantyContactDetails.website && (
-                      <TouchableOpacity 
-                        onPress={() => Linking.openURL(`https://${gearDetails.warrantyContactDetails!.website!.replace(/^https?:\/\//, '')}`)}
-                        className="flex-row items-center gap-3"
-                      >
-                        <Feather name="globe" size={16} color="#f5c518" />
-                        <Text className="text-gold text-sm font-medium underline">{gearDetails.warrantyContactDetails.website}</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        {/* General Notes */}
-        {item.notes && (
-          <View className="p-6">
-            <Text className="text-crescender-400 font-bold mb-2 uppercase tracking-widest text-xs">Notes</Text>
-            <View className="bg-crescender-800/30 p-4 rounded-xl border border-crescender-700/30">
-              <Text className="text-crescender-200 leading-relaxed">{item.notes}</Text>
-            </View>
-          </View>
+        {/* Resources Section - Only show in view mode */}
+        {!isEditing && gearDetails && (
+          <GearItemResourcesView gearDetails={gearDetails} />
         )}
       </ScrollView>
     </View>

@@ -413,7 +413,7 @@ export default function SettingsScreen() {
               {activeTooltip === 'display' && 'Display category filters as icons instead of text labels.'}
               {activeTooltip === 'review' && 'Choose your preferred way to review receipts after scanning. You can change this anytime.'}
               {activeTooltip === 'financial-year' && 'Used for "Last financial year" and "This financial year" in the date picker. Default: July.'}
-              {activeTooltip === 'notifications' && 'Get notified when your receipts have been fully analysed and categorized.'}
+              {activeTooltip === 'notifications' && 'Get notified when your receipts have been fully analysed and categorised.'}
               {activeTooltip === 'data' && 'Backup your local collection (encrypted database and images) to a single file, or restore from a previous backup.'}
             </Text>
           </Pressable>

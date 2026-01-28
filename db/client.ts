@@ -74,6 +74,7 @@ const initTablesSQL = `
     warranty_details text,
     notes text,
     confidence real,
+    images text,
     created_at text DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (transaction_id) REFERENCES transactions(id)
   );
@@ -209,6 +210,14 @@ export async function initDatabase(): Promise<void> {
       try {
         expoDb.execSync('ALTER TABLE line_items ADD COLUMN service_details text;');
         console.log('[DB] Migration: Added service_details to line_items');
+      } catch (e) {
+        // Column already exists, ignore
+      }
+
+      // Added images column
+      try {
+        expoDb.execSync('ALTER TABLE line_items ADD COLUMN images text;');
+        console.log('[DB] Migration: Added images to line_items');
       } catch (e) {
         // Column already exists, ignore
       }

@@ -72,7 +72,7 @@ export default function ShareScreen() {
             onPress: () => router.replace('/')
           },
           {
-            text: 'Analyze',
+            text: 'Analyse',
             onPress: () => processSharedImage(imageUri)
           }
         ]

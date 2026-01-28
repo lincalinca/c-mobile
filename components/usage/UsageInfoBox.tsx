@@ -9,7 +9,7 @@ export const UsageInfoBox = () => {
         <Feather name="info" size={16} color="#94a3b8" />
         <View className="flex-1">
           <Text className="text-crescender-400 text-xs leading-relaxed">
-            Your weekly scan quota resets every Monday at midnight. Bonus scans from ads expire at the end of each week. Bulk uploads count toward your weekly limit.
+            Your weekly scan quota resets every Monday at midnight. Bonus scans from ads expire at the end of each week. Bulk uploads and manual AI Assistant requests count towards your weekly limit.
           </Text>
         </View>
       </View>

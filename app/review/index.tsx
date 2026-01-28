@@ -19,11 +19,16 @@ export default function ReviewRouter() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (params.forceMonolithic === 'true') {
+      setApproach('monolithic');
+      setLoading(false);
+      return;
+    }
     getReviewApproach().then((appr) => {
       setApproach(appr);
       setLoading(false);
     });
-  }, []);
+  }, [params.forceMonolithic]);
 
   if (loading) {
     return (

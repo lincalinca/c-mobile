@@ -97,6 +97,10 @@ export const lineItems = sqliteTable('line_items', {
   notes: text('notes'),
   confidence: real('confidence'), // 0.0 to 1.0
 
+  // Images for item (up to 3) - store as JSON array
+  // JSON: Array<{ uri: string, tag: string, date?: string, exif?: any }>
+  images: text('images'),
+
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
 

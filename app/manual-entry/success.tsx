@@ -11,15 +11,15 @@ export default function ManualEntrySuccess() {
     <View className="flex-1 bg-crescender-950 items-center justify-center px-6">
       <View className="mb-8 items-center">
         <View className="w-24 h-24 rounded-full bg-gold/20 items-center justify-center mb-6">
-           <Image 
-              source={require('../../assets/images/logo.png')} 
-              style={{ width: 48, height: 48, tintColor: '#f5c518' }} 
+            <Image 
+              source={require('../../public/logo.png')} 
+              style={{ width: 48, height: 48 }}
               resizeMode="contain"
             />
         </View>
         <Text className="text-white text-3xl font-bold text-center mb-2">Processing...</Text>
         <Text className="text-crescender-300 text-center text-lg">
-          I'm organizing those details and adding them to your collection. It will appear on your home screen shortly.
+          I'm organising those details and adding them to your collection. It will appear on your home screen shortly.
         </Text>
       </View>
 

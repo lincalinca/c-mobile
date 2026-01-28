@@ -1,9 +1,11 @@
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Linking, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Linking, useWindowDimensions, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import { ReceiptRepository, type LineItemWithDetails, type Receipt } from '../../lib/repository';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ItemImageGallery } from '../../components/common/ItemImageGallery';
+import { ItemImage } from '../../lib/repository';
 import { formatFullDate, getRelativeDateLabel } from '../../lib/dateUtils';
 import { ResultItem, reshapeToResults } from '../../lib/results';
 import { ServiceCard } from '../../components/results/ServiceCard';
@@ -24,6 +26,7 @@ export default function ServiceDetailScreen() {
   const [item, setItem] = useState<LineItemWithDetails | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [relatedItems, setRelatedItems] = useState<ResultItem[]>([]);
+  const [images, setImages] = useState<ItemImage[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -51,6 +54,28 @@ export default function ServiceDetailScreen() {
     };
     loadData();
   }, [id]);
+
+  useEffect(() => {
+    if (item?.imagesParsed) {
+      setImages(item.imagesParsed);
+    } else {
+      setImages([]);
+    }
+  }, [item]);
+
+  const handleImagesChange = async (newImages: ItemImage[]) => {
+    setImages(newImages);
+    if (id) {
+      try {
+        await ReceiptRepository.updateLineItem(id, {
+          images: JSON.stringify(newImages),
+        });
+      } catch (e) {
+        console.error('Failed to save images', e);
+        Alert.alert('Error', 'Failed to save images. Please try again.');
+      }
+    }
+  };
 
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {
@@ -126,6 +151,13 @@ export default function ServiceDetailScreen() {
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}>
+        {/* Item Images Gallery */}
+        <ItemImageGallery 
+          images={images} 
+          onImagesChange={handleImagesChange} 
+          category="service" 
+        />
+
         {/* Hero Section */}
         <View className="p-6 border-b border-crescender-800">
           <View className="flex-row items-center gap-3 mb-4">

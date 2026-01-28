@@ -79,12 +79,21 @@ export interface WarrantyDetails {
   startDate?: string;
 }
 
+// Image Interface
+export interface ItemImage {
+  uri: string;
+  tag: string;
+  date?: string;
+  exif?: any;
+}
+
 // Enhanced Line Item with parsed JSON fields
 export interface LineItemWithDetails extends LineItem {
   gearDetailsParsed?: GearDetails;
   educationDetailsParsed?: EducationDetails;
   serviceDetailsParsed?: ServiceDetails;
   warrantyDetailsParsed?: WarrantyDetails;
+  imagesParsed?: ItemImage[];
 }
 
 // Helper functions to parse JSON fields
@@ -128,6 +137,21 @@ function parseWarrantyDetails(warrantyDetailsJson: string | null): WarrantyDetai
   }
 }
 
+function parseItemImages(imagesJson: string | null): ItemImage[] | undefined {
+  if (!imagesJson) return undefined;
+  // Skip if it's not valid JSON (e.g., starts with a letter instead of [ or {)
+  if (typeof imagesJson === 'string' && !imagesJson.trim().startsWith('[') && !imagesJson.trim().startsWith('{')) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(imagesJson);
+    return Array.isArray(parsed) ? parsed as ItemImage[] : undefined;
+  } catch (e) {
+    console.warn('[Repository] Failed to parse images:', e);
+    return undefined;
+  }
+}
+
 function enhanceLineItem(item: LineItem): LineItemWithDetails {
   return {
     ...item,
@@ -135,6 +159,7 @@ function enhanceLineItem(item: LineItem): LineItemWithDetails {
     educationDetailsParsed: parseEducationDetails(item.educationDetails),
     serviceDetailsParsed: parseServiceDetails(item.serviceDetails),
     warrantyDetailsParsed: parseWarrantyDetails(item.warrantyDetails),
+    imagesParsed: parseItemImages(item.images),
   };
 }
 
@@ -220,7 +245,7 @@ export const TransactionRepository = {
   /**
    * Update a single line item by id (e.g. description, educationDetails).
    */
-  async updateLineItem(id: string, updates: Partial<Pick<LineItem, 'description' | 'educationDetails'>>) {
+  async updateLineItem(id: string, updates: Partial<Pick<LineItem, 'description' | 'educationDetails' | 'images'>>) {
     await waitForDb();
     await db.update(lineItems).set(updates).where(eq(lineItems.id, id));
     console.log('[Repository] Updated line item:', id);
