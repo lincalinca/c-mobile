@@ -8,6 +8,8 @@ import { initDatabase } from "../db/client";
 import { View } from "react-native";
 import { MusicFlowBackground } from "../components/common/MusicFlowBackground";
 import { ATTRequest } from "../components/ads";
+import { initializeChannels } from "../lib/notifications/Channels";
+import { reconcileNotifications, cleanupStaleNotifications } from "../lib/notifications/Reconciler";
 import "../global.css";
 
 export default function Layout() {
@@ -17,9 +19,20 @@ export default function Layout() {
 
   useEffect(() => {
     // Initialize DB in background, don't block render
-    initDatabase().catch((e) => {
-      console.error("Failed to initialize database", e);
-    });
+    initDatabase()
+      .then(async () => {
+        // Initialize notification channels
+        await initializeChannels();
+        
+        // Clean up stale notifications
+        await cleanupStaleNotifications();
+        
+        // Reconcile notifications based on current domain data
+        await reconcileNotifications();
+      })
+      .catch((e) => {
+        console.error("Failed to initialize database", e);
+      });
   }, []);
 
   return (

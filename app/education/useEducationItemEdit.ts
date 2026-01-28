@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ReceiptRepository, type LineItemWithDetails, type Receipt } from '../../lib/repository';
 import { generateEducationSeriesTitle } from '../../lib/educationUtils';
+import { scheduleLessonNotificationsForItem } from '../../lib/educationNotifications';
 
 export interface EducationItemEditState {
   title: string;
@@ -71,6 +72,14 @@ export function useEducationItemEdit(
         description: finalTitle,
         educationDetails: JSON.stringify(merged),
       });
+
+      // Schedule lesson notifications for updated item
+      try {
+        await scheduleLessonNotificationsForItem(item, receipt);
+      } catch (e) {
+        // Don't fail the save if notification scheduling fails
+        console.warn('Failed to schedule lesson notifications:', e);
+      }
 
       onSuccess();
       setIsEditing(false);

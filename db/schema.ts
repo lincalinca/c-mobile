@@ -118,6 +118,34 @@ export const students = sqliteTable('students', {
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
+/**
+ * Notification settings table - single row configuration
+ */
+export const notificationSettings = sqliteTable('notification_settings', {
+  id: text('id').primaryKey().default('default'),
+  globalEnabled: integer('global_enabled', { mode: 'boolean' }).default(false),
+  perCategoryEnabled: text('per_category_enabled').notNull().default('{}'), // JSON: Record<NotificationCategory, boolean>
+  dailyLimit: integer('daily_limit').default(1),
+  weeklyLimit: integer('weekly_limit').default(6),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+/**
+ * Notification events table - individual notification lifecycle events
+ */
+export const notificationEvents = sqliteTable('notification_events', {
+  id: text('id').primaryKey(),
+  category: text('category').notNull(), // NotificationCategory
+  key: text('key').notNull(), // Stable idempotency key
+  scheduledAt: text('scheduled_at').notNull(), // ISO UTC
+  triggerAt: text('trigger_at').notNull(), // ISO UTC
+  status: text('status').notNull().default('scheduled'), // 'scheduled' | 'delivered' | 'cancelled'
+  metadata: text('metadata').notNull().default('{}'), // JSON: NotificationMetadata
+  osNotificationId: text('os_notification_id'), // OS notification identifier for cancellation
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
 // Legacy aliases for backward compatibility during migration
 export const receipts = transactions;
 export const receiptItems = lineItems;

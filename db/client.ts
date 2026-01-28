@@ -253,6 +253,43 @@ export async function initDatabase(): Promise<void> {
         // Table already exists, ignore
       }
 
+      // Phase 6: Notification tables
+      try {
+        expoDb.execSync(`
+          CREATE TABLE IF NOT EXISTS notification_settings (
+            id text PRIMARY KEY NOT NULL DEFAULT 'default',
+            global_enabled integer DEFAULT 0,
+            per_category_enabled text NOT NULL DEFAULT '{}',
+            daily_limit integer DEFAULT 1,
+            weekly_limit integer DEFAULT 6,
+            created_at text DEFAULT CURRENT_TIMESTAMP,
+            updated_at text DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+        console.log('[DB] Migration: Created notification_settings table');
+      } catch (e) {
+        // Table already exists, ignore
+      }
+
+      try {
+        expoDb.execSync(`
+          CREATE TABLE IF NOT EXISTS notification_events (
+            id text PRIMARY KEY NOT NULL,
+            category text NOT NULL,
+            key text NOT NULL,
+            scheduled_at text NOT NULL,
+            trigger_at text NOT NULL,
+            status text NOT NULL DEFAULT 'scheduled',
+            metadata text NOT NULL DEFAULT '{}',
+            os_notification_id text,
+            created_at text DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+        console.log('[DB] Migration: Created notification_events table');
+      } catch (e) {
+        // Table already exists, ignore
+      }
+
       dbInstance = drizzle(expoDb, { schema });
 
       isInitialized = true;

@@ -212,22 +212,23 @@ export default function SettingsScreen() {
               <Feather name="info" size={14} color="#6b7280" />
             </TouchableOpacity>
           </View>
-          <View className="bg-crescender-900/40 rounded-2xl border border-crescender-800 overflow-hidden">
-            <View className="flex-row items-center justify-between p-4">
-              <View className="flex-row items-center gap-3">
-                <View className="w-8 h-8 rounded-full bg-gold/10 items-center justify-center">
-                  <Feather name="bell" size={ICON_SIZES.standard} color="#f5c518" />
-                </View>
-                <Text className="text-white text-base font-medium">Record Analysis Alerts</Text>
+          <TouchableOpacity
+            onPress={() => router.push('/settings/notifications')}
+            className="bg-crescender-900/40 rounded-2xl border border-crescender-800 flex-row items-center justify-between p-4"
+          >
+            <View className="flex-row items-center gap-3 flex-1 min-w-0">
+              <View className="w-8 h-8 rounded-full bg-gold/10 items-center justify-center flex-shrink-0">
+                <Feather name="bell" size={ICON_SIZES.standard} color="#f5c518" />
               </View>
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={setNotificationsEnabled}
-                trackColor={{ false: '#374151', true: '#f5c518' }}
-                thumbColor={Platform.OS === 'ios' ? '#ffffff' : notificationsEnabled ? '#ffffff' : '#9ca3af'}
-              />
+              <View className="flex-1 min-w-0">
+                <Text className="text-white text-base font-medium">Notification Settings</Text>
+                <Text className="text-crescender-400 text-xs mt-0.5" numberOfLines={1}>
+                  Manage lesson reminders, gear alerts, and more
+                </Text>
+              </View>
             </View>
-          </View>
+            <Feather name="chevron-right" size={ICON_SIZES.standard} color="#6b7280" />
+          </TouchableOpacity>
         </View>
 
         <View className="mb-6">
