@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { hasUsedBaseScans } from '../../lib/usageTracking';
 
-interface CameraBarProps {
+interface NewDataBarProps {
   /** @deprecated Use startDate/endDate. Kept for backward compat. */
   selectedDate?: Date | null;
   startDate?: Date | null;
@@ -17,13 +17,13 @@ function formatDayMonth(d: Date) {
   return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
 }
 
-export const CameraBar = ({
+export const NewDataBar = ({
   selectedDate,
   startDate: startProp,
   endDate: endProp,
   onShowDatePicker,
   onClearDate,
-}: CameraBarProps) => {
+}: NewDataBarProps) => {
   const router = useRouter();
   const [showGetMoreScans, setShowGetMoreScans] = useState(false);
   const [showAddReceiptMenu, setShowAddReceiptMenu] = useState(false);

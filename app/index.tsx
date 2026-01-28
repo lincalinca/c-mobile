@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { ReceiptRepository } from '../lib/repository';
 import { reshapeToResults, ResultItem, ResultType } from '../lib/results';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CameraBar } from '../components/header/CameraBar';
+import { NewDataBar } from '../components/header/NewDataBar';
 import { FilterBar, FilterType } from '../components/filters/FilterBar';
 import { CardGrid } from '../components/results/CardGrid';
 import { PersistentHeader } from '../components/header/PersistentHeader';
@@ -262,8 +262,8 @@ export default function HomeScreen() {
         financialYearStartMonth={financialYearStartMonth}
       />
 
-      {/* Camera Capture Bar with Date Filter */}
-      <CameraBar
+      {/* New Data Entry Bar with Date Filter */}
+      <NewDataBar
         startDate={startDate}
         endDate={endDate}
         onShowDatePicker={() => setShowDateRangePicker(true)}
