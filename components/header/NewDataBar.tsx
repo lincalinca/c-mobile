@@ -188,6 +188,25 @@ export const NewDataBar = ({
               </View>
               <Feather name="chevron-right" size={20} color="#9ca3af" />
             </TouchableOpacity>
+            {/* Separator */}
+            <View className="h-[1px] bg-crescender-800 w-full mb-3" />
+
+            <TouchableOpacity
+              onPress={() => {
+                setShowAddReceiptMenu(false);
+                router.push('/manual-entry' as any);
+              }}
+              className="flex-row items-center gap-3 p-4 rounded-[14px]"
+            >
+              <View className="w-10 h-10 rounded-full bg-crescender-800 items-center justify-center">
+                <Feather name="edit-3" size={20} color="#9ca3af" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-crescender-300 text-base font-semibold">Don't have a receipt?</Text>
+                <Text className="text-crescender-500 text-sm">Add item details manually</Text>
+              </View>
+              <Feather name="chevron-right" size={20} color="#6b7280" />
+            </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>

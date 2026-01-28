@@ -1,11 +1,13 @@
-import { View, Text, TouchableOpacity, ScrollView, Platform, Switch, Linking, Modal, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Platform, Switch, Linking, Modal, Pressable, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PersistentHeader } from '../components/header/PersistentHeader';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getReviewApproach, setReviewApproach, type ReviewApproach } from '../lib/reviewConfig';
 import { ICON_SIZES } from '../lib/iconSizes';
+import { BackupService } from '../lib/backupService';
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -18,6 +20,35 @@ export default function SettingsScreen() {
   const [reviewApproach, setReviewApproachState] = useState<ReviewApproach>('monolithic');
   const [showReviewApproachPicker, setShowReviewApproachPicker] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+
+  const handleExportBackup = async () => {
+    try {
+      await BackupService.exportBackup();
+    } catch (e) {
+      Alert.alert('Backup Failed', 'An error occurred while creating the backup.');
+      console.error(e);
+    }
+  };
+
+  const handleImportBackup = () => {
+    Alert.alert(
+      'Restore Data',
+      'This will replace all your current data with the backup. This action cannot be undone. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Restore', 
+          style: 'destructive',
+          onPress: async () => {
+            const success = await BackupService.importBackup();
+            if (!success) {
+              Alert.alert('Restore Failed', 'An error occurred while restoring the backup.');
+            }
+          }
+        },
+      ]
+    );
+  };
 
   // Load settings from storage
   useEffect(() => {
@@ -200,6 +231,45 @@ export default function SettingsScreen() {
         </View>
 
         <View className="mb-6">
+          <View className="flex-row items-center gap-2 mb-2">
+            <Text className="text-gold font-bold uppercase tracking-widest text-xs ml-1">Data Management</Text>
+            <TouchableOpacity
+              onPress={() => setActiveTooltip(activeTooltip === 'data' ? null : 'data')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="info" size={14} color="#6b7280" />
+            </TouchableOpacity>
+          </View>
+          <View className="bg-crescender-900/40 rounded-2xl border border-crescender-800 overflow-hidden">
+            <TouchableOpacity 
+              onPress={handleExportBackup}
+              className="flex-row items-center justify-between p-4 border-b border-crescender-800"
+            >
+              <View className="flex-row items-center gap-3">
+                <View className="w-8 h-8 rounded-full bg-gold/10 items-center justify-center">
+                  <Feather name="download" size={ICON_SIZES.standard} color="#f5c518" />
+                </View>
+                <Text className="text-white text-base font-medium">Backup Data</Text>
+              </View>
+              <Feather name="chevron-right" size={ICON_SIZES.standard} color="#6b7280" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={handleImportBackup}
+              className="flex-row items-center justify-between p-4"
+            >
+              <View className="flex-row items-center gap-3">
+                <View className="w-8 h-8 rounded-full bg-crescender-800 items-center justify-center">
+                  <Feather name="upload-cloud" size={ICON_SIZES.standard} color="#9ca3af" />
+                </View>
+                <Text className="text-white text-base font-medium">Restore Data</Text>
+              </View>
+              <Feather name="chevron-right" size={ICON_SIZES.standard} color="#6b7280" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View className="mb-6">
           <Text className="text-gold font-bold uppercase tracking-widest text-xs ml-1 mb-2">Legal & Support</Text>
           <View className="bg-crescender-900/40 rounded-2xl border border-crescender-800 overflow-hidden">
             <TouchableOpacity 
@@ -329,6 +399,7 @@ export default function SettingsScreen() {
                 {activeTooltip === 'review' && 'Review Style'}
                 {activeTooltip === 'financial-year' && 'Financial Year'}
                 {activeTooltip === 'notifications' && 'Notifications'}
+                {activeTooltip === 'data' && 'Data Management'}
               </Text>
               <TouchableOpacity
                 onPress={() => setActiveTooltip(null)}
@@ -343,6 +414,7 @@ export default function SettingsScreen() {
               {activeTooltip === 'review' && 'Choose your preferred way to review receipts after scanning. You can change this anytime.'}
               {activeTooltip === 'financial-year' && 'Used for "Last financial year" and "This financial year" in the date picker. Default: July.'}
               {activeTooltip === 'notifications' && 'Get notified when your receipts have been fully analysed and categorized.'}
+              {activeTooltip === 'data' && 'Backup your local collection (encrypted database and images) to a single file, or restore from a previous backup.'}
             </Text>
           </Pressable>
         </Pressable>

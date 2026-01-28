@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
-    "@react-native-community/datetimepicker": "8.4.4",
+    "@react-native-community/datetimepicker": "^8.4.4",
     "babel-preset-expo": "~54.0.10",
     "date-fns": "^4.1.0",
     "drizzle-orm": "^0.45.1",
@@ -36,6 +36,9 @@
     "expo-sqlite": "^16.0.10",
     "expo-status-bar": "~3.0.9",
     "expo-tracking-transparency": "~6.0.8",
+    "expo-updates": "~29.0.16",
+    "fast-levenshtein": "^3.0.0",
+    "jszip": "^3.10.1",
     "nativewind": "^4.2.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
