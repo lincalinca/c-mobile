@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { View, Text, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
-import { callSupabaseFunction } from '../lib/supabase';
-import { TransactionRepository } from '../lib/repository';
-import { ProcessingView } from '../components/processing/ProcessingView';
+import { callSupabaseFunction } from '@lib/supabase';
+import { TransactionRepository } from '@lib/repository';
+import { ProcessingView } from '@components/processing/ProcessingView';
 import * as IntentLauncher from 'expo-intent-launcher';
 
 /**

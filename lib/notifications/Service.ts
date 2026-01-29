@@ -7,7 +7,7 @@
 
 import { canSend } from './Policy';
 import { scheduleLocalNotification, generateNotificationKey } from './Scheduler';
-import { linkToEducationItem, linkToGearItem, linkToService } from '../navigation/deeplinks';
+import { linkToEducationItem, linkToGearItem, linkToService } from '@lib/navigation/deeplinks';
 import type { NotificationCategory, NotificationMetadata } from './types';
 
 /**

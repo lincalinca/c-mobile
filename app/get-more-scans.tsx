@@ -3,10 +3,10 @@ import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PersistentHeader } from '../components/header/PersistentHeader';
-import { useRewardedAd } from '../components/ads';
-import { PlaceholderRewardedAd } from '../components/ads/PlaceholderAd';
-import { getUsageStats, addBonusScans } from '../lib/usageTracking';
+import { PersistentHeader } from '@components/header/PersistentHeader';
+import { useRewardedAd } from '@components/ads';
+import { PlaceholderRewardedAd } from '@components/ads/PlaceholderAd';
+import { getUsageStats, addBonusScans } from '@lib/usageTracking';
 import { format } from 'date-fns';
 
 export default function GetMoreScansScreen() {

@@ -3,7 +3,7 @@
  * Declarative definition of education form structure
  */
 
-import type { FormSectionConfig } from '../types';
+import type { FormSectionConfig } from '@lib/forms/types';
 
 export const EDUCATION_FORM_SECTIONS: FormSectionConfig[] = [
   {

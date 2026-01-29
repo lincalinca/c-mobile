@@ -17,8 +17,8 @@ import { getEducationSeriesSummary } from '@lib/educationEvents';
 import { addEducationSeriesToDeviceCalendar } from '@lib/calendarExport';
 import { detectNewPeople } from '@lib/peopleDetection';
 
-import { useReviewState } from '../useReviewState';
-import type { ReviewInitialData, ReviewLineItem } from '../types';
+import { useReviewState } from '@app/review/useReviewState';
+import type { ReviewInitialData, ReviewLineItem } from '@app/review/types';
 import { SectionTitle } from './FormFields';
 import { ReviewTransactionSection } from './ReviewTransactionSection';
 import { ReviewMerchantSection } from './ReviewMerchantSection';

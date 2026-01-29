@@ -15,15 +15,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import * as Crypto from 'expo-crypto';
 import * as Clipboard from 'expo-clipboard';
-import { TransactionRepository } from '../lib/repository';
+import { TransactionRepository } from '@lib/repository';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ITEM_CATEGORIES } from '../constants/categories';
-import { useInterstitialAd, usePreloadInterstitialAd } from '../components/ads';
-import { generateEducationEvents, getEducationSeriesSummary } from '../lib/educationEvents';
-import { addEducationSeriesToDeviceCalendar, addEventToDeviceCalendar } from '../lib/calendarExport';
-import { LessonDateSelector } from '../components/education/LessonDateSelector';
-import { detectNewPeople } from '../lib/peopleDetection';
+import { ITEM_CATEGORIES } from '@constants/categories';
+import { useInterstitialAd, usePreloadInterstitialAd } from '@components/ads';
+import { generateEducationEvents, getEducationSeriesSummary } from '@lib/educationEvents';
+import { addEducationSeriesToDeviceCalendar, addEventToDeviceCalendar } from '@lib/calendarExport';
+import { LessonDateSelector } from '@components/education/LessonDateSelector';
+import { detectNewPeople } from '@lib/peopleDetection';
 
 // Document type options
 const DOCUMENT_TYPES = [

@@ -6,8 +6,8 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { DOCUMENT_TYPES } from '../config';
-import type { DocumentType } from '../config';
+import { DOCUMENT_TYPES } from '@app/review/config';
+import type { DocumentType } from '@app/review/config';
 import { SectionContainer, SectionTitle, TextField, TwoColumnRow } from './FormFields';
 
 interface ReviewTransactionSectionProps {

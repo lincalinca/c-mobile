@@ -6,9 +6,9 @@
  */
 
 import { NotificationEventsRepository, NotificationSettingsRepository } from './NotificationRepository';
-import { scheduleLessonNotificationsForChain } from '../educationNotifications';
-import { buildEducationChains } from '../educationChain';
-import { TransactionRepository } from '../repository';
+import { scheduleLessonNotificationsForChain } from '@lib/educationNotifications';
+import { buildEducationChains } from '@lib/educationChain';
+import { TransactionRepository } from '@lib/repository';
 import { cancelByKey } from './Scheduler';
 import type { NotificationCategory } from './types';
 

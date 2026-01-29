@@ -7,10 +7,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
-import { NotificationSettingsRepository } from '../lib/notifications/NotificationRepository';
-import { PermissionManager } from '../lib/notifications/PermissionManager';
-import { cancelByCategory } from '../lib/notifications/Scheduler';
-import type { NotificationCategory, NotificationSettings } from '../lib/notifications/types';
+import { NotificationSettingsRepository } from '@lib/notifications/NotificationRepository';
+import { PermissionManager } from '@lib/notifications/PermissionManager';
+import { cancelByCategory } from '@lib/notifications/Scheduler';
+import type { NotificationCategory, NotificationSettings } from '@lib/notifications/types';
 
 export function useNotificationSettings() {
   const [settings, setSettings] = useState<NotificationSettings | null>(null);

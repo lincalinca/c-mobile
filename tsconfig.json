@@ -9,8 +9,10 @@
       "@lib/*": ["lib/*"],
       "@app/*": ["app/*"],
       "@db/*": ["db/*"],
+      "@hooks/*": ["hooks/*"],
       "@assets/*": ["assets/*"],
-      "@public/*": ["public/*"]
+      "@public/*": ["public/*"],
+      "@root/*": ["*"]
     }
   },
   "include": [

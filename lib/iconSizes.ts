@@ -3,7 +3,7 @@
  * Icons should scale proportionally with text for visual cohesion
  * 
  * Usage:
- *   import { ICON_SIZES } from '../lib/iconSizes';
+ *   import { ICON_SIZES } from '@lib/iconSizes';
  *   <Feather name="camera" size={ICON_SIZES.standard} />
  */
 

@@ -1,11 +1,11 @@
 import { View, Text, FlatList, TouchableOpacity, Image, TextInput, ActivityIndicator, Platform } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useCallback } from 'react';
-import { ReceiptRepository, Receipt } from '../lib/repository';
+import { ReceiptRepository, Receipt } from '@lib/repository';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { PersistentHeader } from '../components/header/PersistentHeader';
+import { PersistentHeader } from '@components/header/PersistentHeader';
 
 export default function HistoryScreen() {
   const router = useRouter();

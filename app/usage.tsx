@@ -1,14 +1,14 @@
 import { View, Text, ScrollView } from 'react-native';
 import React from 'react';
-import { PersistentHeader } from '../components/header/PersistentHeader';
-import { PlaceholderRewardedAd } from '../components/ads/PlaceholderAd';
-import { useUsageScreen } from '../hooks/useUsageScreen';
+import { PersistentHeader } from '@components/header/PersistentHeader';
+import { PlaceholderRewardedAd } from '@components/ads/PlaceholderAd';
+import { useUsageScreen } from '@hooks/useUsageScreen';
 
 // Atomic UI Components
-import { PageHeader } from '../components/usage/PageHeader';
-import { QuotaDashboard } from '../components/usage/QuotaDashboard';
-import { ActionCard } from '../components/usage/ActionCard';
-import { UsageInfoBox } from '../components/usage/UsageInfoBox';
+import { PageHeader } from '@components/usage/PageHeader';
+import { QuotaDashboard } from '@components/usage/QuotaDashboard';
+import { ActionCard } from '@components/usage/ActionCard';
+import { UsageInfoBox } from '@components/usage/UsageInfoBox';
 
 export default function UsageScreen() {
   const {

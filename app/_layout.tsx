@@ -4,14 +4,14 @@ import { Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useEffect } from "react";
-import { initDatabase } from "../db/client";
+import { initDatabase } from "@db/client";
 import { View } from "react-native";
-import { MusicFlowBackground } from "../components/common/MusicFlowBackground";
-import { ATTRequest } from "../components/ads";
+import { MusicFlowBackground } from "@components/common/MusicFlowBackground";
+import { ATTRequest } from "@components/ads";
 // NOTIFICATIONS ARCHIVED - See /docs/NOTIFICATIONS_ARCHIVE.md for re-implementation
-// import { initializeChannels } from "../lib/notifications/Channels";
-// import { reconcileNotifications, cleanupStaleNotifications } from "../lib/notifications/Reconciler";
-import "../global.css";
+// import { initializeChannels } from "@lib/notifications/Channels";
+// import { reconcileNotifications, cleanupStaleNotifications } from "@lib/notifications/Reconciler";
+import "@root/global.css";
 
 export default function Layout() {
   const pathname = usePathname();

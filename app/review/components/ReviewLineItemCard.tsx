@@ -9,7 +9,7 @@ import { Feather } from '@expo/vector-icons';
 import { ITEM_CATEGORIES } from '@constants/categories';
 import { LessonDateSelector } from '@components/education/LessonDateSelector';
 import { TextField, TwoColumnRow } from './FormFields';
-import type { ReviewLineItem, EducationDetails, GearDetails } from '../types';
+import type { ReviewLineItem, EducationDetails, GearDetails } from '@app/review/types';
 
 // ============================================================================
 // Field Configurations (Data-Driven)

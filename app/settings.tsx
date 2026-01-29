@@ -2,12 +2,12 @@ import { View, Text, TouchableOpacity, ScrollView, Platform, Switch, Linking, Mo
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PersistentHeader } from '../components/header/PersistentHeader';
+import { PersistentHeader } from '@components/header/PersistentHeader';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getReviewApproach, setReviewApproach, type ReviewApproach } from '../lib/reviewConfig';
-import { ICON_SIZES } from '../lib/iconSizes';
-import { BackupService } from '../lib/backupService';
+import { getReviewApproach, setReviewApproach, type ReviewApproach } from '@lib/reviewConfig';
+import { ICON_SIZES } from '@lib/iconSizes';
+import { BackupService } from '@lib/backupService';
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 

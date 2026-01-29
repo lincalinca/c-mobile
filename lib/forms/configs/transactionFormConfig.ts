@@ -3,7 +3,7 @@
  * Declarative definition of transaction form structure
  */
 
-import type { FormSectionConfig } from '../types';
+import type { FormSectionConfig } from '@lib/forms/types';
 
 // Document type options
 const DOCUMENT_TYPES = [

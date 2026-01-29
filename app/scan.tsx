@@ -7,10 +7,10 @@ import * as DocumentPicker from 'expo-document-picker';
 import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { captureRef } from 'react-native-view-shot';
-import { callSupabaseFunction } from '../lib/supabase';
-import { ProcessingWithAdView } from '../components/processing/ProcessingWithAdView';
-import { TransactionRepository, StudentRepository } from '../lib/repository';
-import { recordScan, hasScansRemaining } from '../lib/usageTracking';
+import { callSupabaseFunction } from '@lib/supabase';
+import { ProcessingWithAdView } from '@components/processing/ProcessingWithAdView';
+import { TransactionRepository, StudentRepository } from '@lib/repository';
+import { recordScan, hasScansRemaining } from '@lib/usageTracking';
 
 const isAndroid = Platform.OS === 'android';
 

@@ -1,7 +1,7 @@
 import React from "react";
 import renderer from "react-test-renderer";
 
-import Home from "../index";
+import Home from "@app/index";
 
 describe("<Home />", () => {
   it("has 1 child", () => {

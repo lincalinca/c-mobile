@@ -7,7 +7,7 @@ import { PersistentHeader } from '@components/header/PersistentHeader';
 import { StudentRepository, ReceiptRepository, type Student, type Receipt, type LineItemWithDetails } from '@lib/repository';
 import { formatFullDate } from '@lib/dateUtils';
 import { buildEducationChains, type EducationChain } from '@lib/educationChain';
-import { EducationLearningPathView } from '../education/EducationLearningPathView';
+import { EducationLearningPathView } from '@app/education/EducationLearningPathView';
 import { DatePickerModal } from '@components/calendar/DatePickerModal';
 import { AutoSizingText } from '@components/common/AutoSizingText';
 import { RELATIONSHIP_OPTIONS } from '@components/people/RelationshipSelector';

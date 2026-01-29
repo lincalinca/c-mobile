@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform, Image } from 'react-native';
-import { MusicFlowBackground } from '../common/MusicFlowBackground';
+import { MusicFlowBackground } from '@components/common/MusicFlowBackground';
 
 /**
  * AppLaunchPreview Component

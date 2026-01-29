@@ -1,5 +1,5 @@
-import { db, waitForDb } from '../db/client';
-import { transactions, lineItems, students } from '../db/schema';
+import { db, waitForDb } from '@db/client';
+import { transactions, lineItems, students } from '@db/schema';
 import { desc, eq } from 'drizzle-orm';
 
 // Types

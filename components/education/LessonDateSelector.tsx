@@ -7,7 +7,7 @@
 import { View, Text, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { useState, useMemo } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { DatePickerModal } from '../calendar/DatePickerModal';
+import { DatePickerModal } from '@components/calendar/DatePickerModal';
 import { generateEducationEvents } from '@lib/educationEvents';
 import { getLessonCountSuspects } from '@lib/educationUtils';
 import type { ReceiptItem, EducationDetails } from '@lib/repository';

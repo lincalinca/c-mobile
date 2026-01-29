@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
-import { getUsageStats, addBonusScans } from '../lib/usageTracking';
-import { useRewardedAd } from '../components/ads';
+import { getUsageStats, addBonusScans } from '@lib/usageTracking';
+import { useRewardedAd } from '@components/ads';
 
 export interface UsageStats {
   scansUsed: number;

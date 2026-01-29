@@ -3,7 +3,7 @@
  * Declarative definition of manual entry workflow steps
  */
 
-import type { WorkflowConfig } from '../types';
+import type { WorkflowConfig } from '@lib/workflows/types';
 
 export const MANUAL_ENTRY_WORKFLOW: WorkflowConfig = {
   id: 'manual-entry',

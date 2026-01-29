@@ -3,7 +3,7 @@
  * Declarative definition of service form structure
  */
 
-import type { FormSectionConfig } from '../types';
+import type { FormSectionConfig } from '@lib/forms/types';
 
 export const SERVICE_FORM_SECTIONS: FormSectionConfig[] = [
   {

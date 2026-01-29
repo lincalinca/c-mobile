@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import * as Crypto from 'expo-crypto';
@@ -147,40 +147,26 @@ export default function GearDetailScreen() {
     }
 
     try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please grant permission to save images to your device.');
-        return;
-      }
+      const { uri } = await prepareImageForSave();
+      const isAvailable = await Sharing.isAvailableAsync();
 
-      const { uri, filename } = await prepareImageForSave();
-
-      if (Platform.OS === 'android') {
-        try {
-          const downloadsPath = `${FS.documentDirectory}../Downloads/`;
-          const downloadsUri = `${downloadsPath}${filename}`;
-          const dirInfo = await FS.getInfoAsync(downloadsPath);
-          if (!dirInfo.exists) {
-            await FS.makeDirectoryAsync(downloadsPath, { intermediates: true });
-          }
-          await FS.copyAsync({ from: uri, to: downloadsUri });
-          await MediaLibrary.createAssetAsync(uri);
-          Alert.alert('Saved', `Receipt saved as "${filename}" to Downloads`);
-          return;
-        } catch {
-          // Fall through to media library save
-        }
-      }
-
-      const asset = await MediaLibrary.createAssetAsync(uri);
-      const album = await MediaLibrary.getAlbumAsync('Downloads');
-      if (album == null) {
-        await MediaLibrary.createAlbumAsync('Downloads', asset, false);
+      if (isAvailable) {
+        // Use system share sheet - user can save to Files, Downloads, Photos, etc.
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/jpeg',
+          dialogTitle: 'Save Receipt Image',
+          UTI: 'public.jpeg',
+        });
       } else {
-        await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+        // Fallback to MediaLibrary if sharing unavailable
+        const { status } = await MediaLibrary.requestPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Please grant permission to save images to your device.');
+          return;
+        }
+        await MediaLibrary.createAssetAsync(uri);
+        Alert.alert('Saved', 'Receipt saved to Photos');
       }
-
-      Alert.alert('Saved', `Receipt saved as "${filename}"`);
     } catch (error) {
       console.error('Save error:', error);
       Alert.alert('Save Failed', `Could not save image: ${error instanceof Error ? error.message : 'Unknown error'}`);

@@ -444,7 +444,7 @@ const nextQuestion = (type: CategoryType, step: number) => {
 
 ```typescript
 // lib/forms/configs/transactionFormConfig.ts
-import { FormSectionConfig } from '../types';
+import { FormSectionConfig } from '@lib/forms/types';
 
 export const TRANSACTION_FORM_SECTIONS: FormSectionConfig[] = [
   {
@@ -498,7 +498,7 @@ export function TransactionEditForm({ editState, onUpdate }) {
 
 ```typescript
 // lib/workflows/configs/manualEntryWorkflow.ts
-import { WorkflowConfig } from '../types';
+import { WorkflowConfig } from '@lib/workflows/types';
 
 export const MANUAL_ENTRY_WORKFLOW: WorkflowConfig = {
   steps: [

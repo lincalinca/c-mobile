@@ -6,8 +6,8 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { PAYMENT_STATUSES, PAYMENT_METHODS } from '../config';
-import type { PaymentStatus, PaymentMethod } from '../config';
+import { PAYMENT_STATUSES, PAYMENT_METHODS } from '@app/review/config';
+import type { PaymentStatus, PaymentMethod } from '@app/review/config';
 import { SectionContainer, SectionTitle } from './FormFields';
 
 interface ReviewPaymentSectionProps {

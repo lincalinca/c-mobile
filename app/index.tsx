@@ -1,18 +1,18 @@
 import { View, Text, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator, Alert, Modal, FlatList, BackHandler, Animated } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { ReceiptRepository } from '../lib/repository';
-import { reshapeToResults, ResultItem, ResultType } from '../lib/results';
+import { ReceiptRepository } from '@lib/repository';
+import { reshapeToResults, ResultItem, ResultType } from '@lib/results';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { NewDataBar } from '../components/header/NewDataBar';
-import { FilterBar, FilterType } from '../components/filters/FilterBar';
-import { CardGrid } from '../components/results/CardGrid';
-import { PersistentHeader } from '../components/header/PersistentHeader';
-import { DateRangeCalendarModal } from '../components/calendar/DateRangeCalendarModal';
+import { NewDataBar } from '@components/header/NewDataBar';
+import { FilterBar, FilterType } from '@components/filters/FilterBar';
+import { CardGrid } from '@components/results/CardGrid';
+import { PersistentHeader } from '@components/header/PersistentHeader';
+import { DateRangeCalendarModal } from '@components/calendar/DateRangeCalendarModal';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AdBanner } from '../components/ads';
-import { hasUsedBaseScans } from '../lib/usageTracking';
+import { AdBanner } from '@components/ads';
+import { hasUsedBaseScans } from '@lib/usageTracking';
 
 export default function HomeScreen() {
   const router = useRouter();

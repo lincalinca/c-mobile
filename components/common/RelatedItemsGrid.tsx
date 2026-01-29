@@ -2,11 +2,11 @@ import React from 'react';
 import { View, Text, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { ResultItem } from '@lib/results';
-import { GearCard } from '../results/GearCard';
-import { ServiceCard } from '../results/ServiceCard';
-import { TransactionCard } from '../results/TransactionCard';
-import { EventCard } from '../results/EventCard';
-import { EducationCard } from '../results/EducationCard';
+import { GearCard } from '@components/results/GearCard';
+import { ServiceCard } from '@components/results/ServiceCard';
+import { TransactionCard } from '@components/results/TransactionCard';
+import { EventCard } from '@components/results/EventCard';
+import { EducationCard } from '@components/results/EducationCard';
 
 const CARD_COMPONENTS: Record<string, React.ComponentType<any>> = {
   gear: GearCard,
