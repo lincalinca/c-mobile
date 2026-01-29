@@ -43,6 +43,9 @@ export const transactions = sqliteTable('transactions', {
   paymentStatus: text('payment_status').default('paid'), // 'paid' | 'partial' | 'unpaid' | 'refunded' | 'voided' | 'credited'
   paymentMethod: text('payment_method'), // 'card' | 'cash' | 'eftpos' | 'bank_transfer' | 'afterpay' | etc
 
+  // Processing lifecycle status
+  processingStatus: text('processing_status').default('confirmed'), // 'processing' | 'ready_for_review' | 'confirmed' | 'rejected'
+
   // Media & raw data
   imageUrl: text('image_url'),
   rawOcrData: text('raw_ocr_data'), // JSON string of full OpenAI response
@@ -144,6 +147,33 @@ export const notificationEvents = sqliteTable('notification_events', {
   metadata: text('metadata').notNull().default('{}'), // JSON: NotificationMetadata
   osNotificationId: text('os_notification_id'), // OS notification identifier for cancellation
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+/**
+ * Processing queue table - receipts awaiting AI analysis or user review
+ * Items are moved to transactions table when confirmed, deleted when rejected
+ */
+export const processingQueue = sqliteTable('processing_queue', {
+  id: text('id').primaryKey(),
+
+  // Image data
+  imageUri: text('image_uri').notNull(), // Local file URI
+
+  // Status: 'processing' (waiting for AI) | 'ready_for_review' (AI done, awaiting user) | 'error' (AI failed)
+  status: text('status').notNull().default('processing'),
+
+  // AI response data (populated when status becomes 'ready_for_review')
+  aiResponseData: text('ai_response_data'), // JSON string of full AI response
+
+  // Error info if processing failed
+  errorMessage: text('error_message'),
+
+  // Metadata
+  submittedAt: text('submitted_at').default(sql`CURRENT_TIMESTAMP`),
+  completedAt: text('completed_at'), // When AI finished processing
+
+  // For notifications - track if user has been notified
+  notificationSent: integer('notification_sent', { mode: 'boolean' }).default(false),
 });
 
 // Legacy aliases for backward compatibility during migration

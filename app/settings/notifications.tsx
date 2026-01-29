@@ -6,6 +6,7 @@ import { ICON_SIZES } from '@lib/iconSizes';
 import type { NotificationCategory } from '@lib/notifications/types';
 
 const CATEGORY_LABELS: Record<NotificationCategory, string> = {
+  receipt_ready: 'Receipt analysis complete',
   lessons: 'Lessons & calendar reminders',
   gear_enrichment: 'Gear photos & enrichment',
   warranty: 'Warranty & upgrade reminders',
@@ -87,7 +88,9 @@ export default function NotificationsSettingsScreen() {
                     <View className="w-8 h-8 rounded-full bg-crescender-800 items-center justify-center">
                       <Feather
                         name={
-                          category === 'lessons'
+                          category === 'receipt_ready'
+                            ? 'check-circle'
+                            : category === 'lessons'
                             ? 'calendar'
                             : category === 'gear_enrichment'
                             ? 'camera'
@@ -100,7 +103,7 @@ export default function NotificationsSettingsScreen() {
                             : 'settings'
                         }
                         size={ICON_SIZES.standard}
-                        color="#9ca3af"
+                        color={category === 'receipt_ready' ? '#f5c518' : '#9ca3af'}
                       />
                     </View>
                     <View className="flex-1">

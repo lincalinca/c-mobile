@@ -15,6 +15,7 @@ import { startOfDay, endOfDay, subDays, parseISO, formatISO } from 'date-fns';
 export const NOTIFICATION_POLICY = {
   global: { dailyMax: 1, weeklyMax: 6 },
   perCategory: {
+    receipt_ready: { cooldownDays: 0, alwaysCritical: true }, // Always send immediately when AI finishes
     lessons: { cooldownDays: 0 }, // One per lesson occurrence
     gear_enrichment: { cooldownDays: 3 },
     warranty: { cooldownDays: 7, maxPerItem: 2 },
@@ -48,8 +49,12 @@ export async function canSend(
     return { allowed: false, reason: `Category ${category} disabled` };
   }
   
+  // Get category policy
+  const categoryPolicy = NOTIFICATION_POLICY.perCategory[category];
+
   // Critical notifications bypass daily/weekly caps but still respect global/category toggles
-  const isCritical = context.priority === 'critical';
+  // Some categories are always critical (e.g., receipt_ready)
+  const isCritical = context.priority === 'critical' || (categoryPolicy as any).alwaysCritical;
   
   if (!isCritical) {
     // Check daily limit
@@ -87,7 +92,6 @@ export async function canSend(
   }
   
   // Check category cooldown
-  const categoryPolicy = NOTIFICATION_POLICY.perCategory[category];
   if (categoryPolicy.cooldownDays > 0) {
     const latestEvent = await NotificationEventsRepository.getLatestEvent(
       category,

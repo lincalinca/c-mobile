@@ -12,6 +12,7 @@ import type { NotificationCategory, NotificationMetadata, NotificationStatus, No
 
 // Category default map - ensures new categories get explicit defaults
 const CATEGORY_DEFAULTS: Record<NotificationCategory, boolean> = {
+  receipt_ready: true, // Most important - notify when AI analysis completes
   lessons: false,
   gear_enrichment: false,
   warranty: false,

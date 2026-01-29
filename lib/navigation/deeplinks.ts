@@ -39,3 +39,17 @@ export function linkToTransaction(transactionId: string): string {
 export function linkToPerson(personId: string): string {
   return `crescender://people/${personId}`;
 }
+
+/**
+ * Generate deep link to the processing queue (history with queue filter)
+ */
+export function linkToProcessingQueue(): string {
+  return `crescender://history?filter=queue`;
+}
+
+/**
+ * Generate deep link to a specific queue item for review
+ */
+export function linkToQueueItem(queueItemId: string): string {
+  return `crescender://review/queue/${queueItemId}`;
+}

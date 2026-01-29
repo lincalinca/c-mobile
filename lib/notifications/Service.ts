@@ -7,8 +7,65 @@
 
 import { canSend } from './Policy';
 import { scheduleLocalNotification, generateNotificationKey } from './Scheduler';
-import { linkToEducationItem, linkToGearItem, linkToService } from '@lib/navigation/deeplinks';
+import { linkToEducationItem, linkToGearItem, linkToService, linkToProcessingQueue } from '@lib/navigation/deeplinks';
 import type { NotificationCategory, NotificationMetadata } from './types';
+
+/**
+ * Send receipt ready notification - fires immediately when AI analysis completes
+ * This is the most important notification type for user engagement
+ */
+export async function sendReceiptReadyNotification(context: {
+  queueItemId: string;
+  merchantName?: string;
+  itemCount?: number; // For batch notifications
+}): Promise<{ scheduled: boolean; reason?: string }> {
+  const { queueItemId, merchantName, itemCount } = context;
+
+  // Fire immediately (within 2 seconds to ensure it's scheduled, not instant)
+  const triggerDate = new Date(Date.now() + 2000);
+
+  const metadata: NotificationMetadata = {
+    queueItemId,
+    merchantName,
+    itemCount,
+  };
+
+  const policyCheck = await canSend('receipt_ready', {
+    metadata,
+    triggerDate,
+    priority: 'critical', // Always deliver immediately
+  });
+
+  if (!policyCheck.allowed) {
+    if (__DEV__) {
+      console.log(`[NotificationService] Cannot send receipt ready notification: ${policyCheck.reason}`);
+    }
+    return { scheduled: false, reason: policyCheck.reason };
+  }
+
+  // Build notification content
+  let title = 'Receipt ready for review';
+  let body = 'Tap to review and confirm the extracted details.';
+
+  if (itemCount && itemCount > 1) {
+    title = `${itemCount} receipts ready for review`;
+    body = 'Your batch upload is complete. Tap to review and confirm.';
+  } else if (merchantName) {
+    title = 'Receipt ready for review';
+    body = `${merchantName} receipt analysed. Tap to review and confirm.`;
+  }
+
+  await scheduleLocalNotification({
+    category: 'receipt_ready',
+    title,
+    body,
+    triggerDate,
+    deepLink: linkToProcessingQueue(),
+    metadata,
+  });
+
+  return { scheduled: true };
+}
 
 /**
  * Send lesson reminder notification

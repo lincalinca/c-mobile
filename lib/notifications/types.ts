@@ -5,6 +5,7 @@
  */
 
 export type NotificationCategory =
+  | 'receipt_ready'
   | 'lessons'
   | 'gear_enrichment'
   | 'warranty'
@@ -20,6 +21,9 @@ export interface NotificationMetadata {
   lineItemId?: string;
   studentName?: string;
   instrument?: string;
+  queueItemId?: string; // For receipt_ready notifications
+  merchantName?: string; // For receipt_ready notifications
+  itemCount?: number; // For receipt_ready notifications (batch)
   [key: string]: string | number | boolean | null | undefined;
 }
 
