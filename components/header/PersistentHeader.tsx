@@ -49,7 +49,7 @@ export const PersistentHeader = () => {
               />
             ) : (
               <Image
-                source={require('../../assets/crescender-logo.png')}
+                source={require('@assets/crescender-logo.png')}
                 style={{ width: '100%', height: 28 }}
                 resizeMode="contain"
               />

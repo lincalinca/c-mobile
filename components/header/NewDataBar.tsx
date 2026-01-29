@@ -2,7 +2,7 @@ import { View, Text, TouchableOpacity, Platform, Modal } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
-import { hasUsedBaseScans } from '../../lib/usageTracking';
+import { hasUsedBaseScans } from '@lib/usageTracking';
 
 interface NewDataBarProps {
   /** @deprecated Use startDate/endDate. Kept for backward compat. */

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { ITEM_CATEGORIES, CategoryValue } from '../../constants/categories';
+import { ITEM_CATEGORIES, CategoryValue } from '@constants/categories';
 
 export type FilterType = 'all' | 'gear' | 'service' | 'event' | 'education' | 'transaction';
 

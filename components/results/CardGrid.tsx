@@ -1,7 +1,7 @@
 import React, { forwardRef } from 'react';
 import { View, FlatList, Text, useWindowDimensions } from 'react-native';
 import Animated, { FadeInLeft, FadeInRight, withTiming, withSpring, withDelay, useAnimatedStyle, useSharedValue, withSequence, ComplexAnimationBuilder } from 'react-native-reanimated';
-import { ResultItem, ResultType } from '../../lib/results';
+import { ResultItem, ResultType } from '@lib/results';
 import { GearCard } from './GearCard';
 import { ServiceCard } from './ServiceCard';
 import { EventCard } from './EventCard';

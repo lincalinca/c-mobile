@@ -1,16 +1,16 @@
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ReceiptRepository, StudentRepository, type LineItemWithDetails, type Receipt } from '../../lib/repository';
+import { ReceiptRepository, StudentRepository, type LineItemWithDetails, type Receipt } from '@lib/repository';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getEducationSeriesSummary } from '../../lib/educationEvents';
-import { addEducationSeriesToDeviceCalendar } from '../../lib/calendarExport';
-import { findChainForItem, getChainIndex, type EducationChain } from '../../lib/educationChain';
-import { detectContinuityGaps, type ContinuityGap } from '../../lib/educationContinuity';
-import { ICON_SIZES } from '../../lib/iconSizes';
-import { DatePickerModal } from '../../components/calendar/DatePickerModal';
-import { ContactDetailsSection } from '../../components/common/ContactDetailsSection';
+import { getEducationSeriesSummary } from '@lib/educationEvents';
+import { addEducationSeriesToDeviceCalendar } from '@lib/calendarExport';
+import { findChainForItem, getChainIndex, type EducationChain } from '@lib/educationChain';
+import { detectContinuityGaps, type ContinuityGap } from '@lib/educationContinuity';
+import { ICON_SIZES } from '@lib/iconSizes';
+import { DatePickerModal } from '@components/calendar/DatePickerModal';
+import { ContactDetailsSection } from '@components/common/ContactDetailsSection';
 
 import { useEducationItemEdit } from './useEducationItemEdit';
 import { EducationItemEditForm } from './EducationItemEditForm';

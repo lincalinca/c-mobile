@@ -3,14 +3,14 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PersistentHeader } from '../../components/header/PersistentHeader';
-import { StudentRepository, ReceiptRepository, type Student, type Receipt, type LineItemWithDetails } from '../../lib/repository';
-import { formatFullDate } from '../../lib/dateUtils';
-import { buildEducationChains, type EducationChain } from '../../lib/educationChain';
+import { PersistentHeader } from '@components/header/PersistentHeader';
+import { StudentRepository, ReceiptRepository, type Student, type Receipt, type LineItemWithDetails } from '@lib/repository';
+import { formatFullDate } from '@lib/dateUtils';
+import { buildEducationChains, type EducationChain } from '@lib/educationChain';
 import { EducationLearningPathView } from '../education/EducationLearningPathView';
-import { DatePickerModal } from '../../components/calendar/DatePickerModal';
-import { AutoSizingText } from '../../components/common/AutoSizingText';
-import { RELATIONSHIP_OPTIONS } from '../../components/people/RelationshipSelector';
+import { DatePickerModal } from '@components/calendar/DatePickerModal';
+import { AutoSizingText } from '@components/common/AutoSizingText';
+import { RELATIONSHIP_OPTIONS } from '@components/people/RelationshipSelector';
 
 const ACCENT_COLOR = '#c084fc'; // Purple for people
 

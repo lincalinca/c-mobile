@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import type { Receipt } from '../../lib/repository';
-import { formatABN } from '../../lib/formatUtils';
-import { AutoSizingText } from '../../components/common/AutoSizingText';
+import type { Receipt } from '@lib/repository';
+import { formatABN } from '@lib/formatUtils';
+import { AutoSizingText } from '@components/common/AutoSizingText';
 
 interface TransactionHeroViewProps {
   receipt: Receipt;

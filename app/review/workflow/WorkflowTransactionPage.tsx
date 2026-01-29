@@ -7,9 +7,9 @@
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { ReviewWorkflowState } from '../../../lib/reviewWorkflow';
-import { PersistentHeader } from '../../../components/header/PersistentHeader';
-import { DatePickerModal } from '../../../components/calendar/DatePickerModal';
+import { ReviewWorkflowState } from '@lib/reviewWorkflow';
+import { PersistentHeader } from '@components/header/PersistentHeader';
+import { DatePickerModal } from '@components/calendar/DatePickerModal';
 import { useState } from 'react';
 
 interface WorkflowTransactionPageProps {

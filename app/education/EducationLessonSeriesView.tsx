@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { formatFullDate } from '../../lib/dateUtils';
-import { ICON_SIZES } from '../../lib/iconSizes';
-import type { getEducationSeriesSummary } from '../../lib/educationEvents';
+import { formatFullDate } from '@lib/dateUtils';
+import { ICON_SIZES } from '@lib/iconSizes';
+import type { getEducationSeriesSummary } from '@lib/educationEvents';
 
 const SERIES_COLOR = '#06b6d4'; // Cyan for lesson series
 

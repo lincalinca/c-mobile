@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
 import type { EducationItemEditState } from './useEducationItemEdit';
-import { FormBuilder } from '../../lib/forms/FormBuilder';
-import { EDUCATION_FORM_SECTIONS } from '../../lib/forms/configs/educationFormConfig';
+import { FormBuilder } from '@lib/forms/FormBuilder';
+import { EDUCATION_FORM_SECTIONS } from '@lib/forms/configs/educationFormConfig';
 
 interface EducationItemEditFormProps {
   editState: EducationItemEditState;

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
-import { ReceiptRepository, type LineItemWithDetails, type GearDetails } from '../../../lib/repository';
-import { db, waitForDb } from '../../../db/client';
-import { lineItems } from '../../../db/schema';
+import { ReceiptRepository, type LineItemWithDetails, type GearDetails } from '@lib/repository';
+import { db, waitForDb } from '@db/client';
+import { lineItems } from '@db/schema';
 import { eq } from 'drizzle-orm';
 
 export interface GearItemEditState {

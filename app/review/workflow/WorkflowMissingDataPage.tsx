@@ -8,9 +8,9 @@ import { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { ReviewWorkflowState, analyzeMissingData } from '../../../lib/reviewWorkflow';
-import { PersistentHeader } from '../../../components/header/PersistentHeader';
-import { LessonDateSelector } from '../../../components/education/LessonDateSelector';
+import { ReviewWorkflowState, analyzeMissingData } from '@lib/reviewWorkflow';
+import { PersistentHeader } from '@components/header/PersistentHeader';
+import { LessonDateSelector } from '@components/education/LessonDateSelector';
 
 interface WorkflowMissingDataPageProps {
   workflowState: ReviewWorkflowState;

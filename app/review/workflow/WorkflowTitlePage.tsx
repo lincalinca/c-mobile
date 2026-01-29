@@ -7,8 +7,8 @@
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { ReviewWorkflowState, countItemsByCategory } from '../../../lib/reviewWorkflow';
-import { PersistentHeader } from '../../../components/header/PersistentHeader';
+import { ReviewWorkflowState, countItemsByCategory } from '@lib/reviewWorkflow';
+import { PersistentHeader } from '@components/header/PersistentHeader';
 
 interface WorkflowTitlePageProps {
   workflowState: ReviewWorkflowState;

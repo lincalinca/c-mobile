@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Image, Modal, ScrollView, Alert, Platform
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-import { ItemImage } from '../../lib/repository';
+import { ItemImage } from '@lib/repository';
 import { DatePickerModal } from '../calendar/DatePickerModal';
 
 const FS = FileSystem as any;

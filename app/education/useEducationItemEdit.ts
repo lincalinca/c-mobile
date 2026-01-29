@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
-import { ReceiptRepository, type LineItemWithDetails, type Receipt } from '../../lib/repository';
-import { generateEducationSeriesTitle } from '../../lib/educationUtils';
-import { scheduleLessonNotificationsForItem } from '../../lib/educationNotifications';
+import { ReceiptRepository, type LineItemWithDetails, type Receipt } from '@lib/repository';
+import { generateEducationSeriesTitle } from '@lib/educationUtils';
+import { scheduleLessonNotificationsForItem } from '@lib/educationNotifications';
 
 export interface EducationItemEditState {
   title: string;

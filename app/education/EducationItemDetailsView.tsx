@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import type { LineItemWithDetails, Receipt } from '../../lib/repository';
-import { formatFullDate } from '../../lib/dateUtils';
-import { getEducationSeriesSummary } from '../../lib/educationEvents';
-import { ICON_SIZES } from '../../lib/iconSizes';
+import type { LineItemWithDetails, Receipt } from '@lib/repository';
+import { formatFullDate } from '@lib/dateUtils';
+import { getEducationSeriesSummary } from '@lib/educationEvents';
+import { ICON_SIZES } from '@lib/iconSizes';
 
 const ACCENT_COLOR = '#c084fc'; // Purple for education
 

@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import type { GearDetails } from '../../../lib/repository';
-import { AutoSizingText } from '../../../components/common/AutoSizingText';
+import type { GearDetails } from '@lib/repository';
+import { AutoSizingText } from '@components/common/AutoSizingText';
 
 type IconName = 'external-link' | 'book-open' | 'phone' | 'mail' | 'globe';
 

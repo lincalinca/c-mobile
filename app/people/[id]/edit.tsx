@@ -2,10 +2,10 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityInd
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { PersistentHeader } from '../../../components/header/PersistentHeader';
-import { StudentRepository, type Student } from '../../../lib/repository';
-import { DatePickerModal } from '../../../components/calendar/DatePickerModal';
-import { RelationshipSelector, type RelationshipType } from '../../../components/people/RelationshipSelector';
+import { PersistentHeader } from '@components/header/PersistentHeader';
+import { StudentRepository, type Student } from '@lib/repository';
+import { DatePickerModal } from '@components/calendar/DatePickerModal';
+import { RelationshipSelector, type RelationshipType } from '@components/people/RelationshipSelector';
 
 const ACCENT_COLOR = '#c084fc'; // Purple for people
 

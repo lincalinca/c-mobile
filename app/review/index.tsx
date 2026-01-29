@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, View, Text } from 'react-native';
-import { getReviewApproach } from '../../lib/reviewConfig';
+import { getReviewApproach } from '@lib/reviewConfig';
 import ReviewWorkflow from './workflow/WorkflowRouter';
 import ReviewSimplified from './simplified/SimplifiedReview';
 import ReviewMonolithic from './ReviewMonolithicRefactored';

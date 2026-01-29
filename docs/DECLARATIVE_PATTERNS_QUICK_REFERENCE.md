@@ -73,8 +73,8 @@ export const TRANSACTION_FORM_SECTIONS: FormSectionConfig[] = [
 ];
 
 // app/gear/TransactionEditForm.tsx
-import { FormBuilder } from '../../components/forms/FormBuilder';
-import { TRANSACTION_FORM_SECTIONS } from '../../lib/forms/configs/transactionFormConfig';
+import { FormBuilder } from '@components/forms/FormBuilder';
+import { TRANSACTION_FORM_SECTIONS } from '@lib/forms/configs/transactionFormConfig';
 
 export function TransactionEditForm({ editState, setEditState }) {
   const handleFieldChange = (key: string, value: any) => {
@@ -166,8 +166,8 @@ export const MANUAL_ENTRY_WORKFLOW: WorkflowConfig = {
 };
 
 // app/manual-entry/wizard.tsx
-import { WorkflowRouter } from '../../components/workflows/WorkflowRouter';
-import { MANUAL_ENTRY_WORKFLOW } from '../../lib/workflows/configs/manualEntryWorkflow';
+import { WorkflowRouter } from '@components/workflows/WorkflowRouter';
+import { MANUAL_ENTRY_WORKFLOW } from '@lib/workflows/configs/manualEntryWorkflow';
 
 export default function WizardScreen() {
   return (
@@ -229,8 +229,8 @@ export function GearItemDetail({ item }) {
 
 ```typescript
 // lib/fields/configs/gearFields.ts
-import { DetailFieldConfig } from '../../../components/common/DetailFieldsSection';
-import type { GearDetails } from '../../../lib/repository';
+import { DetailFieldConfig } from '@components/common/DetailFieldsSection';
+import type { GearDetails } from '@lib/repository';
 
 export const GEAR_DETAIL_FIELDS: DetailFieldConfig<GearDetails>[] = [
   {
@@ -256,8 +256,8 @@ export const GEAR_DETAIL_FIELDS: DetailFieldConfig<GearDetails>[] = [
 ];
 
 // app/gear/item/[id].tsx
-import { DetailFieldsSection } from '../../../components/common/DetailFieldsSection';
-import { GEAR_DETAIL_FIELDS } from '../../../lib/fields/configs/gearFields';
+import { DetailFieldsSection } from '@components/common/DetailFieldsSection';
+import { GEAR_DETAIL_FIELDS } from '@lib/fields/configs/gearFields';
 
 export function GearItemDetail({ item }) {
   const gearDetails = item.gearDetailsParsed || {};
@@ -372,8 +372,8 @@ export function validateField(
 }
 
 // app/gear/TransactionEditForm.tsx
-import { VALIDATION_RULES } from '../../lib/validation/rules';
-import { validateField } from '../../lib/validation/validators';
+import { VALIDATION_RULES } from '@lib/validation/rules';
+import { validateField } from '@lib/validation/validators';
 
 export function TransactionEditForm({ editState, setEditState }) {
   const handleSave = async () => {
@@ -477,7 +477,7 @@ export const CHAT_FLOWS: ChatFlow[] = [
 ];
 
 // app/manual-entry/assistant.tsx
-import { CHAT_FLOWS } from '../../lib/chat/flows';
+import { CHAT_FLOWS } from '@lib/chat/flows';
 
 const getFlow = (type: CategoryType): ChatFlow => {
   return CHAT_FLOWS.find(f => f.category === type)!;

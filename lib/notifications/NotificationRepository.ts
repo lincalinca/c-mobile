@@ -5,8 +5,8 @@
  * Single Responsibility: persistence (SQLite / Drizzle) only.
  */
 
-import { db, waitForDb } from '../../db/client';
-import { notificationSettings, notificationEvents } from '../../db/schema';
+import { db, waitForDb } from '@db/client';
+import { notificationSettings, notificationEvents } from '@db/schema';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import type { NotificationCategory, NotificationMetadata, NotificationStatus, NotificationSettings as NotificationSettingsType, NotificationEvent } from './types';
 

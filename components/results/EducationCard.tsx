@@ -2,7 +2,7 @@ import React from 'react';
 import { BaseCard, BaseCardProps } from './BaseCard';
 import { CardDetailRows } from './CardDetailRows';
 import type { CardDetailRow } from './CardDetailRows';
-import { formatEducationDetailsSentence } from '../../lib/educationUtils';
+import { formatEducationDetailsSentence } from '@lib/educationUtils';
 
 const ACCENT_COLOR = '#c084fc';
 const ICON_BG_COLOR = 'rgba(192, 132, 252, 0.15)';

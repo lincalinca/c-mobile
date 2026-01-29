@@ -1,8 +1,8 @@
 import React from 'react';
 import { TouchableOpacity, Text } from 'react-native';
 import type { TransactionEditState } from './useTransactionEdit';
-import { FormBuilder } from '../../lib/forms/FormBuilder';
-import { TRANSACTION_FORM_SECTIONS } from '../../lib/forms/configs/transactionFormConfig';
+import { FormBuilder } from '@lib/forms/FormBuilder';
+import { TRANSACTION_FORM_SECTIONS } from '@lib/forms/configs/transactionFormConfig';
 
 interface TransactionEditFormProps {
   editState: TransactionEditState;

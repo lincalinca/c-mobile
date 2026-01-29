@@ -1,6 +1,6 @@
 import { View, Text, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { PersistentHeader } from '../../components/header/PersistentHeader';
+import { PersistentHeader } from '@components/header/PersistentHeader';
 
 /**
  * NOTIFICATIONS FEATURE ARCHIVED

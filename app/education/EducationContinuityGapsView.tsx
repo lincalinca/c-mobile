@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { formatFullDate } from '../../lib/dateUtils';
-import { ICON_SIZES } from '../../lib/iconSizes';
-import type { ContinuityGap } from '../../lib/educationContinuity';
+import { formatFullDate } from '@lib/dateUtils';
+import { ICON_SIZES } from '@lib/iconSizes';
+import type { ContinuityGap } from '@lib/educationContinuity';
 
 const ACCENT_COLOR = '#c084fc'; // Purple for education
 

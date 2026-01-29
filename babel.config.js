@@ -6,6 +6,22 @@ module.exports = function (api) {
       "nativewind/babel",
     ],
     plugins: [
+      [
+        "module-resolver",
+        {
+          root: ["."],
+          alias: {
+            "@components": "./components",
+            "@constants": "./constants",
+            "@lib": "./lib",
+            "@app": "./app",
+            "@db": "./db",
+            "@assets": "./assets",
+            "@public": "./public",
+          },
+        },
+      ],
+      // reanimated must be last
       "react-native-reanimated/plugin",
     ],
   };

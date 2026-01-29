@@ -1,14 +1,14 @@
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ReceiptRepository, type LineItemWithDetails, type Receipt } from '../../lib/repository';
+import { ReceiptRepository, type LineItemWithDetails, type Receipt } from '@lib/repository';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { formatFullDate, getRelativeDateLabel } from '../../lib/dateUtils';
-import { ContactDetailsSection } from '../../components/common/ContactDetailsSection';
-import { RelatedItemsGrid } from '../../components/common/RelatedItemsGrid';
-import { reshapeToResults, type ResultItem } from '../../lib/results';
-import { addEventToDeviceCalendar } from '../../lib/calendarExport';
+import { formatFullDate, getRelativeDateLabel } from '@lib/dateUtils';
+import { ContactDetailsSection } from '@components/common/ContactDetailsSection';
+import { RelatedItemsGrid } from '@components/common/RelatedItemsGrid';
+import { reshapeToResults, type ResultItem } from '@lib/results';
+import { addEventToDeviceCalendar } from '@lib/calendarExport';
 
 const ACCENT_COLOR = '#22d3ee'; // Cyan for events
 

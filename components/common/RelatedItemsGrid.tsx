@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import type { ResultItem } from '../../lib/results';
+import type { ResultItem } from '@lib/results';
 import { GearCard } from '../results/GearCard';
 import { ServiceCard } from '../results/ServiceCard';
 import { TransactionCard } from '../results/TransactionCard';

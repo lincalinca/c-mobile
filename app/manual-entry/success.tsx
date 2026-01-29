@@ -12,7 +12,7 @@ export default function ManualEntrySuccess() {
       <View className="mb-8 items-center">
         <View className="w-24 h-24 rounded-full bg-gold/20 items-center justify-center mb-6">
             <Image 
-              source={require('../../public/logo.png')} 
+              source={require('@public/logo.png')} 
               style={{ width: 48, height: 48 }}
               resizeMode="contain"
             />

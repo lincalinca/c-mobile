@@ -124,8 +124,8 @@ export const MY_FORM_SECTIONS: FormSectionConfig[] = [
 
 2. **Use FormBuilder:**
 ```typescript
-import { FormBuilder } from '../../components/forms/FormBuilder';
-import { MY_FORM_SECTIONS } from '../../lib/forms/configs/myFormConfig';
+import { FormBuilder } from '@components/forms/FormBuilder';
+import { MY_FORM_SECTIONS } from '@lib/forms/configs/myFormConfig';
 
 <FormBuilder sections={MY_FORM_SECTIONS} values={state} onFieldChange={handleChange} />
 ```
@@ -144,8 +144,8 @@ export const MY_WORKFLOW: WorkflowConfig = {
 
 2. **Use WorkflowRouter:**
 ```typescript
-import { WorkflowRouter } from '../../components/workflows/WorkflowRouter';
-import { MY_WORKFLOW } from '../../lib/workflows/configs/myWorkflow';
+import { WorkflowRouter } from '@components/workflows/WorkflowRouter';
+import { MY_WORKFLOW } from '@lib/workflows/configs/myWorkflow';
 
 <WorkflowRouter config={MY_WORKFLOW} initialState={{}} />
 ```

@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
-import type { LineItemWithDetails, Receipt } from '../../lib/repository';
-import type { ResultItem } from '../../lib/results';
-import { SimpleGearCard } from '../../components/results/SimpleGearCard';
-import { SimpleServiceCard } from '../../components/results/SimpleServiceCard';
-import { SimpleEducationCard } from '../../components/results/SimpleEducationCard';
+import type { LineItemWithDetails, Receipt } from '@lib/repository';
+import type { ResultItem } from '@lib/results';
+import { SimpleGearCard } from '@components/results/SimpleGearCard';
+import { SimpleServiceCard } from '@components/results/SimpleServiceCard';
+import { SimpleEducationCard } from '@components/results/SimpleEducationCard';
 
 const CARD_COMPONENTS: Record<string, React.ComponentType<any>> = {
   gear: SimpleGearCard,

@@ -2,7 +2,7 @@ import React from 'react';
 import { BaseCard, BaseCardProps } from './BaseCard';
 import { CardDetailRows } from './CardDetailRows';
 import type { CardDetailRow } from './CardDetailRows';
-import { getRelativeDateLabel } from '../../lib/dateUtils';
+import { getRelativeDateLabel } from '@lib/dateUtils';
 
 const ACCENT_COLOR = '#f97316';
 const ICON_BG_COLOR = 'rgba(249, 115, 22, 0.15)';

@@ -7,13 +7,13 @@
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { ReviewWorkflowState } from '../../../lib/reviewWorkflow';
-import { PersistentHeader } from '../../../components/header/PersistentHeader';
-import { SimpleEducationCard } from '../../../components/results/SimpleEducationCard';
-import { LessonDateSelector } from '../../../components/education/LessonDateSelector';
+import { ReviewWorkflowState } from '@lib/reviewWorkflow';
+import { PersistentHeader } from '@components/header/PersistentHeader';
+import { SimpleEducationCard } from '@components/results/SimpleEducationCard';
+import { LessonDateSelector } from '@components/education/LessonDateSelector';
 import { useState } from 'react';
-import type { ResultItem } from '../../../lib/results';
-import { generateEducationEvents } from '../../../lib/educationEvents';
+import type { ResultItem } from '@lib/results';
+import { generateEducationEvents } from '@lib/educationEvents';
 
 interface WorkflowEducationPageProps {
   workflowState: ReviewWorkflowState;

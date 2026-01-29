@@ -11,11 +11,11 @@ import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
-import { TransactionRepository } from '../../../lib/repository';
-import { useInterstitialAd, usePreloadInterstitialAd } from '../../../components/ads';
-import { getEducationSeriesSummary } from '../../../lib/educationEvents';
-import { addEducationSeriesToDeviceCalendar } from '../../../lib/calendarExport';
-import { detectNewPeople } from '../../../lib/peopleDetection';
+import { TransactionRepository } from '@lib/repository';
+import { useInterstitialAd, usePreloadInterstitialAd } from '@components/ads';
+import { getEducationSeriesSummary } from '@lib/educationEvents';
+import { addEducationSeriesToDeviceCalendar } from '@lib/calendarExport';
+import { detectNewPeople } from '@lib/peopleDetection';
 
 import { useReviewState } from '../useReviewState';
 import type { ReviewInitialData, ReviewLineItem } from '../types';

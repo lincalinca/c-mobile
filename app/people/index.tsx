@@ -2,10 +2,10 @@ import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from 'react
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useCallback } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { PersistentHeader } from '../../components/header/PersistentHeader';
-import { StudentRepository, type Student } from '../../lib/repository';
-import { formatFullDate } from '../../lib/dateUtils';
-import { RELATIONSHIP_OPTIONS } from '../../components/people/RelationshipSelector';
+import { PersistentHeader } from '@components/header/PersistentHeader';
+import { StudentRepository, type Student } from '@lib/repository';
+import { formatFullDate } from '@lib/dateUtils';
+import { RELATIONSHIP_OPTIONS } from '@components/people/RelationshipSelector';
 
 const ACCENT_COLOR = '#c084fc'; // Purple for people
 

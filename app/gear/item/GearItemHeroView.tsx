@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import type { LineItemWithDetails, Receipt } from '../../../lib/repository';
+import type { LineItemWithDetails, Receipt } from '@lib/repository';
 
 interface GearItemHeroViewProps {
   item: LineItemWithDetails;

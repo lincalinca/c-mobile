@@ -9,15 +9,15 @@ import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Tex
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useMemo, useCallback } from 'react';
 import * as Crypto from 'expo-crypto';
-import { TransactionRepository } from '../../../lib/repository';
+import { TransactionRepository } from '@lib/repository';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PersistentHeader } from '../../../components/header/PersistentHeader';
-import { useInterstitialAd } from '../../../components/ads';
-import { analyzeMissingData } from '../../../lib/reviewWorkflow';
-import { DatePickerModal } from '../../../components/calendar/DatePickerModal';
-import { generateEducationEvents, getEducationSeriesSummary } from '../../../lib/educationEvents';
-import { addEducationSeriesToDeviceCalendar } from '../../../lib/calendarExport';
+import { PersistentHeader } from '@components/header/PersistentHeader';
+import { useInterstitialAd } from '@components/ads';
+import { analyzeMissingData } from '@lib/reviewWorkflow';
+import { DatePickerModal } from '@components/calendar/DatePickerModal';
+import { generateEducationEvents, getEducationSeriesSummary } from '@lib/educationEvents';
+import { addEducationSeriesToDeviceCalendar } from '@lib/calendarExport';
 
 export default function ReviewSimplified() {
   const params = useLocalSearchParams<{ data: string; uri: string }>();

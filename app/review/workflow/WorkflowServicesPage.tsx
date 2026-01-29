@@ -7,11 +7,11 @@
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { ReviewWorkflowState } from '../../../lib/reviewWorkflow';
-import { PersistentHeader } from '../../../components/header/PersistentHeader';
-import { SimpleServiceCard } from '../../../components/results/SimpleServiceCard';
+import { ReviewWorkflowState } from '@lib/reviewWorkflow';
+import { PersistentHeader } from '@components/header/PersistentHeader';
+import { SimpleServiceCard } from '@components/results/SimpleServiceCard';
 import { useState } from 'react';
-import type { ResultItem } from '../../../lib/results';
+import type { ResultItem } from '@lib/results';
 
 interface WorkflowServicesPageProps {
   workflowState: ReviewWorkflowState;

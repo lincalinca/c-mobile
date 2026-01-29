@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import type { GearDetails } from '../../../lib/repository';
-import { AutoSizingText } from '../../../components/common/AutoSizingText';
+import type { GearDetails } from '@lib/repository';
+import { AutoSizingText } from '@components/common/AutoSizingText';
 
 interface FieldConfig {
   label: string;

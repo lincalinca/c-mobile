@@ -2,18 +2,18 @@ import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Mod
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
-import { ReceiptRepository, type LineItemWithDetails, type Receipt } from '../../lib/repository';
+import { ReceiptRepository, type LineItemWithDetails, type Receipt } from '@lib/repository';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ItemImageGallery } from '../../components/common/ItemImageGallery';
-import { ContactDetailsSection } from '../../components/common/ContactDetailsSection';
-import { RelatedItemsGrid } from '../../components/common/RelatedItemsGrid';
-import { ItemImage } from '../../lib/repository';
-import { reshapeToResults, type ResultItem } from '../../lib/results';
-import { formatFullDate } from '../../lib/dateUtils';
+import { ItemImageGallery } from '@components/common/ItemImageGallery';
+import { ContactDetailsSection } from '@components/common/ContactDetailsSection';
+import { RelatedItemsGrid } from '@components/common/RelatedItemsGrid';
+import { ItemImage } from '@lib/repository';
+import { reshapeToResults, type ResultItem } from '@lib/results';
+import { formatFullDate } from '@lib/dateUtils';
 import { useServiceItemEdit } from './useServiceItemEdit';
 import { ServiceItemEditForm } from './ServiceItemEditForm';
-import { DatePickerModal } from '../../components/calendar/DatePickerModal';
+import { DatePickerModal } from '@components/calendar/DatePickerModal';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 

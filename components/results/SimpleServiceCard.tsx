@@ -2,7 +2,7 @@ import React from 'react';
 import { SimpleCard } from './SimpleCard';
 import { CardDetailRows } from './CardDetailRows';
 import type { CardDetailRow } from './CardDetailRows';
-import type { ResultItem } from '../../lib/results';
+import type { ResultItem } from '@lib/results';
 
 const ACCENT_COLOR = '#f97316';
 const ICON_BG_COLOR = 'rgba(249, 115, 22, 0.15)';

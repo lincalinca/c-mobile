@@ -3,11 +3,11 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useState, useRef, useEffect } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { findBestMatch } from '../../lib/fuzzyMatcher';
-import { DatePickerModal } from '../../components/calendar/DatePickerModal';
-import { callSupabaseFunction } from '../../lib/supabase';
-import { recordScan } from '../../lib/usageTracking';
-import { getFlow, getQuestion, type CategoryType } from '../../lib/chat/flows';
+import { findBestMatch } from '@lib/fuzzyMatcher';
+import { DatePickerModal } from '@components/calendar/DatePickerModal';
+import { callSupabaseFunction } from '@lib/supabase';
+import { recordScan } from '@lib/usageTracking';
+import { getFlow, getQuestion, type CategoryType } from '@lib/chat/flows';
 
 interface Message {
   id: string;
@@ -302,7 +302,7 @@ export default function AssistantScreen() {
           </TouchableOpacity>
           <View className="flex-row items-center gap-2">
             <Image 
-              source={require('../../public/logo.png')} 
+              source={require('@public/logo.png')} 
               style={{ width: 28, height: 28 }} 
               resizeMode="contain"
             />
@@ -325,7 +325,7 @@ export default function AssistantScreen() {
               {msg.sender === 'bot' && (
                 <View className="w-8 h-8 rounded-full bg-transparent items-center justify-center mr-2 mt-auto">
                    <Image 
-                      source={require('../../public/logo.png')} 
+                      source={require('@public/logo.png')} 
                       style={{ width: 28, height: 28 }} 
                       resizeMode="contain"
                     />

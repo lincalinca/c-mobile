@@ -8,8 +8,8 @@ import Animated, {
   withTiming,
   useSharedValue,
 } from 'react-native-reanimated';
-import { ResultItem } from '../../lib/results';
-import { getRelativeDateLabel, formatFullDate } from '../../lib/dateUtils';
+import { ResultItem } from '@lib/results';
+import { getRelativeDateLabel, formatFullDate } from '@lib/dateUtils';
 import { CARD, getChipIcon } from './cardStyles';
 
 export interface BaseCardProps {

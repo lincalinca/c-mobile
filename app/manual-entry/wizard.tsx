@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useState, useMemo } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MANUAL_ENTRY_WORKFLOW } from '../../lib/workflows/configs/manualEntryWorkflow';
+import { MANUAL_ENTRY_WORKFLOW } from '@lib/workflows/configs/manualEntryWorkflow';
 
 const STEP_NAMES = ['category', 'details', 'review'] as const;
 type StepName = typeof STEP_NAMES[number];

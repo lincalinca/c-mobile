@@ -476,8 +476,8 @@ export const TRANSACTION_FORM_SECTIONS: FormSectionConfig[] = [
 **Usage:**
 
 ```typescript
-import { FormBuilder } from '../../components/forms/FormBuilder';
-import { TRANSACTION_FORM_SECTIONS } from '../../lib/forms/configs/transactionFormConfig';
+import { FormBuilder } from '@components/forms/FormBuilder';
+import { TRANSACTION_FORM_SECTIONS } from '@lib/forms/configs/transactionFormConfig';
 
 export function TransactionEditForm({ editState, onUpdate }) {
   return (
@@ -527,8 +527,8 @@ export const MANUAL_ENTRY_WORKFLOW: WorkflowConfig = {
 **Usage:**
 
 ```typescript
-import { WorkflowRouter } from '../../components/workflows/WorkflowRouter';
-import { MANUAL_ENTRY_WORKFLOW } from '../../lib/workflows/configs/manualEntryWorkflow';
+import { WorkflowRouter } from '@components/workflows/WorkflowRouter';
+import { MANUAL_ENTRY_WORKFLOW } from '@lib/workflows/configs/manualEntryWorkflow';
 
 export function ManualEntryWizard() {
   return (
@@ -575,8 +575,8 @@ export const VALIDATION_RULES: Record<string, ValidationRule[]> = {
 
 ```typescript
 // lib/fields/configs/gearFields.ts
-import { DetailFieldConfig } from '../../../components/common/DetailFieldsSection';
-import type { GearDetails } from '../../../lib/repository';
+import { DetailFieldConfig } from '@components/common/DetailFieldsSection';
+import type { GearDetails } from '@lib/repository';
 
 export const GEAR_DETAIL_FIELDS: DetailFieldConfig<GearDetails>[] = [
   {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
-import { ReceiptRepository, type Receipt } from '../../lib/repository';
+import { ReceiptRepository, type Receipt } from '@lib/repository';
 
 export interface TransactionEditState {
   merchant: string;

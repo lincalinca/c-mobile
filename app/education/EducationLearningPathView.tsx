@@ -1,9 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, FlatList, useWindowDimensions, Modal } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { formatFullDate } from '../../lib/dateUtils';
-import { getEducationSeriesSummary } from '../../lib/educationEvents';
-import type { EducationChain } from '../../lib/educationChain';
+import { formatFullDate } from '@lib/dateUtils';
+import { getEducationSeriesSummary } from '@lib/educationEvents';
+import type { EducationChain } from '@lib/educationChain';
 
 const ACCENT_COLOR = '#c084fc'; // Purple for education
 

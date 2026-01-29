@@ -2,9 +2,9 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { formatFullDate } from '../../lib/dateUtils';
-import { ICON_SIZES } from '../../lib/iconSizes';
-import type { Receipt } from '../../lib/repository';
+import { formatFullDate } from '@lib/dateUtils';
+import { ICON_SIZES } from '@lib/iconSizes';
+import type { Receipt } from '@lib/repository';
 
 const TRANSACTION_COLOR = '#10b981'; // Green for transactions
 

@@ -8,9 +8,9 @@ import { View, Text, TouchableOpacity, ScrollView, TextInput } from 'react-nativ
 import { useState, useMemo } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { DatePickerModal } from '../calendar/DatePickerModal';
-import { generateEducationEvents } from '../../lib/educationEvents';
-import { getLessonCountSuspects } from '../../lib/educationUtils';
-import type { ReceiptItem, EducationDetails } from '../../lib/repository';
+import { generateEducationEvents } from '@lib/educationEvents';
+import { getLessonCountSuspects } from '@lib/educationUtils';
+import type { ReceiptItem, EducationDetails } from '@lib/repository';
 
 export type LessonFrequency = 'weekly' | 'fortnightly' | 'monthly' | 'one-off';
 

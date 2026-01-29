@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
 import type { ServiceItemEditState } from './useServiceItemEdit';
-import { FormBuilder } from '../../lib/forms/FormBuilder';
-import { SERVICE_FORM_SECTIONS } from '../../lib/forms/configs/serviceFormConfig';
+import { FormBuilder } from '@lib/forms/FormBuilder';
+import { SERVICE_FORM_SECTIONS } from '@lib/forms/configs/serviceFormConfig';
 
 interface ServiceItemEditFormProps {
   editState: ServiceItemEditState;

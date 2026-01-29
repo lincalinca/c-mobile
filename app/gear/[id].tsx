@@ -2,7 +2,7 @@ import { View, Text, ScrollView, TouchableOpacity, Image, Platform, ActivityIndi
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import * as Crypto from 'expo-crypto';
-import { ReceiptRepository, Receipt, type LineItemWithDetails } from '../../lib/repository';
+import { ReceiptRepository, Receipt, type LineItemWithDetails } from '@lib/repository';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
@@ -10,10 +10,10 @@ import * as FileSystem from 'expo-file-system';
 const FS = FileSystem as any;
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
-import { callSupabaseFunction } from '../../lib/supabase';
-import { ProcessingView } from '../../components/processing/ProcessingView';
-import { DatePickerModal } from '../../components/calendar/DatePickerModal';
-import { StatePickerModal } from '../../components/common/StatePickerModal';
+import { callSupabaseFunction } from '@lib/supabase';
+import { ProcessingView } from '@components/processing/ProcessingView';
+import { DatePickerModal } from '@components/calendar/DatePickerModal';
+import { StatePickerModal } from '@components/common/StatePickerModal';
 
 import { useTransactionEdit } from './useTransactionEdit';
 import { TransactionEditForm } from './TransactionEditForm';
