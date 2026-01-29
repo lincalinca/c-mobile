@@ -58,7 +58,9 @@
         "android.permission.RECORD_AUDIO",
         "com.google.android.gms.permission.AD_ID",
         "android.permission.READ_CALENDAR",
-        "android.permission.WRITE_CALENDAR"
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE"
       ]
     },
     "web": {
@@ -87,7 +89,13 @@
           "calendarPermission": "Crescender would like to add events to your calendar so you can view lessons and appointments next to your schedule."
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "color": "#f5c518"
+        }
+      ]
     ],
     "scheme": "crescender",
     "experiments": {

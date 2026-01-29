@@ -2,12 +2,15 @@ import { View, Text, TouchableOpacity, ScrollView, Platform, Switch, Linking, Mo
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Constants from 'expo-constants';
 import { PersistentHeader } from '@components/header/PersistentHeader';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getReviewApproach, setReviewApproach, type ReviewApproach } from '@lib/reviewConfig';
 import { ICON_SIZES } from '@lib/iconSizes';
 import { BackupService } from '@lib/backupService';
+
+const appVersion = Constants.expoConfig?.version ?? '0.0.0';
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -312,6 +315,7 @@ export default function SettingsScreen() {
         </View>
 
         <View className="items-center py-10">
+          <Text className="text-crescender-500 text-xs mb-1">Version {appVersion}</Text>
           <Text className="text-crescender-700 text-xs">© 2026 Crescender Australia</Text>
         </View>
       </ScrollView>

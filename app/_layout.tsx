@@ -8,9 +8,8 @@ import { initDatabase } from "@db/client";
 import { View } from "react-native";
 import { MusicFlowBackground } from "@components/common/MusicFlowBackground";
 import { ATTRequest } from "@components/ads";
-// NOTIFICATIONS ARCHIVED - See /docs/NOTIFICATIONS_ARCHIVE.md for re-implementation
-// import { initializeChannels } from "@lib/notifications/Channels";
-// import { reconcileNotifications, cleanupStaleNotifications } from "@lib/notifications/Reconciler";
+import { initializeChannels } from "@lib/notifications/Channels";
+import { reconcileNotifications, cleanupStaleNotifications } from "@lib/notifications/Reconciler";
 import "@root/global.css";
 
 export default function Layout() {
@@ -22,29 +21,26 @@ export default function Layout() {
     // Initialize DB in background, don't block render
     initDatabase()
       .then(async () => {
-        // NOTIFICATIONS ARCHIVED - See /docs/NOTIFICATIONS_ARCHIVE.md for re-implementation
-        // To restore notifications, uncomment the imports above and the code below:
-        //
-        // try {
-        //   // Initialize notification channels (safe in Expo Go - will skip if not available)
-        //   await initializeChannels();
-        // } catch (e) {
-        //   console.warn("Failed to initialize notification channels (may not be available in Expo Go):", e);
-        // }
-        //
-        // try {
-        //   // Clean up stale notifications
-        //   await cleanupStaleNotifications();
-        // } catch (e) {
-        //   console.warn("Failed to cleanup stale notifications:", e);
-        // }
-        //
-        // try {
-        //   // Reconcile notifications based on current domain data
-        //   await reconcileNotifications();
-        // } catch (e) {
-        //   console.warn("Failed to reconcile notifications:", e);
-        // }
+        try {
+          // Initialize notification channels (safe in Expo Go - will skip if not available)
+          await initializeChannels();
+        } catch (e) {
+          console.warn("Failed to initialize notification channels:", e);
+        }
+
+        try {
+          // Clean up stale notifications
+          await cleanupStaleNotifications();
+        } catch (e) {
+          console.warn("Failed to cleanup stale notifications:", e);
+        }
+
+        try {
+          // Reconcile notifications based on current domain data
+          await reconcileNotifications();
+        } catch (e) {
+          console.warn("Failed to reconcile notifications:", e);
+        }
       })
       .catch((e) => {
         console.error("Failed to initialize database", e);
