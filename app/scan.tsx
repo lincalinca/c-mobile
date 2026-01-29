@@ -10,7 +10,8 @@ import { captureRef } from 'react-native-view-shot';
 import { callSupabaseFunction } from '@lib/supabase';
 import { ProcessingWithAdView } from '@components/processing/ProcessingWithAdView';
 import { TransactionRepository, StudentRepository } from '@lib/repository';
-import { recordScan, hasScansRemaining } from '@lib/usageTracking';
+import { recordScan, hasScansRemaining, getScansRemaining } from '@lib/usageTracking';
+import { useUploadStore } from '@lib/stores/uploadStore';
 
 const isAndroid = Platform.OS === 'android';
 
@@ -307,24 +308,84 @@ export default function ScanScreen() {
     setProcessingResults(null);
   };
 
+  const { addItems: addToBulkUpload } = useUploadStore();
+
   const pickDocument = async () => {
     try {
+      // Check remaining scans first
+      const remaining = await getScansRemaining();
+      if (remaining <= 0) {
+        Alert.alert(
+          'No Scans Remaining',
+          'You\'ve used all your scans for this week. Watch an ad to get 10 more scans.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Get More Scans',
+              onPress: () => router.push('/get-more-scans'),
+              style: 'default'
+            }
+          ]
+        );
+        return;
+      }
+
       const result = await DocumentPicker.getDocumentAsync({
         type: ['image/*'],
         copyToCacheDirectory: true,
+        multiple: true, // Enable multi-select
       });
 
       if (result.canceled || !result.assets || result.assets.length === 0) {
         return;
       }
 
-      const asset = result.assets[0];
-      // Read file as base64
-      const base64 = await readAsStringAsync(asset.uri, {
-        encoding: EncodingType.Base64,
-      });
+      // Single image: use existing flow for immediate feedback
+      if (result.assets.length === 1) {
+        const asset = result.assets[0];
+        const base64 = await readAsStringAsync(asset.uri, {
+          encoding: EncodingType.Base64,
+        });
+        await processImage(asset.uri, base64);
+        return;
+      }
 
-      await processImage(asset.uri, base64);
+      // Multiple images: use bulk upload queue
+      const imageUris = result.assets.map(asset => asset.uri);
+
+      // Cap to remaining scans and show feedback
+      if (imageUris.length > remaining) {
+        Alert.alert(
+          'Selection Limited',
+          `You have ${remaining} scans remaining this week. Only the first ${remaining} images will be processed.\n\nWatch an ad to get more scans.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: `Process ${remaining}`,
+              onPress: async () => {
+                const { added, rejected } = await addToBulkUpload(imageUris);
+                if (rejected > 0) {
+                  console.log(`[Scan] Bulk upload: ${added} added, ${rejected} rejected due to quota`);
+                }
+                // Navigate back so user can see the progress modal
+                handleGoBack();
+              },
+              style: 'default'
+            },
+            {
+              text: 'Get More Scans',
+              onPress: () => router.push('/get-more-scans'),
+            }
+          ]
+        );
+        return;
+      }
+
+      // All images fit within quota
+      const { added } = await addToBulkUpload(imageUris);
+      console.log(`[Scan] Bulk upload started: ${added} images`);
+      // Navigate back so user can see the progress modal
+      handleGoBack();
     } catch (error) {
       console.error('Document picker error:', error);
       Alert.alert('Error', 'Failed to pick document');

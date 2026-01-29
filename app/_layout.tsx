@@ -8,9 +8,24 @@ import { initDatabase } from "@db/client";
 import { View } from "react-native";
 import { MusicFlowBackground } from "@components/common/MusicFlowBackground";
 import { ATTRequest } from "@components/ads";
+import { BulkUploadProgress } from "@components/bulk";
 import { initializeChannels } from "@lib/notifications/Channels";
 import { reconcileNotifications, cleanupStaleNotifications } from "@lib/notifications/Reconciler";
 import "@root/global.css";
+
+// Initialize Google Mobile Ads SDK
+let mobileAdsInitialized = false;
+async function initializeMobileAds() {
+  if (mobileAdsInitialized) return;
+  try {
+    const { default: mobileAds } = await import('react-native-google-mobile-ads');
+    await mobileAds().initialize();
+    mobileAdsInitialized = true;
+    console.log('[Ads] Google Mobile Ads SDK initialized');
+  } catch (e) {
+    console.warn('[Ads] Failed to initialize Google Mobile Ads SDK:', e);
+  }
+}
 
 export default function Layout() {
   const pathname = usePathname();
@@ -18,6 +33,9 @@ export default function Layout() {
   const isScanScreen = pathname === '/scan';
 
   useEffect(() => {
+    // Initialize Google Mobile Ads SDK early
+    initializeMobileAds();
+
     // Initialize DB in background, don't block render
     initDatabase()
       .then(async () => {
@@ -60,12 +78,13 @@ export default function Layout() {
       >
         {!isScanScreen && <MusicFlowBackground />}
         <Stack
-          screenOptions={{ 
-            headerShown: false, 
+          screenOptions={{
+            headerShown: false,
             contentStyle: { backgroundColor: 'transparent' },
             backgroundColor: 'transparent'
           } as any}
         />
+        <BulkUploadProgress />
         <StatusBar style="light" />
       </View>
     </SafeAreaProvider>
