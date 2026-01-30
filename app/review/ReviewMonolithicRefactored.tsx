@@ -8,10 +8,11 @@
  * with full separation of concerns.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TransactionRepository } from '@lib/repository';
 
 import { ReviewContent } from './components';
 import type { ReviewInitialData } from './types';
@@ -51,17 +52,83 @@ function EmptyState({ onReturnHome }: EmptyStateProps) {
 // ============================================================================
 
 export default function ReviewMonolithicRefactored() {
-  const params = useLocalSearchParams<{ data: string; uri: string; queueItemId?: string }>();
+  const params = useLocalSearchParams<{ data: string; uri: string; queueItemId?: string; transactionId?: string }>();
   const router = useRouter();
 
-  // Parse initial data from URL params
+  const [draftData, setDraftData] = useState<ReviewInitialData | null>(null);
+
+  useEffect(() => {
+    if (params.transactionId) {
+      // Use helper internal to this effect or assume sync for now?
+      // Since component function is sync, we need async fetching inside useEffect
+      const fetchDraft = async () => {
+        try {
+          const trans = await TransactionRepository.getById(params.transactionId!);
+          if (trans) {
+            const items = await TransactionRepository.getLineItems(params.transactionId!);
+            // Transform transaction to InitialData format used by ReviewContent
+            // This needs to match the structure expected by useReviewState
+            // Simplified transformation:
+            setDraftData({
+              financial: {
+                merchant: trans.merchant,
+                date: trans.transactionDate,
+                total: trans.total / 100,
+              },
+              items: items.map((i: any) => ({
+                description: i.description,
+                totalPrice: i.totalPrice / 100,
+                unitPrice: i.unitPrice / 100,
+                quantity: i.quantity,
+                category: i.category,
+                // ... map other fields if needed
+              }))
+            });
+            // Actually, for manual entry, it might be better to pass the draft directly.
+            // But staying within Monolithic architecture:
+            // Let's fetch the rawOcrData which we saved!
+            if (trans.rawOcrData) {
+               try {
+                  const savedForm = JSON.parse(trans.rawOcrData);
+                  // Transform manual form data to ReviewInitialData (AI response format)
+                  // Manual Form: { merchant, transactionDate, items: [...] }
+                  // AI Response: { financial: { merchant: name, date, total }, items: [...] }
+                  const aiFormat: ReviewInitialData = {
+                    financial: {
+                      merchant: savedForm.merchant,
+                      date: savedForm.transactionDate,
+                      total: savedForm.totalPrice ? parseFloat(savedForm.totalPrice) : 0,
+                    },
+                    items: savedForm.items?.map((item: any) => ({
+                      description: item.description,
+                      totalPrice: item.totalPrice, 
+                      unitPrice: item.unitPrice || item.totalPrice,
+                      category: item.category,
+                      quantity: 1
+                    })) || []
+                  };
+                  setDraftData(aiFormat);
+               } catch(e) { console.error(e); }
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      };
+      fetchDraft();
+    }
+  }, [params.transactionId]);
+
+  // Parse initial data from URL params or use loaded draft
   const initialData = useMemo<ReviewInitialData>(() => {
+    if (draftData) return draftData;
     try {
-      return JSON.parse(params.data || '{}');
+      if (params.data) return JSON.parse(params.data);
+      return {};
     } catch (e) {
       return {};
     }
-  }, [params.data]);
+  }, [params.data, draftData]);
 
   // If no data, show empty state
   if (!params.data && !params.uri) {

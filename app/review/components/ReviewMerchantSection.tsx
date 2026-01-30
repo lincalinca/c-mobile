@@ -49,7 +49,7 @@ export function ReviewMerchantSection({
   return (
     <>
       <SectionTitle
-        icon={<Feather name="map-pin" size={12} color="#f5c518" />}
+        icon={<Feather name="map-pin" size={18} color="#f5c518" />}
         title="Merchant Details"
       />
       <SectionContainer>

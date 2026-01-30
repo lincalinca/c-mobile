@@ -116,6 +116,7 @@ export const students = sqliteTable('students', {
   relationship: text('relationship'), // 'self' | 'child' | 'student' | 'spouse' | 'other'
   instrument: text('instrument'), // Primary instrument (e.g., "Violin", "Piano")
   startedLessonsDate: text('started_lessons_date'), // YYYY-MM-DD format
+  status: text('status').default('active'), // 'active' | 'draft' | 'archived'
   notes: text('notes'), // Additional profile information
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),

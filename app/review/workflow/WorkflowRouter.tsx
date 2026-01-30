@@ -5,7 +5,7 @@
  */
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, Text, Alert } from 'react-native';
 import * as Crypto from 'expo-crypto';
@@ -23,7 +23,7 @@ import WorkflowEducationPage from './WorkflowEducationPage';
 import WorkflowEventsPage from './WorkflowEventsPage';
 
 export default function ReviewWorkflow() {
-  const params = useLocalSearchParams<{ data: string; uri: string; queueItemId?: string }>();
+  const params = useLocalSearchParams<{ data: string; uri: string; queueItemId?: string; transactionId?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
@@ -44,50 +44,167 @@ export default function ReviewWorkflow() {
     }
   }, [params.data]);
 
-  // Extract params values to avoid object reference issues
-  const paramsData = params.data || '';
-  const paramsUri = params.uri || '';
+  const paramsTransactionId = params.transactionId as string | undefined;
+  const dataCreatedRef = useRef(false);
 
   useEffect(() => {
-    // Initialize workflow state from initial data
-    const merchantIsNew = initialData.financial?.merchantIsNew !== false;
-    
-    const state: ReviewWorkflowState = {
-      merchant: merchantIsNew
-        ? (initialData.financial?.merchantDetails?.name || initialData.financial?.merchant || 'Unknown Merchant')
-        : (initialData.financial?.merchant || 'Unknown Merchant'),
-      merchantAbn: merchantIsNew ? (initialData.financial?.merchantDetails?.abn || '') : '',
-      documentType: initialData.documentType || 'receipt',
-      transactionDate: initialData.financial?.date || new Date().toISOString().split('T')[0],
-      invoiceNumber: initialData.financial?.invoiceNumber || '',
-      subtotal: initialData.financial?.subtotal?.toString() || '',
-      tax: initialData.financial?.tax?.toString() || '',
-      total: initialData.financial?.total?.toString() || '0',
-      paymentStatus: initialData.financial?.paymentStatus || 'paid',
-      paymentMethod: initialData.financial?.paymentMethod || 'card',
-      summary: initialData.summary || '',
-      merchantPhone: merchantIsNew ? (initialData.financial?.merchantDetails?.phone || '') : '',
-      merchantEmail: merchantIsNew ? (initialData.financial?.merchantDetails?.email || '') : '',
-      merchantWebsite: merchantIsNew ? (initialData.financial?.merchantDetails?.website || '') : '',
-      merchantAddress: merchantIsNew ? (initialData.financial?.merchantDetails?.address || '') : '',
-      merchantSuburb: merchantIsNew ? (initialData.financial?.merchantDetails?.suburb || '') : '',
-      merchantState: merchantIsNew ? (initialData.financial?.merchantDetails?.state || '') : '',
-      merchantPostcode: merchantIsNew ? (initialData.financial?.merchantDetails?.postcode || '') : '',
-      items: initialData.items || [],
-      currentStep: 'title',
-      completedSteps: new Set(),
-      imageUri: paramsUri,
-      rawOcrData: paramsData,
-      merchantIsNew,
-      matchedMerchantId: initialData.financial?.merchantId || null,
+    const initWorkflow = async () => {
+      // 1. Existing Draft: Load from DB
+      if (paramsTransactionId) {
+        try {
+          const txn = await TransactionRepository.getById(paramsTransactionId);
+          if (!txn) {
+            console.error('Transaction not found:', paramsTransactionId);
+            return;
+          }
+          const items = await TransactionRepository.getLineItems(paramsTransactionId);
+          
+          setWorkflowState({
+            transactionId: txn.id,
+            merchant: txn.merchant,
+            merchantAbn: txn.merchantAbn || '',
+            documentType: txn.documentType,
+            transactionDate: txn.transactionDate,
+            invoiceNumber: txn.invoiceNumber || '',
+            subtotal: (txn.subtotal ? txn.subtotal / 100 : 0).toString(),
+            tax: (txn.tax ? txn.tax / 100 : 0).toString(),
+            total: (txn.total / 100).toString(),
+            paymentStatus: txn.paymentStatus || 'paid',
+            paymentMethod: txn.paymentMethod || 'card',
+            summary: txn.summary || '',
+            merchantPhone: txn.merchantPhone || '',
+            merchantEmail: txn.merchantEmail || '',
+            merchantWebsite: txn.merchantWebsite || '',
+            merchantAddress: txn.merchantAddress || '',
+            merchantSuburb: txn.merchantSuburb || '',
+            merchantState: txn.merchantState || '',
+            merchantPostcode: txn.merchantPostcode || '',
+            items: items as any[],
+            currentStep: 'title',
+            completedSteps: new Set(),
+            imageUri: txn.imageUrl || '',
+            rawOcrData: txn.rawOcrData || '',
+            merchantIsNew: false,
+            matchedMerchantId: null,
+          });
+        } catch (e) {
+          console.error('Failed to load transaction:', e);
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
+
+      // 2. Legacy Data (Camera/Upload): Auto-create draft
+      if (initialData && !dataCreatedRef.current) {
+        dataCreatedRef.current = true; // Prevent double creation
+        try {
+          // Parse data
+          const merchantIsNew = initialData.financial?.merchantIsNew !== false;
+          const transactionId = Crypto.randomUUID();
+          
+          const newTxn = {
+            id: transactionId,
+            merchant: merchantIsNew
+              ? (initialData.financial?.merchantDetails?.name || initialData.financial?.merchant || 'Unknown Merchant')
+              : (initialData.financial?.merchant || 'Unknown Merchant'),
+            merchantAbn: merchantIsNew ? (initialData.financial?.merchantDetails?.abn || '') : '',
+            merchantPhone: merchantIsNew ? (initialData.financial?.merchantDetails?.phone || '') : '',
+            merchantEmail: merchantIsNew ? (initialData.financial?.merchantDetails?.email || '') : '',
+            merchantWebsite: merchantIsNew ? (initialData.financial?.merchantDetails?.website || '') : '',
+            merchantAddress: merchantIsNew ? (initialData.financial?.merchantDetails?.address || '') : '',
+            merchantSuburb: merchantIsNew ? (initialData.financial?.merchantDetails?.suburb || '') : '',
+            merchantState: merchantIsNew ? (initialData.financial?.merchantDetails?.state || '') : '',
+            merchantPostcode: merchantIsNew ? (initialData.financial?.merchantDetails?.postcode || '') : '',
+            summary: initialData.summary || '',
+            documentType: (initialData.documentType || 'receipt') as any,
+            transactionDate: initialData.financial?.date || new Date().toISOString().split('T')[0],
+            invoiceNumber: initialData.financial?.invoiceNumber || '',
+            subtotal: initialData.financial?.subtotal ? Math.round(parseFloat(initialData.financial.subtotal) * 100) : null,
+            tax: initialData.financial?.tax ? Math.round(parseFloat(initialData.financial.tax) * 100) : null,
+            total: Math.round((parseFloat(initialData.financial?.total) || 0) * 100),
+            paymentStatus: (initialData.financial?.paymentStatus || 'paid') as any,
+            paymentMethod: (initialData.financial?.paymentMethod || 'card') as any,
+            imageUrl: params.uri || '',
+            rawOcrData: params.data || '',
+            syncStatus: 'pending' as const,
+          };
+
+          const newItems = (initialData.items || []).map((item: any) => ({
+            id: Crypto.randomUUID(),
+            transactionId,
+            description: item.description,
+            category: item.category || 'other',
+            brand: item.brand || null,
+            model: item.model || null,
+            quantity: item.quantity || 1,
+            unitPrice: Math.round((item.unitPrice || 0) * 100),
+            totalPrice: Math.round((item.totalPrice || 0) * 100),
+            gearDetails: item.gearDetails ? JSON.stringify(item.gearDetails) : null,
+            educationDetails: item.educationDetails ? JSON.stringify(item.educationDetails) : null,
+            serviceDetails: item.serviceDetails ? JSON.stringify(item.serviceDetails) : null,
+            notes: item.notes || null,
+          }));
+
+          // Save to DB immediately
+          await TransactionRepository.createDraft(newTxn, newItems);
+          
+          // Update URL to prevent re-creation on refresh
+          router.setParams({ transactionId, data: undefined });
+
+          // Initialize State
+          setWorkflowState({
+            transactionId,
+            merchant: newTxn.merchant,
+            merchantAbn: newTxn.merchantAbn || '',
+            documentType: newTxn.documentType,
+            transactionDate: newTxn.transactionDate,
+            invoiceNumber: newTxn.invoiceNumber || '',
+            subtotal: (newTxn.subtotal ? newTxn.subtotal / 100 : 0).toString(),
+            tax: (newTxn.tax ? newTxn.tax / 100 : 0).toString(),
+            total: (newTxn.total / 100).toString(),
+            paymentStatus: newTxn.paymentStatus,
+            paymentMethod: newTxn.paymentMethod,
+            summary: newTxn.summary || '',
+            merchantPhone: newTxn.merchantPhone || '',
+            merchantEmail: newTxn.merchantEmail || '',
+            merchantWebsite: newTxn.merchantWebsite || '',
+            merchantAddress: newTxn.merchantAddress || '',
+            merchantSuburb: newTxn.merchantSuburb || '',
+            merchantState: newTxn.merchantState || '',
+            merchantPostcode: newTxn.merchantPostcode || '',
+            items: newItems,
+            currentStep: 'title',
+            completedSteps: new Set(),
+            imageUri: newTxn.imageUrl || '',
+            rawOcrData: newTxn.rawOcrData || '',
+            merchantIsNew,
+            matchedMerchantId: initialData.financial?.merchantId || null,
+          });
+        } catch (e) {
+          console.error('Failed to auto-create draft:', e);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
     };
     
-    setWorkflowState(state);
-    setLoading(false);
-  }, [initialData, paramsData, paramsUri]);
+    initWorkflow();
+  }, [initialData, params.data, params.uri, paramsTransactionId]);
 
   const updateState = (updates: Partial<ReviewWorkflowState>) => {
-    setWorkflowState(prev => prev ? { ...prev, ...updates } : null);
+    setWorkflowState(prev => {
+       if (!prev) return null;
+       const newState = { ...prev, ...updates };
+       
+       // Optimization: If we have a transactionId, we *could* save to DB here.
+       // For now, we rely on final save, OR implement specific save points.
+       // Ideally, updating items array should trigger a DB update.
+       
+       return newState;
+    });
   };
 
   const navigateToStep = (step: WorkflowStep) => {
@@ -104,6 +221,8 @@ export default function ReviewWorkflow() {
 
   const handleNext = () => {
     if (!workflowState) return;
+    
+    // TODO: Sync to DB here if using persistence to prevent data loss on crash
     
     const counts = countItemsByCategory(workflowState.items);
     const missingData = analyzeMissingData(workflowState.items);
@@ -134,6 +253,9 @@ export default function ReviewWorkflow() {
     }
   };
 
+  /**
+   * Creates a NEW transaction (Legacy support)
+   */
   const performSave = async (): Promise<string | null> => {
     if (!workflowState) return null;
     
@@ -151,14 +273,14 @@ export default function ReviewWorkflow() {
       merchantState: workflowState.merchantState || null,
       merchantPostcode: workflowState.merchantPostcode || null,
       summary: workflowState.summary || null,
-      documentType: workflowState.documentType,
+      documentType: workflowState.documentType as any,
       transactionDate: workflowState.transactionDate,
       invoiceNumber: workflowState.invoiceNumber || null,
       subtotal: workflowState.subtotal ? Math.round(parseFloat(workflowState.subtotal) * 100) : null,
       tax: workflowState.tax ? Math.round(parseFloat(workflowState.tax) * 100) : null,
       total: Math.round(parseFloat(workflowState.total) * 100),
-      paymentStatus: workflowState.paymentStatus,
-      paymentMethod: workflowState.paymentMethod,
+      paymentStatus: workflowState.paymentStatus as any,
+      paymentMethod: workflowState.paymentMethod as any,
       imageUrl: workflowState.imageUri,
       rawOcrData: workflowState.rawOcrData,
       syncStatus: 'pending',
@@ -188,11 +310,55 @@ export default function ReviewWorkflow() {
     return transactionId;
   };
 
+  /**
+   * Synchronizes current workflow state to DB (for existing Draft)
+   * Used before confirming
+   */
+  const syncDraftToDb = async (id: string) => {
+    if (!workflowState) return;
+    
+    // Update Transaction
+    await TransactionRepository.update(id, {
+      merchant: workflowState.merchant,
+      // ... update other transaction fields
+      total: Math.round(parseFloat(workflowState.total) * 100),
+      summary: workflowState.summary,
+      transactionDate: workflowState.transactionDate,
+    });
+    
+    // Replace Items (easiest way to sync changed array)
+    // In a more granular system we'd update specific lines, but for 'Save & Exit' this is safe
+    const newItems = workflowState.items.map((item: any) => ({
+      id: item.id || Crypto.randomUUID(),
+      transactionId: id,
+      description: item.description,
+      category: item.category || 'other',
+      brand: item.brand || null,
+      model: item.model || null,
+      quantity: item.quantity || 1,
+      unitPrice: Math.round((item.unitPrice || 0) * 100),
+      totalPrice: Math.round((item.totalPrice || 0) * 100),
+      gearDetails: item.gearDetails ? JSON.stringify(item.gearDetails) : null,
+      educationDetails: item.educationDetails ? JSON.stringify(item.educationDetails) : null,
+      serviceDetails: item.serviceDetails ? JSON.stringify(item.serviceDetails) : null,
+      // ... map other fields
+    }));
+    
+    await TransactionRepository.replaceLineItems(id, newItems as any);
+  };
+
   const handleSaveAndExit = useCallback(async () => {
     if (!workflowState) return;
 
     try {
-      await performSave();
+      if (workflowState.transactionId) {
+        // Mode A: Confirm Draft (Persistence)
+        await syncDraftToDb(workflowState.transactionId); // Ensure latest state is saved
+        await TransactionRepository.confirmDraft(workflowState.transactionId);
+      } else {
+        // Mode B: Create New (Legacy)
+        await performSave();
+      }
 
       // Clean up queue item if this came from bulk upload
       if (params.queueItemId) {

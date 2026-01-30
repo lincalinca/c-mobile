@@ -137,70 +137,9 @@ export function LessonDateSelector({ item, transactionDate, onUpdate }: LessonDa
   };
 
   return (
-    <View className="mt-4 pt-4 border-t border-crescender-700">
-      <Text className="text-crescender-400 text-sm mb-3 font-semibold">Lesson Schedule</Text>
 
-      {/* Student name – important to capture */}
-      <View className="mb-4">
-        <Text className="text-crescender-500 text-xs mb-2">
-          Student name <Text className="text-yellow-500">(required)</Text>
-        </Text>
-        <TextInput
-          className="text-white text-base border-b border-crescender-700 py-1"
-          value={eduDetails.studentName || ''}
-          onChangeText={(text) => onUpdate({ studentName: text.trim() || undefined })}
-          placeholder="e.g. Alex, Jordan"
-          placeholderTextColor="#666"
-        />
-        {!eduDetails.studentName && (
-          <Text className="text-yellow-500 text-xs mt-1">Student name helps track lessons</Text>
-        )}
-      </View>
+    <View className="mt-2">
 
-      {/* Teacher name */}
-      <View className="mb-4">
-        <Text className="text-crescender-500 text-xs mb-2">
-          Teacher name <Text className="text-crescender-600">(optional)</Text>
-        </Text>
-        <TextInput
-          className="text-white text-base border-b border-crescender-700 py-1"
-          value={eduDetails.teacherName || ''}
-          onChangeText={(text) => onUpdate({ teacherName: text.trim() || undefined })}
-          placeholder="e.g. Jane Smith"
-          placeholderTextColor="#666"
-        />
-      </View>
-
-      {/* Focus Field */}
-      <View className="mb-4">
-        <Text className="text-crescender-500 text-xs mb-2">
-          Focus <Text className="text-crescender-600">(e.g., Violin, Piano, Vocals, Theory)</Text>
-        </Text>
-        <TextInput
-          className="text-white text-base border-b border-crescender-700 py-1"
-          value={eduDetails.focus || ''}
-          onChangeText={(text) => onUpdate({ focus: text.trim() || undefined })}
-          placeholder="Violin, Piano, Vocals, Theory, Etc"
-          placeholderTextColor="#666"
-        />
-        {!eduDetails.focus && (
-          <Text className="text-yellow-500 text-xs mt-1">Focus needed for chaining lessons</Text>
-        )}
-      </View>
-
-      {/* Lesson Start Date */}
-      <View className="mb-4">
-        <Text className="text-crescender-500 text-xs mb-2">Lesson Start Date</Text>
-        <TouchableOpacity
-          onPress={() => setShowDatePicker(true)}
-          className="bg-crescender-800 p-3 rounded-xl flex-row items-center justify-between border border-crescender-700"
-        >
-          <Text className={`text-base ${startDate ? 'text-white' : 'text-crescender-500'}`}>
-            {formatDateFull(startDate)}
-          </Text>
-          <Feather name="calendar" size={20} color="#f5c518" />
-        </TouchableOpacity>
-      </View>
 
       {/* Frequency Selector Chips */}
       <View className="mb-4">
@@ -230,6 +169,20 @@ export function LessonDateSelector({ item, transactionDate, onUpdate }: LessonDa
             ))}
           </View>
         </ScrollView>
+      </View>
+
+      {/* Lesson Start Date */}
+      <View className="mb-4">
+        <Text className="text-crescender-500 text-xs mb-2">Lesson Start Date</Text>
+        <TouchableOpacity
+          onPress={() => setShowDatePicker(true)}
+          className="bg-crescender-800 p-3 rounded-xl flex-row items-center justify-between border border-crescender-700"
+        >
+          <Text className={`text-base ${startDate ? 'text-white' : 'text-crescender-500'}`}>
+            {formatDateFull(startDate)}
+          </Text>
+          <Feather name="calendar" size={20} color="#f5c518" />
+        </TouchableOpacity>
       </View>
 
       {/* Lesson Count Humility UI */}

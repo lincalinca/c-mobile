@@ -8,6 +8,8 @@ import { DatePickerModal } from '@components/calendar/DatePickerModal';
 import { callSupabaseFunction } from '@lib/supabase';
 import { recordScan, hasScansRemaining } from '@lib/usageTracking';
 import { getFlow, getQuestion, type CategoryType } from '@lib/chat/flows';
+import { TransactionRepository } from '@lib/repository';
+import * as Crypto from 'expo-crypto';
 
 interface Message {
   id: string;
@@ -253,48 +255,54 @@ export default function AssistantScreen() {
 
       console.log("[Assistant] Enrichment Result:", result);
       
-      // Reshape the result into the standard ReceiptData format expected by /review
-      const reshapedData = {
-        summary: result.summary,
-        financial: {
-          merchant: result.merchant.name,
-          merchantAbn: result.merchant.abn,
-          date: draftItem.date ? draftItem.date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-          total: result.item.totalPrice,
-          subtotal: result.item.totalPrice,
-          tax: 0,
-          merchantDetails: {
-            name: result.merchant.name,
-            suburb: result.merchant.suburb,
-            address: result.merchant.address,
-            phone: result.merchant.phone,
-            email: result.merchant.email,
-            website: result.merchant.website
-          }
-        },
-        items: [{
-          description: result.item.description,
-          category: result.item.category,
-          brand: result.item.brand || result.item.gearDetails?.brand,
-          model: result.item.model || result.item.gearDetails?.modelName,
-          quantity: 1,
-          unitPrice: result.item.totalPrice,
-          totalPrice: result.item.totalPrice,
-          // Map category-specific details
-          gearDetails: result.item.category === 'gear' ? result.item.gearDetails : undefined,
-          educationDetails: result.item.category === 'education' ? result.item.educationDetails : undefined,
-          serviceDetails: result.item.category === 'service' ? result.item.serviceDetails : undefined,
-          notes: `Added via Crescender Assistant${draftItem.details?.purchaseSource ? ` (${draftItem.details.purchaseSource} purchase)` : ''}`
-        }]
-      };
+      // Create a Draft Transaction in DB directly
+      const transactionId = Crypto.randomUUID();
+      const itemId = Crypto.randomUUID();
 
-      // Navigate to standard review screen, forcing monolithic style for manual AI entries
+      await TransactionRepository.createDraft({
+        id: transactionId,
+        merchant: result.merchant.name || 'Unknown',
+        merchantAbn: result.merchant.abn || null,
+        merchantPhone: result.merchant.phone || null,
+        merchantEmail: result.merchant.email || null,
+        merchantWebsite: result.merchant.website || null,
+        merchantAddress: result.merchant.address || null,
+        merchantSuburb: result.merchant.suburb || null,
+        merchantState: null,
+        merchantPostcode: null,
+        transactionDate: draftItem.date ? draftItem.date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        total: Math.round((result.item.totalPrice || 0) * 100),
+        subtotal: Math.round((result.item.totalPrice || 0) * 100),
+        tax: 0,
+        paymentStatus: 'paid',
+        paymentMethod: 'card', 
+        summary: result.summary || 'Manual Entry',
+        documentType: 'receipt', // default
+        syncStatus: 'pending',
+        rawOcrData: JSON.stringify(result), // Store full AI result for reference
+      }, [{
+        id: itemId,
+        transactionId: transactionId,
+        description: result.item.description || 'Item',
+        category: result.item.category || 'other',
+        brand: result.item.brand || result.item.gearDetails?.brand || null,
+        model: result.item.model || result.item.gearDetails?.modelName || null,
+        quantity: 1,
+        unitPrice: Math.round((result.item.totalPrice || 0) * 100),
+        totalPrice: Math.round((result.item.totalPrice || 0) * 100),
+        // Details as JSON strings
+        gearDetails: result.item.category === 'gear' && result.item.gearDetails ? JSON.stringify(result.item.gearDetails) : null,
+        educationDetails: result.item.category === 'education' && result.item.educationDetails ? JSON.stringify(result.item.educationDetails) : null,
+        serviceDetails: result.item.category === 'service' && result.item.serviceDetails ? JSON.stringify(result.item.serviceDetails) : null,
+        notes: `Added via Crescender Assistant${draftItem.details?.purchaseSource ? ` (${draftItem.details.purchaseSource} purchase)` : ''}`,
+      }]);
+
+      // Navigate to review with ID
       router.replace({
         pathname: '/review',
         params: { 
-          data: JSON.stringify(reshapedData),
-          uri: undefined, // Manual entry has no image
-          forceMonolithic: 'true'
+          transactionId: transactionId,
+          forceMonolithic: 'true' // Keep monolithic flow for manual entries as requested
         }
       });
     } catch (error) {

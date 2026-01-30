@@ -1,11 +1,14 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, Image, Modal } from 'react-native';
+import { View, TouchableOpacity, Text, Image, Modal, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TransactionHeroView } from './TransactionHeroView';
+import type { Receipt } from '@lib/repository';
 
 interface TransactionImageModalProps {
   visible: boolean;
   imageUrl: string | null;
+  receipt?: Receipt | null;
   onClose: () => void;
   onSave: () => void;
   onShare: () => void;
@@ -14,6 +17,7 @@ interface TransactionImageModalProps {
 export function TransactionImageModal({
   visible,
   imageUrl,
+  receipt,
   onClose,
   onSave,
   onShare,
@@ -23,43 +27,43 @@ export function TransactionImageModal({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View
-        className="flex-1 bg-black/95"
+        className="flex-1 bg-black"
         style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
       >
-        {/* Header */}
-        <View className="flex-row justify-between items-center px-4 py-3">
-          <TouchableOpacity onPress={onClose} className="bg-crescender-800/50 p-3 rounded-full">
+        {/* Header Actions */}
+        <View className="flex-row justify-between items-center px-4 py-2 z-10 bg-black/50 absolute top-0 left-0 right-0" style={{ marginTop: insets.top }}>
+          <TouchableOpacity onPress={onClose} className="bg-crescender-800/80 p-3 rounded-full">
             <Feather name="x" size={24} color="white" />
           </TouchableOpacity>
           <View className="flex-row gap-3">
-            <TouchableOpacity
-              onPress={onSave}
-              className="bg-gold/20 px-4 py-3 rounded-full border border-gold/30 flex-row items-center gap-2"
-            >
+            <TouchableOpacity onPress={onSave} className="bg-gold/20 px-4 py-3 rounded-full border border-gold/30 flex-row items-center gap-2">
               <Feather name="download" size={20} color="#f5c518" />
-              <Text className="text-gold font-semibold text-sm">Save</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={onShare}
-              className="bg-crescender-800/50 px-4 py-3 rounded-full border border-crescender-700/50 flex-row items-center gap-2"
-            >
+            <TouchableOpacity onPress={onShare} className="bg-crescender-800/80 px-4 py-3 rounded-full border border-crescender-700/50 flex-row items-center gap-2">
               <Feather name="share-2" size={20} color="white" />
-              <Text className="text-white font-semibold text-sm">Share</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Image */}
-        <View className="flex-1 justify-center items-center px-4">
-          {imageUrl && (
-            <Image
-              source={{ uri: imageUrl }}
-              className="w-full"
-              style={{ flex: 1 }}
-              resizeMode="contain"
-            />
-          )}
-        </View>
+        <ScrollView className="flex-1" contentContainerStyle={{ paddingTop: 80, paddingBottom: 40 }}>
+           {/* Hero Component Overlay */}
+           {receipt && (
+             <View className="mb-4">
+               <TransactionHeroView receipt={receipt} />
+             </View>
+           )}
+
+           {/* Image */}
+           <View className="min-h-[500px] justify-center items-center px-4">
+             {imageUrl && (
+               <Image
+                 source={{ uri: imageUrl }}
+                 className="w-full h-[600px]"
+                 resizeMode="contain"
+               />
+             )}
+           </View>
+        </ScrollView>
       </View>
     </Modal>
   );

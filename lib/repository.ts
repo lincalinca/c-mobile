@@ -169,12 +169,17 @@ function enhanceLineItem(item: LineItem): LineItemWithDetails {
 export const TransactionRepository = {
   async getAll() {
     await waitForDb();
-    return await db.select().from(transactions).orderBy(desc(transactions.createdAt));
+    return await db.select().from(transactions)
+      .where(eq(transactions.processingStatus, 'confirmed'))
+      .orderBy(desc(transactions.createdAt));
   },
 
   async getAllWithItems() {
     await waitForDb();
-    const allTransactions = await db.select().from(transactions).orderBy(desc(transactions.createdAt));
+    const allTransactions = await db.select().from(transactions)
+      .where(eq(transactions.processingStatus, 'confirmed'))
+      .orderBy(desc(transactions.createdAt));
+      
     const transactionsWithItems = await Promise.all(
       allTransactions.map(async (txn: Transaction) => {
         const items = await db.select().from(lineItems).where(eq(lineItems.transactionId, txn.id));
@@ -189,6 +194,64 @@ export const TransactionRepository = {
     await waitForDb();
     const result = await db.select().from(transactions).where(eq(transactions.id, id));
     return result[0] || null;
+  },
+
+  /**
+   * Get all gear items for selection in dropdowns
+   */
+  async getAllGearItems() {
+    await waitForDb();
+    const items = await db.select({
+      id: lineItems.id,
+      description: lineItems.description,
+      brand: lineItems.brand,
+      model: lineItems.model,
+    })
+    .from(lineItems)
+    .where(eq(lineItems.category, 'gear'))
+    .orderBy(desc(lineItems.createdAt));
+    
+    return items.map((item: any) => ({
+      ...item,
+      label: `${item.brand ? item.brand + ' ' : ''}${item.model || item.description}`
+    }));
+  },
+
+  /**
+   * Create a draft transaction from initial data
+   * Sets processingStatus to 'ready_for_review'
+   */
+  async createDraft(transaction: NewTransaction, items: NewLineItem[]) {
+    await waitForDb();
+    try {
+      // Ensure specific fields are set for a draft
+      const draftTransaction = {
+        ...transaction,
+        processingStatus: 'ready_for_review' as const, // Force status
+      };
+
+      await db.insert(transactions).values(draftTransaction);
+      if (items.length > 0) {
+        await db.insert(lineItems).values(items);
+      }
+      console.log('[Repository] Created draft transaction:', transaction.id);
+      return draftTransaction;
+    } catch (e) {
+      console.error('[Repository] Error creating draft transaction:', e);
+      throw e;
+    }
+  },
+
+  /**
+   * Finalize a draft transaction
+   * Sets processingStatus to 'confirmed'
+   */
+  async confirmDraft(id: string) {
+    await waitForDb();
+    await db.update(transactions)
+      .set({ processingStatus: 'confirmed' })
+      .where(eq(transactions.id, id));
+    console.log('[Repository] Confirmed transaction:', id);
   },
 
   async getLineItems(transactionId: string): Promise<LineItemWithDetails[]> {
@@ -222,6 +285,7 @@ export const TransactionRepository = {
     await waitForDb();
     await db.delete(lineItems).where(eq(lineItems.transactionId, id));
     await db.delete(transactions).where(eq(transactions.id, id));
+    console.log('[Repository] Deleted transaction:', id);
   },
 
   /**

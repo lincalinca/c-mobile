@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Platform, Modal, Animated, PanResponder, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions, CameraType, FlashMode } from 'expo-camera';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
@@ -72,6 +72,17 @@ export default function ScanScreen() {
       setShowPermissionModal(true);
     }
   }, [permission, showPermissionModal, hasWebPermission]);
+
+  // Handle upload mode from router params
+  const { mode } = useLocalSearchParams();
+  useEffect(() => {
+    if (mode === 'upload') {
+      // Small delay to ensure navigation is complete before opening picker
+      setTimeout(() => {
+        pickDocument();
+      }, 500);
+    }
+  }, [mode]);
 
   // Reset cameraReady when facing or flash changes so we only capture after onCameraReady fires again
   useEffect(() => {

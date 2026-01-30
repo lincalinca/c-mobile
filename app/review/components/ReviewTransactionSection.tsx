@@ -3,12 +3,13 @@
  * Displays document type, merchant, ABN, invoice number, date, and summary
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DOCUMENT_TYPES } from '@app/review/config';
 import type { DocumentType } from '@app/review/config';
-import { SectionContainer, SectionTitle, TextField, TwoColumnRow } from './FormFields';
+import { SectionContainer, SectionTitle } from './FormFields';
+import { DatePickerModal } from '@components/calendar/DatePickerModal';
 
 interface ReviewTransactionSectionProps {
   merchant: string;
@@ -29,10 +30,17 @@ export function ReviewTransactionSection({
   summary,
   onFieldChange,
 }: ReviewTransactionSectionProps) {
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // Format date for display (e.g. 12 May 2024)
+  const displayDate = transactionDate 
+    ? new Date(transactionDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
+    : 'Select Date';
+
   return (
     <>
       <SectionTitle
-        icon={<Feather name="file-text" size={12} color="#f5c518" />}
+        icon={<Feather name="file-text" size={18} color="#f5c518" />} 
         title="Transaction Details"
       />
       <SectionContainer>
@@ -97,16 +105,18 @@ export function ReviewTransactionSection({
           </View>
         </View>
 
-        {/* Date */}
+        {/* Date Field (Modal Trigger) */}
         <View className="mb-4">
           <Text className="text-crescender-400 text-sm mb-1">Date</Text>
-          <TextInput
-            className="text-white text-lg border-b border-crescender-700 py-1"
-            value={transactionDate}
-            onChangeText={(text) => onFieldChange('transactionDate', text)}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#666"
-          />
+          <TouchableOpacity 
+            onPress={() => setShowDatePicker(true)}
+            className="border-b border-crescender-700 py-1 flex-row items-center justify-between"
+          >
+            <Text className={transactionDate ? "text-white text-lg" : "text-gray-500 text-lg"}>
+              {displayDate}
+            </Text>
+            <Feather name="calendar" size={18} color="#f5c518" />
+          </TouchableOpacity>
         </View>
 
         {/* Transaction Summary */}
@@ -121,6 +131,18 @@ export function ReviewTransactionSection({
             maxLength={100}
           />
         </View>
+
+        {/* Date Picker Modal */}
+        <DatePickerModal 
+          visible={showDatePicker}
+          onRequestClose={() => setShowDatePicker(false)}
+          onConfirm={(date) => {
+            onFieldChange('transactionDate', date);
+            setShowDatePicker(false);
+          }}
+          initialDate={transactionDate}
+          title="Transaction Date"
+        />
       </SectionContainer>
     </>
   );

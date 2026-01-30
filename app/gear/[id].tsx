@@ -378,6 +378,7 @@ export default function GearDetailScreen() {
       <TransactionImageModal
         visible={showImageModal}
         imageUrl={receipt.imageUrl}
+        receipt={receipt}
         onClose={() => setShowImageModal(false)}
         onSave={handleSaveImage}
         onShare={handleShareImage}

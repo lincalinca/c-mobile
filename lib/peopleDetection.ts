@@ -1,3 +1,4 @@
+import { get } from 'fast-levenshtein';
 /**
  * People Detection - Detects potential person names from events and education items
  */
@@ -83,6 +84,59 @@ export async function checkIfPersonExists(name: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Find best matching person for a given name
+ */
+export async function findBestMatchingPerson(name: string): Promise<{ person: Student; confidence: number } | null> {
+  try {
+    const allPeople = await StudentRepository.getAll();
+    if (allPeople.length === 0) return null;
+
+    let bestMatch: Student | null = null;
+    let minDistance = Infinity;
+    const normalizedTarget = name.trim().toLowerCase();
+
+    for (const person of allPeople) {
+      const normalizedSource = person.name.trim().toLowerCase();
+      
+      // Exact match
+      if (normalizedSource === normalizedTarget) {
+        return { person, confidence: 1.0 };
+      }
+
+      // Levenshtein distance
+      const distance = get(normalizedTarget, normalizedSource);
+      
+      // Basic heuristic: check if one name is a substring of the other (e.g. "Tom" and "Thomas")
+      // And the distance is reasonable
+      if (normalizedSource.includes(normalizedTarget) || normalizedTarget.includes(normalizedSource)) {
+         // Boost score for substring matches
+         if (distance < minDistance) {
+            minDistance = distance;
+            bestMatch = person;
+         }
+      } else if (distance < minDistance) {
+        minDistance = distance;
+        bestMatch = person;
+      }
+    }
+
+    if (bestMatch) {
+      const threshold = Math.max(3, bestMatch.name.length * 0.4);
+      if (minDistance <= threshold) {
+        const confidence = 1 - (minDistance / Math.max(normalizedTarget.length, bestMatch.name.length));
+        return { person: bestMatch, confidence };
+      }
+    }
+    
+    return null;
+  } catch (e) {
+    console.error('Failed to find best matching person', e);
+    return null;
+  }
+}
+
 
 /**
  * Detect new people from items and return names that don't exist yet

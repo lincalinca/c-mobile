@@ -1,41 +1,42 @@
-import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { cloudLog } from '@lib/cloudLogger';
 import type { BannerAdSize as BannerAdSizeType } from 'react-native-google-mobile-ads';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 
 // Lazy import to avoid errors in Expo Go where native module isn't available
 let BannerAd: any;
 let BannerAdSize: any;
 let TestIds: any;
 
-try {
-  const adsModule = require('react-native-google-mobile-ads');
-  BannerAd = adsModule.BannerAd;
-  BannerAdSize = adsModule.BannerAdSize;
-  TestIds = adsModule.TestIds;
-} catch (error) {
-  // Native module not available (e.g., in Expo Go)
-  console.warn('Google Mobile Ads module not available:', error);
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+if (!isExpoGo) {
+  try {
+    const adsModule = require('react-native-google-mobile-ads');
+    BannerAd = adsModule.BannerAd;
+    BannerAdSize = adsModule.BannerAdSize;
+    TestIds = adsModule.TestIds;
+  } catch (error) {
+    console.warn('Google Mobile Ads module not found (native).');
+  }
+}
+
+if (!TestIds) {
   // Provide fallback TestIds object
   TestIds = {
-    BANNER: 'ca-app-pub-3940256099942544/6300978111', // Google test ad unit ID
+    BANNER: 'ca-app-pub-3940256099942544/6300978111', 
   };
 }
 
-// Production Ad Unit IDs
-const IOS_BANNER_AD_UNIT_ID = __DEV__
-  ? (TestIds?.BANNER || 'ca-app-pub-3940256099942544/6300978111')
-  : 'ca-app-pub-5375818323643018/6519980079';
-
-const ANDROID_BANNER_AD_UNIT_ID = __DEV__
-  ? (TestIds?.BANNER || 'ca-app-pub-3940256099942544/6300978111')
-  : 'ca-app-pub-5375818323643018/6200415873';
+// Demo Ad Unit IDs (Google Test IDs)
+const IOS_BANNER_AD_UNIT_ID = 'ca-app-pub-3940256099942544/2435281174'; // Adaptive Banner
+const ANDROID_BANNER_AD_UNIT_ID = 'ca-app-pub-3940256099942544/9214589741'; // Adaptive Banner
 
 // Platform-specific ad unit ID selection
 const adUnitId = BannerAd ? Platform.select({
   ios: IOS_BANNER_AD_UNIT_ID,
   android: ANDROID_BANNER_AD_UNIT_ID,
-  default: TestIds?.BANNER || 'ca-app-pub-3940256099942544/6300978111',
+  default: 'ca-app-pub-3940256099942544/6300978111',
 }) : null;
 
 interface AdBannerProps {

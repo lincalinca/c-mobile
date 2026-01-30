@@ -17,7 +17,9 @@ import { useUploadStore } from '@lib/stores/uploadStore';
 import { useInterstitialAd, usePreloadInterstitialAd } from '@components/ads';
 import { getEducationSeriesSummary } from '@lib/educationEvents';
 import { addEducationSeriesToDeviceCalendar } from '@lib/calendarExport';
-import { detectNewPeople } from '@lib/peopleDetection';
+import { detectNewPeople, findBestMatchingPerson } from '@lib/peopleDetection';
+import { AddPersonModal } from './AddPersonModal';
+import { StudentRepository } from '@lib/repository';
 
 import { useReviewState } from '@app/review/useReviewState';
 import type { ReviewInitialData, ReviewLineItem } from '@app/review/types';
@@ -67,41 +69,69 @@ function DebugView({ visible, initialData }: DebugViewProps) {
 }
 
 // ============================================================================
-// New Person Modal Component
+// New Person Modal Component (Advanced)
 // ============================================================================
 
 interface NewPersonModalProps {
   visible: boolean;
   personName: string | null;
-  onResponse: (isNewPerson: boolean) => void;
+  bestMatch: { person: any; confidence: number } | null;
+  onAction: (action: 'add' | 'remind' | 'skip' | 'assign', match?: any) => void;
 }
 
-function NewPersonModal({ visible, personName, onResponse }: NewPersonModalProps) {
+function NewPersonModal({ visible, personName, bestMatch, onAction }: NewPersonModalProps) {
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={() => onResponse(false)}
+      onRequestClose={() => onAction('skip')}
     >
       <View className="flex-1 bg-black/60 justify-center items-center px-6">
         <View className="bg-crescender-900 rounded-2xl p-6 border border-crescender-700 max-w-md w-full">
           <Text className="text-white text-xl font-bold mb-2">New Person Detected</Text>
           <Text className="text-crescender-300 text-base mb-6">
-            We detected "{personName}" in this transaction. Is this a new person you'd like to add?
+            We found "{personName}" in this transaction. Is this a new person?
           </Text>
-          <View className="flex-row gap-3">
-            <TouchableOpacity
-              onPress={() => onResponse(false)}
-              className="flex-1 bg-crescender-800 px-4 py-3 rounded-xl"
+
+          {bestMatch && bestMatch.confidence > 0.4 && (
+             <TouchableOpacity
+              onPress={() => onAction('assign', bestMatch.person)}
+              className="bg-crescender-800 border border-gold/30 p-4 rounded-xl mb-4 flex-row items-center gap-3"
             >
-              <Text className="text-crescender-200 font-semibold text-center">Skip</Text>
+              <View className="bg-gold/10 p-2 rounded-full">
+                <Feather name="user-check" size={20} color="#f5c518" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-gold font-bold text-base">Match: {bestMatch.person.name}</Text>
+                <Text className="text-crescender-400 text-xs">Assign this item to {bestMatch.person.name}</Text>
+              </View>
+              <Feather name="chevron-right" size={20} color="#f5c518" />
             </TouchableOpacity>
+          )}
+
+          <View className="gap-3">
             <TouchableOpacity
-              onPress={() => onResponse(true)}
-              className="flex-1 bg-gold px-4 py-3 rounded-xl"
+              onPress={() => onAction('add')}
+              className="bg-gold p-4 rounded-xl flex-row justify-center items-center gap-2"
             >
-              <Text className="text-black font-bold text-center">Add Person</Text>
+              <Feather name="plus-circle" size={18} color="#2e1065" />
+              <Text className="text-black font-bold text-lg">Add {personName} Now</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => onAction('remind')}
+              className="bg-crescender-800 p-4 rounded-xl flex-row justify-center items-center gap-2"
+            >
+              <Feather name="clock" size={18} color="#e2e8f0" />
+              <Text className="text-white font-semibold text-lg">Remind Me Later</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => onAction('skip')}
+              className="p-2"
+            >
+              <Text className="text-crescender-400 font-semibold text-center text-base">No, Skip</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -153,7 +183,9 @@ export function ReviewContent({ initialData, imageUri, rawData, queueItemId }: R
   const [isSaving, setIsSaving] = useState(false);
   const [showRawData, setShowRawData] = useState(false);
   const [detectedPersonName, setDetectedPersonName] = useState<string | null>(null);
+  const [bestMatchPerson, setBestMatchPerson] = useState<{ person: any; confidence: number } | null>(null);
   const [showPersonPrompt, setShowPersonPrompt] = useState(false);
+  const [showAddPersonModal, setShowAddPersonModal] = useState(false);
 
   // Preload interstitial ad early
   usePreloadInterstitialAd();
@@ -167,7 +199,13 @@ export function ReviewContent({ initialData, imageUri, rawData, queueItemId }: R
       try {
         const newNames = await detectNewPeople(state.items);
         if (newNames.length > 0) {
-          setDetectedPersonName(newNames[0]);
+          const name = newNames[0];
+          setDetectedPersonName(name);
+
+          // Find potential match
+          const match = await findBestMatchingPerson(name);
+          setBestMatchPerson(match);
+
           setShowPersonPrompt(true);
         }
       } catch (e) {
@@ -188,13 +226,64 @@ export function ReviewContent({ initialData, imageUri, rawData, queueItemId }: R
     }
   }, [router]);
 
-  const handlePersonPromptResponse = async (isNewPerson: boolean) => {
+  const handlePersonPromptAction = async (action: 'add' | 'remind' | 'skip' | 'assign', match?: any) => {
     setShowPersonPrompt(false);
 
-    if (isNewPerson && detectedPersonName) {
-      router.push(`/people/new?name=${encodeURIComponent(detectedPersonName)}`);
+    if (action === 'add') {
+      // Open add person modal without leaving page
+      setShowAddPersonModal(true);
+    } else if (action === 'assign' && match) {
+      // Logic to assign this person to the current item(s)
+      // We assume the first found name corresponds to the first education item or all relevant items
+      if (detectedPersonName) {
+        // Iterate items and update studentName if it matches detected name
+        // Or simpler: update all education items to use this person's name
+        // Ideally we find the specific item. detectNewPeople logic iterates all items.
+        // For now, let's update ALL education items with this person's name if they had a missing or similar name
+        // Or just override.
+        state.items.forEach((item, index) => {
+          if (item.category === 'education' && item.educationDetails) {
+             const details = typeof item.educationDetails === 'string' ? JSON.parse(item.educationDetails) : item.educationDetails;
+             if (details.studentName === detectedPersonName) {
+               updateItemEducation(index, { ...details, studentName: match.name });
+             }
+          }
+        });
+        Alert.alert('Assigned', `Items assigned to ${match.name}`);
+      }
+      setDetectedPersonName(null);
+    } else if (action === 'remind') {
+      // Create draft person
+      if (detectedPersonName) {
+        const id = Crypto.randomUUID();
+        await StudentRepository.create({
+          id,
+          name: detectedPersonName,
+          status: 'draft',
+          relationship: 'student',
+          notes: 'Added from Receipt Review'
+        });
+        Alert.alert('Reminder Set', `${detectedPersonName} added to People as a draft.`);
+      }
+      setDetectedPersonName(null);
+    } else {
+      // Skip
+      setDetectedPersonName(null);
     }
+  };
 
+  const handleAddPersonComplete = (personId: string, name: string) => {
+    // Auto-update items with this new name
+    if (detectedPersonName) {
+      state.items.forEach((item, index) => {
+          if (item.category === 'education' && item.educationDetails) {
+             const details = typeof item.educationDetails === 'string' ? JSON.parse(item.educationDetails) : item.educationDetails;
+             if (details.studentName === detectedPersonName) {
+               updateItemEducation(index, { ...details, studentName: name });
+             }
+          }
+      });
+    }
     setDetectedPersonName(null);
   };
 
@@ -425,7 +514,16 @@ export function ReviewContent({ initialData, imageUri, rawData, queueItemId }: R
       <NewPersonModal
         visible={showPersonPrompt}
         personName={detectedPersonName}
-        onResponse={handlePersonPromptResponse}
+        bestMatch={bestMatchPerson}
+        onAction={handlePersonPromptAction}
+      />
+
+      {/* Add Person Modal (Inline) */}
+      <AddPersonModal
+        visible={showAddPersonModal}
+        initialName={detectedPersonName || ''}
+        onClose={() => setShowAddPersonModal(false)}
+        onPersonAdded={handleAddPersonComplete}
       />
 
       {/* Save Footer */}

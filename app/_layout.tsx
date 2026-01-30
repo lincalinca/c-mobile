@@ -13,10 +13,17 @@ import { initializeChannels } from "@lib/notifications/Channels";
 import { reconcileNotifications, cleanupStaleNotifications } from "@lib/notifications/Reconciler";
 import "@root/global.css";
 import { cloudLog } from "@lib/cloudLogger";
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 
 // Initialize Google Mobile Ads SDK
 let mobileAdsInitialized = false;
 async function initializeMobileAds() {
+  // Skip initialization in Expo Go
+  if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
+    cloudLog.info('ads', 'Skipping AdMob initialization in Expo Go');
+    return;
+  }
+
   if (mobileAdsInitialized) {
     cloudLog.info('ads', 'AdMob SDK already initialized');
     return;
@@ -36,10 +43,8 @@ async function initializeMobileAds() {
       timestamp: new Date().toISOString(),
     });
   } catch (e: any) {
-    cloudLog.error('ads', 'Failed to initialize AdMob SDK', {
-      error: e?.message || String(e),
-      stack: e?.stack,
-    });
+    // Silent fail in development / simulator if module missing
+    console.warn('AdMob init failed (expected in Expo Go):', e.message);
   }
 }
 

@@ -1,30 +1,30 @@
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert, FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PersistentHeader } from '@components/header/PersistentHeader';
-import { StudentRepository, ReceiptRepository, type Student, type Receipt, type LineItemWithDetails } from '@lib/repository';
+import { StudentRepository, ReceiptRepository } from '@lib/repository';
 import { formatFullDate } from '@lib/dateUtils';
-import { buildEducationChains, type EducationChain } from '@lib/educationChain';
-import { EducationLearningPathView } from '@app/education/EducationLearningPathView';
+import { buildEducationChains } from '@lib/educationChain';
 import { DatePickerModal } from '@components/calendar/DatePickerModal';
 import { AutoSizingText } from '@components/common/AutoSizingText';
 import { RELATIONSHIP_OPTIONS } from '@components/people/RelationshipSelector';
+import { reshapeToResults, type ResultItem, type ResultType } from '@lib/results';
+import { EducationCard } from '@components/results/EducationCard';
+import { EventCard } from '@components/results/EventCard';
+import { GearCard } from '@components/results/GearCard';
+import { ServiceCard } from '@components/results/ServiceCard';
 
 const ACCENT_COLOR = '#c084fc'; // Purple for people
 
 export default function PersonDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
-  const [person, setPerson] = useState<Student | null>(null);
-  const [educationChains, setEducationChains] = useState<EducationChain[]>([]);
+  const [person, setPerson] = useState<any>(null);
+  const [personResults, setPersonResults] = useState<ResultItem[]>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showLearningPathInfo, setShowLearningPathInfo] = useState(false);
-  const [currentChainIndices, setCurrentChainIndices] = useState<Record<string, number>>({});
-  const [currentChain, setCurrentChain] = useState<EducationChain | null>(null);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -37,22 +37,33 @@ export default function PersonDetailScreen() {
       }
       setPerson(personData);
 
-      // Load all receipts to find education items for this person
+      // Load all receipts to find items for this person
       const receipts = await ReceiptRepository.getAllWithItems();
+      const allResults = reshapeToResults(receipts as any);
       
-      // Filter education chains for this person
-      const allChains = buildEducationChains(receipts);
-      const personChains = allChains.filter(
-        chain => chain.studentName?.toLowerCase() === personData.name.toLowerCase()
-      );
+      // Filter for this person
+      // 1. Exact match on studentName in metadata
+      // 2. Fuzzy match on subtitle? (User asked for updated spelling to conform, so exact match on correct name is best if data is clean)
+      // We will match normalized names
+      const normalizedName = personData.name.toLowerCase().trim();
       
-      setEducationChains(personChains);
+      const filtered = allResults.filter(item => {
+        // Education items
+        if (item.type === 'education') {
+          const sName = item.metadata?.studentName?.toLowerCase().trim();
+          return sName === normalizedName || item.subtitle?.toLowerCase().includes(normalizedName);
+        }
+        // Event items (lessons)
+        if (item.type === 'event') {
+          const sName = item.metadata?.studentName || item.subtitle;
+          return sName?.toLowerCase().includes(normalizedName);
+        }
+        // Gear assigned to this person? (Not yet implemented in schema but good for future)
+        return false;
+      });
+
+      setPersonResults(filtered);
       
-      // Set the first chain as current if available
-      if (personChains.length > 0) {
-        setCurrentChain(personChains[0]);
-        setCurrentChainIndices(prev => ({ ...prev, [personChains[0].chainKey]: 0 }));
-      }
     } catch (e) {
       console.error('Failed to load person details', e);
       Alert.alert('Error', 'Failed to load person details');
@@ -72,7 +83,6 @@ export default function PersonDetailScreen() {
       setPerson({ ...person, startedLessonsDate: date });
       setShowDatePicker(false);
     } catch (e) {
-      console.error('Failed to update started date', e);
       Alert.alert('Error', 'Failed to update date');
     }
   };
@@ -83,37 +93,29 @@ export default function PersonDetailScreen() {
       await StudentRepository.update(person.id, { instrument });
       setPerson({ ...person, instrument });
     } catch (e) {
-      console.error('Failed to update instrument', e);
       Alert.alert('Error', 'Failed to update instrument');
     }
   };
 
-  const handleChainItemChange = (chainKey: string) => (index: number, itemId: string) => {
-    setCurrentChainIndices(prev => ({ ...prev, [chainKey]: index }));
-    // Could navigate to education item detail here if needed
+  const renderItem = ({ item }: { item: ResultItem }) => {
+    const commonProps = {
+      item,
+      onPress: () => {
+         if (item.type === 'education') router.push(`/education/${item.id}` as any);
+         if (item.type === 'event') router.push(`/events/${item.id}` as any);
+      },
+      isHighlighted: false
+    };
+
+    if (item.type === 'education') return <View className="mb-4"><EducationCard {...commonProps} /></View>;
+    if (item.type === 'event') return <View className="mb-4"><EventCard {...commonProps} /></View>;
+    return null;
   };
 
-  if (loading) {
+  const ListHeader = () => {
+    if (!person) return null;
     return (
-      <View className="flex-1" style={{ backgroundColor: 'transparent' }}>
-        <PersistentHeader />
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color={ACCENT_COLOR} />
-        </View>
-      </View>
-    );
-  }
-
-  if (!person) {
-    return null;
-  }
-
-  return (
-    <View className="flex-1" style={{ backgroundColor: 'transparent' }}>
-      <PersistentHeader />
-
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
-        <View className="px-6 py-6">
+      <View className="px-6 py-6 border-b border-crescender-800/50 mb-4">
           {/* Back Button */}
           <TouchableOpacity
             onPress={() => router.push('/people')}
@@ -126,13 +128,49 @@ export default function PersonDetailScreen() {
           {/* Person Name & Relationship */}
           <View className="mb-6">
             <Text className="text-white text-3xl font-bold mb-2">{person.name}</Text>
-            {person.relationship && (
-              <View className="bg-gold/20 px-4 py-2 rounded-full self-start mt-2">
-                <Text className="text-gold font-medium text-base">
-                  {RELATIONSHIP_OPTIONS.find(r => r.value === person.relationship)?.label || person.relationship}
-                </Text>
+            <View className="flex-row gap-2">
+              {person.relationship && (
+                <View className="bg-gold/20 px-4 py-2 rounded-full self-start">
+                  <Text className="text-gold font-medium text-base">
+                    {RELATIONSHIP_OPTIONS.find(r => r.value === person.relationship)?.label || person.relationship}
+                  </Text>
+                </View>
+              )}
+              <View className={`px-4 py-2 rounded-full self-start border ${person.status === 'draft' ? 'bg-orange-500/10 border-orange-500/30' : 'bg-green-500/10 border-green-500/30'}`}>
+                 <Text className={`${person.status === 'draft' ? 'text-orange-400' : 'text-green-400'} font-medium text-base capitalize`}>
+                    {person.status || 'Active'}
+                 </Text>
               </View>
-            )}
+            </View>
+          </View>
+
+          {/* Stats Grid */}
+          <View className="flex-row gap-4 mb-6">
+            <View className="flex-1 bg-crescender-900/40 p-4 rounded-xl border border-crescender-800">
+               <Text className="text-crescender-400 text-xs uppercase mb-1">Items</Text>
+               <Text className="text-white text-2xl font-bold">{personResults.length}</Text>
+            </View>
+            {/* Instrument */}
+            <TouchableOpacity 
+              onPress={() => {
+                   Alert.prompt(
+                      'Set Instrument',
+                      'Enter the focus instrument for this person',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Save', onPress: (val) => val && handleUpdateInstrument(val) },
+                      ],
+                      'plain-text',
+                      person.instrument
+                    );
+              }}
+              className="flex-[2] bg-crescender-900/40 p-4 rounded-xl border border-crescender-800"
+            >
+               <Text className="text-crescender-400 text-xs uppercase mb-1">Focus Instrument</Text>
+               <Text className="text-white text-xl font-bold" numberOfLines={1}>
+                 {person.instrument || 'Tap to set'}
+               </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Started Lessons Date */}
@@ -153,64 +191,6 @@ export default function PersonDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Instrument */}
-          <View className="mb-6">
-            <Text className="font-bold uppercase tracking-widest text-xs mb-2" style={{ color: ACCENT_COLOR }}>
-              Focus Instrument
-            </Text>
-            <View className="bg-crescender-900/40 p-4 rounded-xl border border-crescender-800">
-              {person.instrument ? (
-                <AutoSizingText
-                  value={person.instrument}
-                  baseFontSize={16}
-                  minFontSize={12}
-                  className="text-white text-base"
-                />
-              ) : (
-                <TouchableOpacity
-                  onPress={() => {
-                    Alert.prompt(
-                      'Set Instrument',
-                      'Enter the focus instrument for this person',
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        {
-                          text: 'Save',
-                          onPress: (instrument?: string) => {
-                            if (instrument) handleUpdateInstrument(instrument);
-                          },
-                        },
-                      ],
-                      'plain-text'
-                    );
-                  }}
-                  className="flex-row items-center gap-2"
-                >
-                  <Text className="text-crescender-500 text-base">Not set</Text>
-                  <Feather name="plus" size={16} color="#6b7280" />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          {/* Learning Paths */}
-          {educationChains.length > 0 && (
-            <View className="mb-6">
-              {educationChains.map((chain, idx) => (
-                <View key={chain.chainKey} className="mb-6">
-                  <EducationLearningPathView
-                    chain={chain}
-                    currentChainIndex={currentChainIndices[chain.chainKey] ?? 0}
-                    onItemChange={handleChainItemChange(chain.chainKey)}
-                    showInfoModal={showLearningPathInfo && idx === 0}
-                    onShowInfoModal={setShowLearningPathInfo}
-                    variant="nested"
-                  />
-                </View>
-              ))}
-            </View>
-          )}
-
           {/* Notes */}
           {person.notes && (
             <View className="mb-6">
@@ -226,23 +206,53 @@ export default function PersonDetailScreen() {
           {/* Edit Button */}
           <TouchableOpacity
             onPress={() => router.push(`/people/${person.id}/edit`)}
-            className="bg-gold px-6 py-4 rounded-full"
+            className="bg-crescender-800 px-6 py-3 rounded-xl mb-8 border border-crescender-700"
           >
-            <Text className="text-black font-bold text-center text-lg">Edit Profile</Text>
+            <Text className="text-crescender-300 font-bold text-center">Edit Profile Details</Text>
           </TouchableOpacity>
+
+          <Text className="text-white font-bold text-lg mb-4 ml-1">History & Records</Text>
+      </View>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View className="flex-1" style={{ backgroundColor: 'transparent' }}>
+        <PersistentHeader />
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color={ACCENT_COLOR} />
         </View>
-      </ScrollView>
+      </View>
+    );
+  }
+
+  if (!person) return null;
+
+  return (
+    <View className="flex-1" style={{ backgroundColor: 'transparent' }}>
+      <PersistentHeader />
+      <FlatList
+        data={personResults}
+        renderItem={renderItem}
+        keyExtractor={item => item.id}
+        ListHeaderComponent={ListHeader}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        ListEmptyComponent={
+          <View className="p-10 items-center justify-center">
+             <Text className="text-crescender-500 text-center">No records found for {person.name}</Text>
+          </View>
+        }
+      />
 
       {/* Date Picker Modal */}
-      {person && (
-        <DatePickerModal
-          visible={showDatePicker}
-          onClose={() => setShowDatePicker(false)}
-          onConfirm={handleUpdateStartedDate}
-          initialDate={person.startedLessonsDate || undefined}
-          title="Started Lessons Date"
-        />
-      )}
+      <DatePickerModal
+        visible={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        onConfirm={handleUpdateStartedDate}
+        initialDate={person.startedLessonsDate || undefined}
+        title="Started Lessons Date"
+      />
     </View>
   );
 }

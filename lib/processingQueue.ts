@@ -26,6 +26,17 @@ export interface QueueItem {
   notificationSent: boolean;
 }
 
+
+function safeJsonParse(json: string | null): any {
+  if (!json) return null;
+  try {
+    return JSON.parse(json);
+  } catch (e) {
+    console.warn('[ProcessingQueueRepository] Failed to parse JSON:', e);
+    return null;
+  }
+}
+
 /**
  * Processing Queue Repository
  */
@@ -119,7 +130,7 @@ export const ProcessingQueueRepository = {
       id: row.id,
       imageUri: row.imageUri,
       status: row.status as ProcessingStatus,
-      aiResponseData: row.aiResponseData ? JSON.parse(row.aiResponseData) : null,
+      aiResponseData: safeJsonParse(row.aiResponseData),
       errorMessage: row.errorMessage,
       submittedAt: row.submittedAt || new Date().toISOString(),
       completedAt: row.completedAt,
@@ -139,7 +150,7 @@ export const ProcessingQueueRepository = {
       id: row.id,
       imageUri: row.imageUri,
       status: row.status as ProcessingStatus,
-      aiResponseData: row.aiResponseData ? JSON.parse(row.aiResponseData) : null,
+      aiResponseData: safeJsonParse(row.aiResponseData),
       errorMessage: row.errorMessage,
       submittedAt: row.submittedAt || new Date().toISOString(),
       completedAt: row.completedAt,
@@ -163,7 +174,7 @@ export const ProcessingQueueRepository = {
       id: row.id,
       imageUri: row.imageUri,
       status: row.status as ProcessingStatus,
-      aiResponseData: row.aiResponseData ? JSON.parse(row.aiResponseData) : null,
+      aiResponseData: safeJsonParse(row.aiResponseData),
       errorMessage: row.errorMessage,
       submittedAt: row.submittedAt || new Date().toISOString(),
       completedAt: row.completedAt,

@@ -45,6 +45,7 @@ const initTablesSQL = `
     payment_method text,
     image_url text,
     raw_ocr_data text,
+    processing_status text DEFAULT 'confirmed',
     sync_status text DEFAULT 'pending',
     created_at text DEFAULT CURRENT_TIMESTAMP,
     updated_at text DEFAULT CURRENT_TIMESTAMP
@@ -86,6 +87,7 @@ const initTablesSQL = `
     relationship text,
     instrument text,
     started_lessons_date text,
+    status text DEFAULT 'active',
     notes text,
     created_at text DEFAULT CURRENT_TIMESTAMP,
     updated_at text DEFAULT CURRENT_TIMESTAMP
@@ -288,6 +290,23 @@ export async function initDatabase(): Promise<void> {
         console.log('[DB] Migration: Created notification_events table');
       } catch (e) {
         // Table already exists, ignore
+      }
+
+      // Phase 7: Processing Status column (critical for drafts)
+      try {
+        expoDb.execSync(`ALTER TABLE transactions ADD COLUMN processing_status text DEFAULT 'confirmed';`);
+        console.log('[DB] Migration: Added processing_status to transactions');
+      } catch (e) {
+        // Column already exists, ignore
+      }
+
+      
+      // Phase 8: Student Status (draft/active)
+      try {
+        expoDb.execSync(`ALTER TABLE students ADD COLUMN status text DEFAULT 'active';`);
+        console.log('[DB] Migration: Added status to students');
+      } catch (e) {
+        // Column already exists, ignore
       }
 
       dbInstance = drizzle(expoDb, { schema });

@@ -30,8 +30,8 @@ export function ReviewPaymentSection({
   return (
     <>
       <SectionTitle
-        icon={<Feather name="credit-card" size={12} color="#f5c518" />}
-        title="Payment Details"
+        icon={<Feather name="credit-card" size={18} color="#f5c518" />}
+        title="Payment & Totals"
       />
       <SectionContainer>
         {/* Payment Status */}

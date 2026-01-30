@@ -112,7 +112,7 @@ export const NewDataBar = ({
 
   const handleUploadPress = () => {
     setShowAddReceiptMenu(false);
-    router.push('/scan');
+    router.push('/scan?mode=upload');
   };
 
   return (
@@ -157,37 +157,69 @@ export const NewDataBar = ({
             onPress={(e) => e.stopPropagation()}
             className="bg-crescender-900 rounded-[18px] p-4 border border-crescender-700 w-full max-w-sm"
           >
-            <Text className="text-white text-lg font-bold mb-4 text-center">Add Receipt</Text>
-            
-            <TouchableOpacity
-              onPress={handleScanPress}
-              className="flex-row items-center gap-3 p-4 rounded-[14px] bg-crescender-800/50 border border-crescender-700 mb-3"
-            >
-              <View className="w-10 h-10 rounded-full bg-gold/20 items-center justify-center">
-                <Feather name="camera" size={20} color="#f5c518" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-white text-base font-semibold">Scan</Text>
-                <Text className="text-crescender-400 text-sm">Take a photo of your receipt</Text>
-              </View>
-              <Feather name="chevron-right" size={20} color="#9ca3af" />
-            </TouchableOpacity>
+            {showGetMoreScans ? (
+              // --- GET MORE SCANS OPTIONS ---
+              <>
+                <Text className="text-white text-lg font-bold mb-2 text-center">Unlock More Scans</Text>
+                <Text className="text-crescender-400 text-sm text-center mb-6">You've ran out of free AI scans for this week. Watch a short ad to unlock 10 more instantly.</Text>
 
-            <TouchableOpacity
-              onPress={handleUploadPress}
-              className="flex-row items-center gap-3 p-4 rounded-[14px] bg-crescender-800/50 border border-crescender-700"
-            >
-              <View className="w-10 h-10 rounded-full bg-gold/20 items-center justify-center">
-                <Feather name="upload" size={20} color="#f5c518" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-white text-base font-semibold">Upload</Text>
-                <Text className="text-crescender-400 text-sm">Select from your gallery</Text>
-              </View>
-              <Feather name="chevron-right" size={20} color="#9ca3af" />
-            </TouchableOpacity>
-            {/* Separator */}
-            <View className="h-[1px] bg-crescender-800 w-full mb-3" />
+                <TouchableOpacity
+                  onPress={() => {
+                     setShowAddReceiptMenu(false);
+                     router.push('/get-more-scans');
+                  }}
+                  className="flex-row items-center gap-3 p-4 rounded-[14px] bg-gold mb-6 border border-yellow-500"
+                >
+                  <View className="w-10 h-10 rounded-full bg-black/10 items-center justify-center">
+                    <Feather name="play-circle" size={24} color="#2e1065" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-crescender-950 text-base font-bold">Watch Video</Text>
+                    <Text className="text-crescender-900 text-sm opacity-80">Get 10 Free Scans</Text>
+                  </View>
+                  <Feather name="chevron-right" size={20} color="#2e1065" />
+                </TouchableOpacity>
+
+                {/* Separator */}
+                <View className="h-[1px] bg-crescender-800 w-full mb-3" />
+              </>
+            ) : (
+              // --- STANDARD SCAN OPTIONS ---
+              <>
+                <Text className="text-white text-lg font-bold mb-4 text-center">Add Receipt</Text>
+                
+                <TouchableOpacity
+                  onPress={handleScanPress}
+                  className="flex-row items-center gap-3 p-4 rounded-[14px] bg-crescender-800/50 border border-crescender-700 mb-3"
+                >
+                  <View className="w-10 h-10 rounded-full bg-gold/20 items-center justify-center">
+                    <Feather name="camera" size={20} color="#f5c518" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-white text-base font-semibold">Scan</Text>
+                    <Text className="text-crescender-400 text-sm">Take a photo of your receipt</Text>
+                  </View>
+                  <Feather name="chevron-right" size={20} color="#9ca3af" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleUploadPress}
+                  className="flex-row items-center gap-3 p-4 rounded-[14px] bg-crescender-800/50 border border-crescender-700 mb-6"
+                >
+                  <View className="w-10 h-10 rounded-full bg-gold/20 items-center justify-center">
+                    <Feather name="upload" size={20} color="#f5c518" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-white text-base font-semibold">Upload</Text>
+                    <Text className="text-crescender-400 text-sm">Select from your gallery</Text>
+                  </View>
+                  <Feather name="chevron-right" size={20} color="#9ca3af" />
+                </TouchableOpacity>
+                
+                {/* Separator */}
+                <View className="h-[1px] bg-crescender-800 w-full mb-3" />
+              </>
+            )}
 
             <TouchableOpacity
               onPress={() => {

@@ -7,6 +7,9 @@
 import type { ReceiptItem } from './repository';
 
 export interface ReviewWorkflowState {
+  // Transaction Context
+  transactionId?: string | null;
+
   // Transaction data
   merchant: string;
   merchantAbn: string;

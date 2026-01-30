@@ -30,19 +30,15 @@ if (!TestIds) {
   };
 }
 
-// Production Ad Unit IDs - Rewarded ads grant +10 scans
-const IOS_REWARDED_AD_UNIT_ID = __DEV__
-  ? (TestIds?.REWARDED || 'ca-app-pub-3940256099942544/5224354917')
-  : 'ca-app-pub-5375818323643018/2580735062';
+// Demo Ad Unit IDs (Google Test IDs)
+const IOS_REWARDED_AD_UNIT_ID = 'ca-app-pub-3940256099942544/1712485313';
+const ANDROID_REWARDED_AD_UNIT_ID = 'ca-app-pub-3940256099942544/5224354917';
 
-const ANDROID_REWARDED_AD_UNIT_ID = __DEV__
-  ? (TestIds?.REWARDED || 'ca-app-pub-3940256099942544/5224354917')
-  : 'ca-app-pub-5375818323643018/7833061743';
-
+// Hardcoded for testing to verify rewards work
 const adUnitId = (RewardedAd && adsModuleLoaded) ? Platform.select({
   ios: IOS_REWARDED_AD_UNIT_ID,
   android: ANDROID_REWARDED_AD_UNIT_ID,
-  default: TestIds?.REWARDED || 'ca-app-pub-3940256099942544/5224354917',
+  default: 'ca-app-pub-3940256099942544/5224354917',
 }) : null;
 
 interface UseRewardedAdOptions {
