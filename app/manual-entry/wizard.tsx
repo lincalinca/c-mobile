@@ -144,7 +144,123 @@ const SelectField = ({ field, value, onChange, themeColor }: { field: FieldDefin
   </View>
 );
 
-const ImagePickerField = ({ field, value, onChange, themeColor }: { field: FieldDefinition, value: string[], onChange: (v: string[]) => void, themeColor: string }) => {
+const SliderField = ({ field, value, onChange, themeColor }: { field: FieldDefinition, value: string, onChange: (v: string) => void, themeColor: string }) => {
+  const options = field.options || [];
+  // For 'condition', we want "Poor" (left) to "New" (right).
+  // The schema array order is New -> Poor.
+  // We should reverse it for the display so Poor is first?
+  // Actually, checking schema: New, Excellent, Good, Fair, Poor.
+  // Typically sliders go Low (bad) -> High (good).
+  // So we should reverse correct order: Poor, Fair, Good, Excellent, New.
+  
+  // Note: Schema defines options order. We can render them in reverse index or just update schema?
+  // Let's reverse the array for display so index 0 = Left.
+  const displayOptions = [...options].reverse();
+  
+  const currentIndex = displayOptions.findIndex(o => o.value === value);
+  const selectedIndex = currentIndex === -1 ? displayOptions.length - 1 : currentIndex; // Default to last (New)
+
+  return (
+    <View className="mb-8">
+       <Text style={{ color: themeColor }} className="font-bold text-xs uppercase mb-4 ml-1">
+        {field.label} {field.required && '*'}
+      </Text>
+      
+      <View className="relative h-12 justify-center">
+        {/* Track Line */}
+        <View className="absolute left-0 right-0 h-1 bg-crescender-800 rounded-full" />
+        
+        {/* Active Track */}
+        <View 
+           style={{ 
+             backgroundColor: themeColor,
+             width: `${(selectedIndex / (displayOptions.length - 1)) * 100}%`
+           }} 
+           className="absolute left-0 h-1 rounded-full" 
+        />
+
+        {/* Nodes */}
+        <View className="flex-row justify-between items-center w-full">
+          {displayOptions.map((opt, idx) => {
+            const isActive = idx === selectedIndex;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                onPress={() => onChange(opt.value)}
+                className="items-center"
+              >
+                <View 
+                  style={{ 
+                    backgroundColor: isActive ? themeColor : '#1e1b4b',
+                    borderColor: isActive ? themeColor : '#334155',
+                    borderWidth: 2,
+                  }}
+                  className="w-6 h-6 rounded-full"
+                />
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* Labels */}
+      <View className="flex-row justify-between mt-2">
+         {displayOptions.map((opt, idx) => (
+           <TouchableOpacity key={opt.value} onPress={() => onChange(opt.value)}>
+             <Text 
+               style={{ 
+                 color: idx === selectedIndex ? themeColor : '#94a3b8',
+                 fontWeight: idx === selectedIndex ? 'bold' : 'normal'
+               }}
+               className="text-xs text-center w-16"
+             >
+               {opt.label}
+             </Text>
+           </TouchableOpacity>
+         ))}
+      </View>
+      
+      <Text className="text-white text-lg font-bold text-center mt-4">
+        {displayOptions[selectedIndex]?.label || value}
+      </Text>
+    </View>
+  );
+};
+
+// --- Tag Constants ---
+const TAG_OPTIONS: Record<string, { value: string; label: string }[]> = {
+  gear: [
+    { value: 'Manufacturer image', label: 'Manufacturer' },
+    { value: 'Performance Image', label: 'Performance' },
+    { value: 'Still image', label: 'Still / Mockup' },
+    { value: 'Serial Number', label: 'Serial #' },
+    { value: 'Damage/Condition', label: 'Damage' },
+    { value: 'Action Shot', label: 'Action Shot' },
+  ],
+  service: [
+    { value: 'Before', label: 'Before' },
+    { value: 'Work in Progress', label: 'In Progress' },
+    { value: 'After', label: 'After' },
+    { value: 'In-situ', label: 'In-situ' },
+    { value: 'Issue Found', label: 'Issue Found' },
+    { value: 'Invoice', label: 'Invoice' },
+    { value: 'Report', label: 'Report' },
+  ],
+  education: [
+    { value: 'Notes', label: 'Notes' },
+    { value: 'Sheet Music', label: 'Sheet Music' },
+  ],
+  default: [
+    { value: 'Other', label: 'Other' },
+    { value: 'Receipt', label: 'Receipt' },
+    { value: 'Manual', label: 'Manual' },
+  ]
+};
+
+const ImagePickerField = ({ field, value, onChange, themeColor, category }: { field: FieldDefinition, value: any[], onChange: (v: any[]) => void, themeColor: string, category: string }) => {
+  const availableTags = TAG_OPTIONS[category] || TAG_OPTIONS.default;
+  const defaultTag = availableTags[0]?.value || 'Other';
+
   const pickImage = async () => {
     // Request permission if needed (usually managed by Expo automatically for media library)
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -156,15 +272,26 @@ const ImagePickerField = ({ field, value, onChange, themeColor }: { field: Field
     });
 
     if (!result.canceled) {
-      const uris = result.assets.map(asset => asset.uri);
+      const newItems = result.assets.map(asset => ({ uri: asset.uri, tag: defaultTag })); // Default tag
       const existing = value || [];
-      onChange([...existing, ...uris]);
+      onChange([...existing, ...newItems]);
     }
   };
 
   const removeImage = (index: number) => {
     const existing = value || [];
     onChange(existing.filter((_, i) => i !== index));
+  };
+
+  const updateTag = (index: number, tag: string) => {
+    const existing = value || [];
+    const updated = [...existing];
+    if (updated[index]) {
+      // Handle both string (old) and object (new) value formats for safety
+      const item = typeof updated[index] === 'string' ? { uri: updated[index], tag: defaultTag } : updated[index];
+      updated[index] = { ...item, tag };
+      onChange(updated);
+    }
   };
 
   const images = value || [];
@@ -175,25 +302,59 @@ const ImagePickerField = ({ field, value, onChange, themeColor }: { field: Field
         {field.label || 'Images'}
       </Text>
       
-      <View className="flex-row flex-wrap gap-2">
-        {images.map((uri, idx) => (
-          <View key={idx} className="w-24 h-24 relative rounded-xl overflow-hidden bg-crescender-900 border border-crescender-800">
-            <Image source={{ uri }} className="w-full h-full" resizeMode="cover" />
-            <TouchableOpacity 
-              onPress={() => removeImage(idx)}
-              className="absolute top-1 right-1 bg-black/50 p-1 rounded-full"
-            >
-              <Feather name="x" size={12} color="white" />
-            </TouchableOpacity>
-          </View>
-        ))}
+      <View className="flex-col gap-6">
+        {images.map((item, idx) => {
+          const uri = typeof item === 'string' ? item : item.uri;
+          const currentTag = typeof item === 'string' ? defaultTag : item.tag;
+
+          return (
+            <View key={idx} className="bg-crescender-900 border border-crescender-800 rounded-xl overflow-hidden p-3">
+               <View className="flex-row gap-4 mb-3">
+                  <Image source={{ uri }} className="w-24 h-24 rounded-lg bg-black" resizeMode="cover" />
+                  <View className="flex-1 justify-center">
+                     <Text className="text-white font-bold mb-1">Image {idx + 1}</Text>
+                     <Text className="text-crescender-400 text-xs mb-2">Select a tag for this image:</Text>
+                     <TouchableOpacity 
+                        onPress={() => removeImage(idx)}
+                        className="self-start bg-red-500/20 px-3 py-1 rounded-full border border-red-500/50"
+                     >
+                        <Text className="text-red-400 text-xs font-bold">Remove</Text>
+                     </TouchableOpacity>
+                  </View>
+               </View>
+               
+               {/* Chip Buttons */}
+               <View className="flex-row flex-wrap gap-2">
+                 {availableTags.map(tag => (
+                   <TouchableOpacity
+                     key={tag.value}
+                     onPress={() => updateTag(idx, tag.value)}
+                     style={{ 
+                       backgroundColor: currentTag === tag.value ? themeColor : 'rgba(30, 41, 59, 0.5)',
+                       borderColor: currentTag === tag.value ? themeColor : '#334155'
+                     }}
+                     className="px-3 py-2 rounded-lg border"
+                   >
+                     <Text 
+                       style={{ color: currentTag === tag.value ? '#000' : '#ffff' }}
+                       className="text-xs font-bold"
+                     >
+                       {tag.label}
+                     </Text>
+                   </TouchableOpacity>
+                 ))}
+               </View>
+            </View>
+          );
+        })}
 
         <TouchableOpacity 
           onPress={pickImage}
-          className="w-24 h-24 rounded-xl border-dashed border-2 border-crescender-700 items-center justify-center bg-crescender-900/50"
+          style={{ borderColor: themeColor }}
+          className="w-full h-24 rounded-xl border-dashed border-2 items-center justify-center bg-crescender-900/50 flex-row gap-3"
         >
           <Feather name="camera" size={24} color={themeColor} />
-          <Text className="text-crescender-400 text-xs mt-1">Add</Text>
+          <Text className="text-crescender-400 text-base font-medium">Add Photo</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -246,16 +407,30 @@ export default function WizardScreen() {
 
   const currentStep = visibleSteps[currentStepIndex];
 
-  // Initialize deafult values
+  // Initialize default values
   useEffect(() => {
-    const defaults: any = {};
-    MANUAL_ENTRY_SCHEMA.forEach(step => {
-      step.fields.forEach(field => {
-        if (field.defaultValue !== undefined && getNestedValue(formData, field.id) === undefined) {
-           // We can't set state in loop easily, so we just check manually
-           // This is a simplification
-        }
+    setFormData((prev: any) => {
+      let newData = { ...prev };
+      
+      // If date not set, default to today (ISO string)
+      // We check raw prev state or just ensure it's set if missing
+      // Actually, relying on schema defaults is better
+      
+      MANUAL_ENTRY_SCHEMA.forEach(step => {
+        step.fields.forEach(field => {
+          const currentVal = getNestedValue(newData, field.id);
+          if (field.defaultValue !== undefined && (currentVal === undefined || currentVal === null || currentVal === '')) {
+             newData = setNestedValue(newData, field.id, field.defaultValue);
+          }
+        });
       });
+      
+      // Explicit global default for date if not in schema (though it is)
+      if (!newData.transactionDate) {
+         newData.transactionDate = new Date().toISOString();
+      }
+
+      return newData;
     });
   }, []);
 
@@ -344,19 +519,29 @@ export default function WizardScreen() {
       const eventDetails = formData.eventDetails || {};
       const moneyDetails = formData.moneyDetails || {};
 
-      // Handle Image Uploads (Array of URIs)
+      // Handle Image Uploads (Array of objects or strings)
       // Save to lineItem images field as JSON
       const imagesRaw = formData.images || [];
+      const defaultTag = TAG_OPTIONS[category]?.[0]?.value || 'Other';
+      
       const imagesJson = imagesRaw.length > 0 ? JSON.stringify(
-        imagesRaw.map((uri: string) => ({ uri, tag: 'manual', date: new Date().toISOString() }))
+        imagesRaw.map((item: any) => {
+          const uri = typeof item === 'string' ? item : item.uri;
+          const tag = typeof item === 'string' ? defaultTag : item.tag;
+          return { uri, tag, date: new Date().toISOString() };
+        })
       ) : null;
+      
+      const mainImageUri = imagesRaw.length > 0 
+        ? (typeof imagesRaw[0] === 'string' ? imagesRaw[0] : imagesRaw[0].uri)
+        : null;
 
       // Calculate totals
       const priceRaw = parseFloat(formData.totalPrice || '0');
       const priceCents = Math.round(priceRaw * 100);
 
-      // Create Draft
-      await TransactionRepository.createDraft({
+      // Create Transaction (Confirmed, skipping draft)
+      await TransactionRepository.create({
         id: transactionId,
         merchant,
         merchantAbn: null,
@@ -376,7 +561,9 @@ export default function WizardScreen() {
         summary: description,
         documentType: 'receipt',
         syncStatus: 'pending',
-        rawOcrData: JSON.stringify(formData), // Save raw form data for debug
+        processingStatus: 'confirmed', // Finalize immediately
+        imageUrl: mainImageUri, // Set main image
+        rawOcrData: JSON.stringify(formData), 
       }, [{
         id: itemId,
         transactionId: transactionId,
@@ -392,33 +579,49 @@ export default function WizardScreen() {
         model: formData.model || null,
         serialNumber: formData.serialNumber || null,
         
-        // Map event details to notes or extend DB if needed. 
-        // For now, if category is Money or Event, store details in notes as well to persist them.
+        // Map notes
         notes: [
           formData.notes || 'Added via Manual Wizard',
           category === 'money' ? `Money Details: ${JSON.stringify(moneyDetails)}` : '',
           category === 'event' ? `Event Details: ${JSON.stringify(eventDetails)}` : '',
         ].filter(Boolean).join('\n\n'),
         
-        // JSON columns (only save if relevant to category to keep DB clean)
+        // JSON columns
         gearDetails: category === 'gear' ? JSON.stringify(gearDetails) : null,
         educationDetails: category === 'education' ? JSON.stringify(educationDetails) : null,
         serviceDetails: category === 'service' ? JSON.stringify(serviceDetails) : null, 
-        
-        // Map event details to notes or extend DB if needed. 
-        // For now, if category is Money, store details in notes as well or a specific field?
-        // Current DB schema doesn't have moneyDetails or eventDetails column.
-        // We will append to notes for now to persist it.
-        // Or store in `gearDetails` if we want to abuse a column, but better to put in notes.
       }]);
 
-      router.replace({
-        pathname: '/review',
-        params: { 
-          transactionId: transactionId,
-          forceMonolithic: 'true' 
-        }
-      });
+      // Navigate to Detail Page directly
+      let targetPath = '/';
+      switch(category) {
+        case 'event':
+           // Assuming event detail page exists or goes to events list?
+           // Actually, mobile app might not have explicit event/[id] yet?
+           // Using generic detail for now or home.
+           // If we have event/[id], use it. Otherwise go to main list.
+           targetPath = '/'; 
+           // TODO: verify event route
+           break;
+        case 'gear':
+           targetPath = `/gear/${transactionId}`; // Gear detail view works with Receipt ID
+           break;
+        case 'service':
+           // Service detail often same as Gear or specific?
+           targetPath = `/gear/${transactionId}`; 
+           break;
+        case 'education':
+           // Education detail?
+           targetPath = '/';
+           break;
+        default:
+           targetPath = '/';
+      }
+
+      Alert.alert('Success', 'Item added successfully.', [
+        { text: 'OK', onPress: () => router.replace(targetPath as any) }
+      ]);
+      
     } catch (e) {
       console.error('Failed to save wizard entry:', e);
       Alert.alert('Error', 'Failed to save entry.');
@@ -489,6 +692,16 @@ export default function WizardScreen() {
                       themeColor={themeColor}
                     />
                   );
+                  case 'slider':
+                    return (
+                      <SliderField 
+                        key={field.id}
+                        field={field} 
+                        value={val} 
+                        onChange={(v) => handleFieldChange(field.id, v)} 
+                        themeColor={themeColor}
+                      />
+                    );
                 case 'date':
                    return (
                     <DateField 
@@ -507,6 +720,7 @@ export default function WizardScreen() {
                        value={val}
                        onChange={(v) => handleFieldChange(field.id, v)}
                        themeColor={themeColor}
+                       category={formData.category} // Pass category for tagging specific options
                      />
                    );
                 case 'header':

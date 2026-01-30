@@ -87,29 +87,8 @@ export default function ReviewMonolithicRefactored() {
             // Actually, for manual entry, it might be better to pass the draft directly.
             // But staying within Monolithic architecture:
             // Let's fetch the rawOcrData which we saved!
-            if (trans.rawOcrData) {
-               try {
-                  const savedForm = JSON.parse(trans.rawOcrData);
-                  // Transform manual form data to ReviewInitialData (AI response format)
-                  // Manual Form: { merchant, transactionDate, items: [...] }
-                  // AI Response: { financial: { merchant: name, date, total }, items: [...] }
-                  const aiFormat: ReviewInitialData = {
-                    financial: {
-                      merchant: savedForm.merchant,
-                      date: savedForm.transactionDate,
-                      total: savedForm.totalPrice ? parseFloat(savedForm.totalPrice) : 0,
-                    },
-                    items: savedForm.items?.map((item: any) => ({
-                      description: item.description,
-                      totalPrice: item.totalPrice, 
-                      unitPrice: item.unitPrice || item.totalPrice,
-                      category: item.category,
-                      quantity: 1
-                    })) || []
-                  };
-                  setDraftData(aiFormat);
-               } catch(e) { console.error(e); }
-            }
+            // We trust the DB items for drafts, no need to re-parse rawOcrData
+            // which might just be the manual form state without 'items' array.
           }
         } catch (e) {
           console.error(e);
@@ -131,7 +110,7 @@ export default function ReviewMonolithicRefactored() {
   }, [params.data, draftData]);
 
   // If no data, show empty state
-  if (!params.data && !params.uri) {
+  if (!params.data && !params.uri && !draftData && !params.transactionId) {
     return <EmptyState onReturnHome={() => router.replace('/')} />;
   }
 
@@ -141,6 +120,7 @@ export default function ReviewMonolithicRefactored() {
       initialData={initialData}
       imageUri={params.uri}
       rawData={params.data}
+      transactionId={params.transactionId}
     />
   );
 }

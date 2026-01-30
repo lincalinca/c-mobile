@@ -8,6 +8,7 @@ export type FieldType =
   | 'boolean' 
   | 'textarea'
   | 'image'
+  | 'slider'
   | 'header';
 
 export interface FieldOption {
@@ -61,10 +62,11 @@ export const MANUAL_ENTRY_SCHEMA: WizardStep[] = [
     ]
   },
 
-  // Step 2: The Basics (Common to all)
+  // Step 2: The Basics (Common to all EXCEPT Event)
   {
     id: 'basics',
     title: 'The Basics',
+    condition: (data) => data.category !== 'event',
     fields: [
       { id: 'description', label: 'Title / Description', type: 'text', placeholder: 'e.g. Fender Stratocaster', required: true },
       { id: 'merchant', label: 'Merchant / Provider', type: 'text', placeholder: 'e.g. Better Music', required: true },
@@ -74,7 +76,88 @@ export const MANUAL_ENTRY_SCHEMA: WizardStep[] = [
     ]
   },
 
-  // Step 3a: Gear Specifics
+  // --- EVENT SPECIFIC STEPS ---
+
+  // Event Step 1: What kind of event?
+  {
+    id: 'event_type',
+    title: 'What kind of event is this?',
+    condition: (data) => data.category === 'event',
+    fields: [
+      { 
+        id: 'description', // Map Type to Description/Title for now as primary identifier
+        type: 'select', 
+        required: true,
+        options: [
+          { value: 'Performance', label: 'Performance', icon: 'mic' },
+          { value: 'Concert', label: 'Concert', icon: 'music' },
+          { value: 'Lesson', label: 'Lesson', icon: 'book' },
+          { value: 'Meeting', label: 'Meeting', icon: 'users' },
+          { value: 'Practice', label: 'Practice', icon: 'play-circle' },
+          { value: 'Rehearsal', label: 'Rehearsal', icon: 'repeat' },
+          { value: 'Other', label: 'Other', icon: 'calendar' },
+        ]
+      },
+    ]
+  },
+
+  // Event Step 2: When & Recurrence
+  {
+    id: 'event_timing',
+    title: 'When is this happening?',
+    condition: (data) => data.category === 'event',
+    fields: [
+      { id: 'transactionDate', label: 'Start Date & Time', type: 'date', required: true },
+      { 
+        id: 'eventDetails.recurrence', 
+        label: 'Is this recurring?', 
+        type: 'select', 
+        required: true,
+        defaultValue: 'once',
+        options: [
+          { value: 'once', label: 'Once off' },
+          { value: 'weekly', label: 'Weekly' },
+          { value: 'fortnightly', label: 'Fortnightly' },
+          { value: 'monthly', label: 'Monthly' },
+          { value: 'annually', label: 'Annually' },
+        ]
+      }
+    ]
+  },
+
+  // Event Step 3: Location
+  {
+    id: 'event_location',
+    title: 'Where is this happening?',
+    condition: (data) => data.category === 'event',
+    fields: [
+      { 
+        id: 'eventDetails.locationType', 
+        label: 'Location Type', 
+        type: 'select',
+        required: true,
+        options: [
+          { value: 'physical', label: 'Physical Address', icon: 'map-pin' },
+          { value: 'virtual', label: 'Virtual / Online', icon: 'monitor' },
+          { value: 'phone', label: 'Phone', icon: 'phone' },
+          { value: 'flexible', label: 'Flexible / TBD', icon: 'help-circle' },
+        ]
+      },
+      // Conditional logic for address field?
+      // Our simple schema doesn't support intra-step dependency easily without custom rendering.
+      // But we can just show the address field generic.
+      { 
+        id: 'eventDetails.venue', 
+        label: 'Address / Link / Details', 
+        type: 'text', 
+        placeholder: '123 Music St, or Zoom Link' 
+      },
+    ]
+  },
+
+  // --- END EVENT STEPS ---
+
+  // Step 3a: Gear Details (Identity)
   {
     id: 'gear_details',
     title: 'Gear Details',
@@ -83,13 +166,29 @@ export const MANUAL_ENTRY_SCHEMA: WizardStep[] = [
       { id: 'brand', label: 'Brand', type: 'text', placeholder: 'e.g. Gibson', required: true },
       { id: 'model', label: 'Model', type: 'text', placeholder: 'e.g. Les Paul Standard' },
       { id: 'serialNumber', label: 'Serial Number', type: 'text', placeholder: 'Optional' },
-      
-      { id: 'specs_header', label: 'Specifications', type: 'header' },
+    ]
+  },
+
+  // Step 3b: Gear Specs
+  {
+    id: 'gear_specs',
+    title: 'Specifications',
+    condition: (data) => data.category === 'gear',
+    fields: [
       { id: 'gearDetails.colour', label: 'Colour / Finish', type: 'text', placeholder: 'e.g. Sunburst' },
       { id: 'gearDetails.makeYear', label: 'Year of Make', type: 'text', placeholder: 'e.g. 1959' },
-      { id: 'gearDetails.condition', label: 'Condition', type: 'select', options: [
+    ]
+  },
+
+  // Step 3c: Gear Condition & Photos
+  {
+    id: 'gear_condition',
+    title: 'Condition & Photos',
+    condition: (data) => data.category === 'gear',
+    fields: [
+      { id: 'gearDetails.condition', label: 'Condition', type: 'slider', defaultValue: 'New', options: [
         { value: 'New', label: 'New' },
-        { value: 'Excellent', label: 'Excellent' },
+        { value: 'Great', label: 'Great' },
         { value: 'Good', label: 'Good' },
         { value: 'Fair', label: 'Fair' },
         { value: 'Poor', label: 'Poor' },
@@ -132,19 +231,6 @@ export const MANUAL_ENTRY_SCHEMA: WizardStep[] = [
       { id: 'serviceDetails.nextDueDate', label: 'Next Service Due', type: 'date' },
       { id: 'serviceDetails.relatedGearId', label: 'Related Item', type: 'select', placeholder: 'Select Item', options: [] }, // Options populated at runtime
       { id: 'images', label: 'Service Report / Photos', type: 'image', required: false },
-    ]
-  },
-
-  // Step 3d: Event Specifics
-  {
-    id: 'event_details',
-    title: 'Event Details',
-    condition: (data) => data.category === 'event',
-    fields: [
-      { id: 'date', label: 'Event Date', type: 'date', required: true }, // Map to root date or item date? Usually item date for events.
-      { id: 'eventDetails.artist', label: 'Artist / Performer', type: 'text' },
-      { id: 'eventDetails.venue', label: 'Venue', type: 'text' },
-      { id: 'eventDetails.seatInfo', label: 'Seat / Section', type: 'text' },
     ]
   },
 

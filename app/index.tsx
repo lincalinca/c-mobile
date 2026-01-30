@@ -31,6 +31,7 @@ export default function HomeScreen() {
   const [showEventSeries, setShowEventSeries] = useState(true);
   const [showGetMoreScans, setShowGetMoreScans] = useState(false);
   const [hasShownFilterHint, setHasShownFilterHint] = useState(false);
+  const [showAddReceiptMenu, setShowAddReceiptMenu] = useState(false);
 
   const gridRef = useRef<FlatList>(null);
   const toastOpacity = useRef(new Animated.Value(0)).current;
@@ -221,12 +222,12 @@ export default function HomeScreen() {
       <View className="flex-1" style={{ backgroundColor: 'transparent' }}>
         <PersistentHeader />
         <View className="flex-1 justify-center items-center px-10">
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => {
               if (showGetMoreScans) {
                 router.push('/get-more-scans');
               } else {
-                router.push('/scan');
+                setShowAddReceiptMenu(true);
               }
             }}
             className="w-64 h-64 rounded-full bg-gold/10 border-4 border-gold/30 items-center justify-center shadow-2xl shadow-gold/20"
@@ -237,7 +238,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
           <Text className="text-white text-3xl font-bold mt-10 tracking-tight text-center" style={{ fontFamily: (Platform.OS as any) === 'web' ? 'Bebas Neue, system-ui' : 'System' }}>
             {showGetMoreScans ? 'GET MORE SCANS' : 'GOT A RECEIPT?'}{'\n'}
-            {showGetMoreScans ? 'WATCH AD TO CONTINUE' : 'SNAP TO GET STARTED'}
+            {showGetMoreScans ? 'WATCH AD TO CONTINUE' : 'TAP TO GET STARTED'}
           </Text>
           <Text className="text-crescender-400 text-center mt-4 leading-relaxed">
             {showGetMoreScans
@@ -245,6 +246,82 @@ export default function HomeScreen() {
               : 'Instantly track gear, events, and transactions by snapping your first receipt.'}
           </Text>
         </View>
+
+        {/* Add Receipt Menu Modal */}
+        <Modal
+          visible={showAddReceiptMenu}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowAddReceiptMenu(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => setShowAddReceiptMenu(false)}
+            className="flex-1 bg-black/50 justify-center items-center px-6"
+          >
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+              className="bg-crescender-900 rounded-[18px] p-4 border border-crescender-700 w-full max-w-sm"
+            >
+              <Text className="text-white text-lg font-bold mb-4 text-center">Add Receipt</Text>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setShowAddReceiptMenu(false);
+                  router.push('/scan');
+                }}
+                className="flex-row items-center gap-3 p-4 rounded-[14px] bg-crescender-800/50 border border-crescender-700 mb-3"
+              >
+                <View className="w-10 h-10 rounded-full bg-gold/20 items-center justify-center">
+                  <Feather name="camera" size={20} color="#f5c518" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-base font-semibold">Scan</Text>
+                  <Text className="text-crescender-400 text-sm">Take a photo of your receipt</Text>
+                </View>
+                <Feather name="chevron-right" size={20} color="#9ca3af" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setShowAddReceiptMenu(false);
+                  router.push('/scan?mode=upload');
+                }}
+                className="flex-row items-center gap-3 p-4 rounded-[14px] bg-crescender-800/50 border border-crescender-700 mb-6"
+              >
+                <View className="w-10 h-10 rounded-full bg-gold/20 items-center justify-center">
+                  <Feather name="upload" size={20} color="#f5c518" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-base font-semibold">Upload</Text>
+                  <Text className="text-crescender-400 text-sm">Select from your gallery</Text>
+                </View>
+                <Feather name="chevron-right" size={20} color="#9ca3af" />
+              </TouchableOpacity>
+
+              {/* Separator */}
+              <View className="h-[1px] bg-crescender-800 w-full mb-3" />
+
+              <TouchableOpacity
+                onPress={() => {
+                  setShowAddReceiptMenu(false);
+                  router.push('/manual-entry' as any);
+                }}
+                className="flex-row items-center gap-3 p-4 rounded-[14px]"
+              >
+                <View className="w-10 h-10 rounded-full bg-crescender-800 items-center justify-center">
+                  <Feather name="edit-3" size={20} color="#9ca3af" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-crescender-300 text-base font-semibold">Don't have a receipt?</Text>
+                  <Text className="text-crescender-500 text-sm">Add item details manually</Text>
+                </View>
+                <Feather name="chevron-right" size={20} color="#6b7280" />
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
       </View>
     );
   }

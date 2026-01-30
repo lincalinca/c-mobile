@@ -162,9 +162,10 @@ interface ReviewContentProps {
   initialData: ReviewInitialData;
   imageUri: string;
   rawData: string;
+  transactionId?: string;
 }
 
-export function ReviewContent({ initialData, imageUri, rawData, queueItemId }: ReviewContentProps) {
+export function ReviewContent({ initialData, imageUri, rawData, queueItemId, transactionId }: ReviewContentProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -294,10 +295,11 @@ export function ReviewContent({ initialData, imageUri, rawData, queueItemId }: R
 
   // Save logic
   const performSave = async (): Promise<string | null> => {
-    const transactionId = Crypto.randomUUID();
+    // If we have an existing transactionId (Draft), we use that. Otherwise generate new.
+    const finalId = transactionId || Crypto.randomUUID();
 
-    await TransactionRepository.create({
-      id: transactionId,
+    const transactionData = {
+      id: finalId,
       merchant: state.merchant,
       merchantAbn: state.merchantAbn || null,
       merchantPhone: state.merchantPhone || null,
@@ -311,17 +313,20 @@ export function ReviewContent({ initialData, imageUri, rawData, queueItemId }: R
       documentType: state.documentType,
       transactionDate: state.transactionDate,
       invoiceNumber: state.invoiceNumber || null,
-      subtotal: state.subtotal ? Math.round(parseFloat(state.subtotal) * 100) : null,
-      tax: state.tax ? Math.round(parseFloat(state.tax) * 100) : null,
-      total: Math.round(parseFloat(state.total) * 100),
+      subtotal: state.subtotal ? Math.round(parseFloat(String(state.subtotal)) * 100) : null,
+      tax: state.tax ? Math.round(parseFloat(String(state.tax)) * 100) : null,
+      total: Math.round(parseFloat(String(state.total)) * 100),
       paymentStatus: state.paymentStatus,
       paymentMethod: state.paymentMethod,
-      imageUrl: imageUri,
-      rawOcrData: rawData,
+      imageUrl: imageUri || null,
+      rawOcrData: rawData || null,
       syncStatus: 'pending',
-    }, state.items.map((item: ReviewLineItem) => ({
+      processingStatus: 'confirmed', // Mark as confirmed since user reviewed
+    };
+
+    const lineItemsData = state.items.map((item: ReviewLineItem) => ({
       id: Crypto.randomUUID(),
-      transactionId,
+      transactionId: finalId,
       description: item.description,
       category: item.category || 'other',
       brand: item.brand || null,
@@ -339,9 +344,20 @@ export function ReviewContent({ initialData, imageUri, rawData, queueItemId }: R
       educationDetails: item.educationDetails ? JSON.stringify(item.educationDetails) : null,
       notes: item.notes || null,
       confidence: item.confidence || null,
-    })));
+    }));
 
-    return transactionId;
+    if (transactionId) {
+      // Update Existing Draft
+      await TransactionRepository.update(finalId, transactionData);
+      // Replace items (simpler than syncing diff)
+      // We need a replaceLineItems method or delete then create
+      await TransactionRepository.replaceLineItems(finalId, lineItemsData);
+    } else {
+      // Create New
+      await TransactionRepository.create(transactionData, lineItemsData);
+    }
+
+    return finalId;
   };
 
   const handleSave = async () => {

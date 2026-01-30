@@ -292,7 +292,28 @@ export async function initDatabase(): Promise<void> {
         // Table already exists, ignore
       }
 
-      // Phase 7: Processing Status column (critical for drafts)
+      // Phase 7: Processing Queue
+      try {
+        expoDb.execSync(`
+          CREATE TABLE IF NOT EXISTS processing_queue (
+            id text PRIMARY KEY NOT NULL,
+            image_uri text NOT NULL,
+            status text NOT NULL DEFAULT 'queued',
+            ai_response_data text,
+            error_message text,
+            scan_type text,
+            submitted_at text DEFAULT CURRENT_TIMESTAMP,
+            completed_at text,
+            notification_sent integer DEFAULT 0,
+            created_at text DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+        console.log('[DB] Migration: Created processing_queue table');
+      } catch (e) {
+        // Table already exists, ignore
+      }
+
+      // Phase 8: Notification events
       try {
         expoDb.execSync(`ALTER TABLE transactions ADD COLUMN processing_status text DEFAULT 'confirmed';`);
         console.log('[DB] Migration: Added processing_status to transactions');
