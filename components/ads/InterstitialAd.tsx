@@ -76,7 +76,7 @@ export function useInterstitialAd() {
       ad.load();
     });
 
-    const unsubscribeError = ad.addAdEventListener(AdEventType?.ERROR, (error) => {
+    const unsubscribeError = ad.addAdEventListener(AdEventType?.ERROR, (error: unknown) => {
       console.error('Interstitial ad error:', error);
       setIsLoaded(false);
     });

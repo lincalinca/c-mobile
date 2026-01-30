@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { findBestMatch } from '@lib/fuzzyMatcher';
 import { DatePickerModal } from '@components/calendar/DatePickerModal';
 import { callSupabaseFunction } from '@lib/supabase';
-import { recordScan } from '@lib/usageTracking';
+import { recordScan, hasScansRemaining } from '@lib/usageTracking';
 import { getFlow, getQuestion, type CategoryType } from '@lib/chat/flows';
 
 interface Message {
@@ -23,15 +23,15 @@ export default function AssistantScreen() {
   const insets = useSafeAreaInsets();
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState<Message[]>([
-    { 
-      id: 'welcome', 
-      sender: 'bot', 
-      text: "Hi! I'm the Crescender Assistant. What are you adding today? (e.g. \"Guitar lessons with Jack\", \"New Fender Strat\", \"Repair for my Sax\")" 
+    {
+      id: 'welcome',
+      sender: 'bot',
+      text: "Hi! I'm the Crescender Assistant. What are you adding today? (e.g. \"Guitar lessons with Jack\", \"New Fender Strat\", \"Repair for my Sax\")"
     }
   ]);
   const [isTyping, setIsTyping] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
-  
+
   // State Machine
   const [conversationState, setConversationState] = useState<'IDLE' | 'CATEGORY_CONFIRM' | 'DETAILS' | 'REVIEW'>('IDLE');
   const [detailStep, setDetailStep] = useState(0);
@@ -46,6 +46,28 @@ export default function AssistantScreen() {
 
   // Date Picker handling
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // Check scan quota on mount
+  useEffect(() => {
+    const checkQuota = async () => {
+      const hasQuota = await hasScansRemaining();
+      if (!hasQuota) {
+        Alert.alert(
+          'No Scans Remaining',
+          'You\'ve used all your scans for this week. Watch an ad to get 10 more scans.',
+          [
+            { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
+            {
+              text: 'Get More Scans',
+              onPress: () => router.replace('/get-more-scans'),
+              style: 'default'
+            }
+          ]
+        );
+      }
+    };
+    checkQuota();
+  }, []);
 
   // --- Core State Machine ---
 
@@ -192,7 +214,26 @@ export default function AssistantScreen() {
     setConversationState('REVIEW');
     setIsTyping(true);
     addBotMessage("Got it! I'm organising those details for you...", 'text');
-    
+
+    // Check quota before deducting (defensive check in case user ran out during conversation)
+    const hasQuota = await hasScansRemaining();
+    if (!hasQuota) {
+      setIsTyping(false);
+      Alert.alert(
+        'No Scans Remaining',
+        'You\'ve used all your scans for this week. Watch an ad to get 10 more scans.',
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
+          {
+            text: 'Get More Scans',
+            onPress: () => router.replace('/get-more-scans'),
+            style: 'default'
+          }
+        ]
+      );
+      return;
+    }
+
     // Deduct a scan as per manual entry rules (each gear/item counts as a scan)
     try {
       await recordScan();

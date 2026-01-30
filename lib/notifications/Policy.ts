@@ -114,7 +114,8 @@ export async function canSend(
   }
   
   // Check per-item limit (e.g., warranty maxPerItem)
-  if (categoryPolicy.maxPerItem && context.metadata) {
+  const maxPerItem = 'maxPerItem' in categoryPolicy ? categoryPolicy.maxPerItem : undefined;
+  if (maxPerItem && context.metadata) {
     const itemEvents = await NotificationEventsRepository.getEventsByCategory(category);
     const itemKey = context.metadata.gearId || context.metadata.serviceId || context.metadata.lessonId;
     
@@ -127,8 +128,8 @@ export async function canSend(
         }
       ).length;
       
-      if (itemCount >= categoryPolicy.maxPerItem) {
-        return { allowed: false, reason: `Per-item limit reached (${itemCount}/${categoryPolicy.maxPerItem})` };
+      if (itemCount >= maxPerItem) {
+        return { allowed: false, reason: `Per-item limit reached (${itemCount}/${maxPerItem})` };
       }
     }
   }

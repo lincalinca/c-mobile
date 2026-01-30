@@ -2,7 +2,7 @@
  * People Detection - Detects potential person names from events and education items
  */
 
-import { StudentRepository } from './repository';
+import { StudentRepository, type Student } from './repository';
 
 /**
  * Extract potential person names from event/education metadata
@@ -76,7 +76,7 @@ export async function checkIfPersonExists(name: string): Promise<boolean> {
   try {
     const allPeople = await StudentRepository.getAll();
     return allPeople.some(
-      person => person.name.toLowerCase().trim() === name.toLowerCase().trim()
+      (person: Student) => person.name.toLowerCase().trim() === name.toLowerCase().trim()
     );
   } catch (e) {
     console.error('Failed to check if person exists', e);

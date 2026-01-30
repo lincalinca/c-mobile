@@ -51,7 +51,7 @@ export default function PersonDetailScreen() {
       // Set the first chain as current if available
       if (personChains.length > 0) {
         setCurrentChain(personChains[0]);
-        setCurrentChainIndex(0);
+        setCurrentChainIndices(prev => ({ ...prev, [personChains[0].chainKey]: 0 }));
       }
     } catch (e) {
       console.error('Failed to load person details', e);
@@ -176,7 +176,7 @@ export default function PersonDetailScreen() {
                         { text: 'Cancel', style: 'cancel' },
                         {
                           text: 'Save',
-                          onPress: (instrument) => {
+                          onPress: (instrument?: string) => {
                             if (instrument) handleUpdateInstrument(instrument);
                           },
                         },

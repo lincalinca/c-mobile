@@ -10,6 +10,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useMemo, useCallback } from 'react';
 import * as Crypto from 'expo-crypto';
 import { TransactionRepository } from '@lib/repository';
+import { ProcessingQueueRepository } from '@lib/processingQueue';
+import { useUploadStore } from '@lib/stores/uploadStore';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PersistentHeader } from '@components/header/PersistentHeader';
@@ -20,7 +22,7 @@ import { generateEducationEvents, getEducationSeriesSummary } from '@lib/educati
 import { addEducationSeriesToDeviceCalendar } from '@lib/calendarExport';
 
 export default function ReviewSimplified() {
-  const params = useLocalSearchParams<{ data: string; uri: string }>();
+  const params = useLocalSearchParams<{ data: string; uri: string; queueItemId?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -107,6 +109,42 @@ export default function ReviewSimplified() {
 
   const handleSave = async () => {
     setIsSaving(true);
+      
+      // Clean up queue item if this came from bulk upload
+      if (params.queueItemId) {
+        try {
+          await ProcessingQueueRepository.removeItem(params.queueItemId);
+          console.log('[Simplified Review] Removed queue item:', params.queueItemId);
+        } catch (e) {
+          console.warn('[Simplified Review] Failed to remove queue item:', e);
+        }
+        
+        // Also remove from Zustand upload store
+        const uploadStore = useUploadStore.getState();
+        const uploadItem = uploadStore.items.find(item => item.queueItemId === params.queueItemId);
+        if (uploadItem) {
+          uploadStore.removeItem(uploadItem.id);
+          console.log('[Simplified Review] Removed upload item:', uploadItem.id);
+        }
+      }
+      
+      // Clean up queue item if this came from bulk upload
+      if (params.queueItemId) {
+        try {
+          await ProcessingQueueRepository.removeItem(params.queueItemId);
+          console.log('[Simplified Review] Removed queue item:', params.queueItemId);
+        } catch (e) {
+          console.warn('[Simplified Review] Failed to remove queue item:', e);
+        }
+        
+        // Also remove from Zustand upload store
+        const uploadStore = useUploadStore.getState();
+        const uploadItem = uploadStore.items.find(item => item.queueItemId === params.queueItemId);
+        if (uploadItem) {
+          uploadStore.removeItem(uploadItem.id);
+          console.log('[Simplified Review] Removed upload item:', uploadItem.id);
+        }
+      }
     try {
       await performSave();
 

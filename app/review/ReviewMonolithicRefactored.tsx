@@ -51,7 +51,7 @@ function EmptyState({ onReturnHome }: EmptyStateProps) {
 // ============================================================================
 
 export default function ReviewMonolithicRefactored() {
-  const params = useLocalSearchParams<{ data: string; uri: string }>();
+  const params = useLocalSearchParams<{ data: string; uri: string; queueItemId?: string }>();
   const router = useRouter();
 
   // Parse initial data from URL params
@@ -70,6 +70,7 @@ export default function ReviewMonolithicRefactored() {
 
   return (
     <ReviewContent
+      queueItemId={params.queueItemId}
       initialData={initialData}
       imageUri={params.uri}
       rawData={params.data}

@@ -13,7 +13,7 @@ import ReviewSimplified from './simplified/SimplifiedReview';
 import ReviewMonolithic from './ReviewMonolithicRefactored';
 
 export default function ReviewRouter() {
-  const params = useLocalSearchParams<{ data: string; uri: string }>();
+  const params = useLocalSearchParams<{ data: string; uri: string; queueItemId?: string; forceMonolithic?: string }>();
   const router = useRouter();
   const [approach, setApproach] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

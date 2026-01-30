@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
+import { cloudLog } from '@lib/cloudLogger';
 
 // Lazy import to avoid errors in Expo Go where native module isn't available
 let RewardedAd: any;
@@ -129,6 +130,8 @@ export function useRewardedAd(options: UseRewardedAdOptions = {}) {
     let unsubscribeError: (() => void) | null = null;
 
     try {
+      cloudLog.info('ads', 'Creating rewarded ad', { adUnitId, platform: Platform.OS });
+      
       // Create and load the rewarded ad with error handling
       ad = RewardedAd.createForAdRequest(adUnitId, {
         requestNonPersonalizedAdsOnly: false,
@@ -142,7 +145,7 @@ export function useRewardedAd(options: UseRewardedAdOptions = {}) {
       unsubscribeLoaded = ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
         setIsLoaded(true);
         setIsLoading(false);
-        console.log('Rewarded ad loaded');
+        cloudLog.info('ads', 'Rewarded ad loaded successfully');
         // If user requested to show ad, show it now that it's loaded
         if (showRequestedRef.current) {
           showRequestedRef.current = false;
@@ -156,6 +159,7 @@ export function useRewardedAd(options: UseRewardedAdOptions = {}) {
 
       unsubscribeEarned = ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, (reward: any) => {
         console.log('User earned reward:', reward);
+        cloudLog.info('ads', 'User earned reward from ad', { reward });
         setIsLoaded(false);
         onRewarded?.(reward);
         // Reload the ad after reward is earned
@@ -183,6 +187,10 @@ export function useRewardedAd(options: UseRewardedAdOptions = {}) {
 
       unsubscribeError = ad.addAdEventListener(RewardedAdEventType.ERROR, (error: any) => {
         console.error('Rewarded ad error:', error);
+        cloudLog.error('ads', 'Rewarded ad failed to load', { 
+          error: error?.message || String(error),
+          code: error?.code 
+        });
         setIsLoaded(false);
         setIsLoading(false);
         onAdFailedToLoad?.(error);
@@ -208,6 +216,10 @@ export function useRewardedAd(options: UseRewardedAdOptions = {}) {
       };
     } catch (error) {
       console.error('Error initializing rewarded ad:', error);
+      cloudLog.error('ads', 'Error initializing rewarded ad', { 
+        error: (error as Error)?.message || String(error),
+        stack: (error as Error)?.stack
+      });
       setIsLoaded(false);
       setIsLoading(false);
       onAdFailedToLoad?.(error as Error);

@@ -11,6 +11,8 @@ import { View, ActivityIndicator, Text, Alert } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import { ReviewWorkflowState, WorkflowStep, analyzeMissingData, getNextStep, countItemsByCategory } from '@lib/reviewWorkflow';
 import { TransactionRepository } from '@lib/repository';
+import { ProcessingQueueRepository } from '@lib/processingQueue';
+import { useUploadStore } from '@lib/stores/uploadStore';
 import { useInterstitialAd, usePreloadInterstitialAd } from '@components/ads';
 import WorkflowTitlePage from './WorkflowTitlePage';
 import WorkflowMissingDataPage from './WorkflowMissingDataPage';
@@ -21,12 +23,15 @@ import WorkflowEducationPage from './WorkflowEducationPage';
 import WorkflowEventsPage from './WorkflowEventsPage';
 
 export default function ReviewWorkflow() {
-  const params = useLocalSearchParams<{ data: string; uri: string }>();
+  const params = useLocalSearchParams<{ data: string; uri: string; queueItemId?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [workflowState, setWorkflowState] = useState<ReviewWorkflowState | null>(null);
-  
+
+  // Get Zustand store for bulk upload cleanup
+  const { removeItem: removeUploadItem } = useUploadStore();
+
   // Preload interstitial ad
   usePreloadInterstitialAd();
   const { show: showInterstitial } = useInterstitialAd();
@@ -185,15 +190,34 @@ export default function ReviewWorkflow() {
 
   const handleSaveAndExit = useCallback(async () => {
     if (!workflowState) return;
-    
+
     try {
       await performSave();
-      
+
+      // Clean up queue item if this came from bulk upload
+      if (params.queueItemId) {
+        try {
+          await ProcessingQueueRepository.removeItem(params.queueItemId);
+          console.log('[Workflow] Removed queue item:', params.queueItemId);
+        } catch (e) {
+          console.warn('[Workflow] Failed to remove queue item:', e);
+        }
+
+        // Also remove from Zustand upload store
+        // Find the upload item by queueItemId
+        const uploadStore = useUploadStore.getState();
+        const uploadItem = uploadStore.items.find(item => item.queueItemId === params.queueItemId);
+        if (uploadItem) {
+          removeUploadItem(uploadItem.id);
+          console.log('[Workflow] Removed upload item:', uploadItem.id);
+        }
+      }
+
       // Show interstitial ad
       setTimeout(() => {
         showInterstitial();
       }, 500);
-      
+
       Alert.alert('Saved!', 'Transaction saved successfully', [
         { text: 'OK', onPress: () => router.replace('/') }
       ]);
@@ -201,7 +225,7 @@ export default function ReviewWorkflow() {
       console.error('[Workflow] Save error:', e);
       Alert.alert('Error', 'Failed to save transaction. Please try again.');
     }
-  }, [workflowState, showInterstitial, router]);
+  }, [workflowState, params.queueItemId, removeUploadItem, showInterstitial, router]);
 
   // Auto-save when reaching complete step
   useEffect(() => {

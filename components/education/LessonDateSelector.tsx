@@ -12,10 +12,29 @@ import { generateEducationEvents } from '@lib/educationEvents';
 import { getLessonCountSuspects } from '@lib/educationUtils';
 import type { ReceiptItem, EducationDetails } from '@lib/repository';
 
+type EducationDetailsLike = {
+  teacherName?: string;
+  studentName?: string;
+  focus?: string;
+  frequency?: string;
+  duration?: string;
+  startDate?: string;
+  endDate?: string;
+  daysOfWeek?: string[];
+  times?: string[];
+};
+
+type LessonDateSelectorItem = Omit<Partial<ReceiptItem>, 'educationDetails'> & {
+  id?: string;
+  description?: string;
+  quantity?: number | null;
+  educationDetails?: EducationDetailsLike | string | null;
+};
+
 export type LessonFrequency = 'weekly' | 'fortnightly' | 'monthly' | 'one-off';
 
 interface LessonDateSelectorProps {
-  item: ReceiptItem;
+  item: LessonDateSelectorItem;
   transactionDate: string;
   onUpdate: (updates: Partial<EducationDetails & { quantity?: number }>) => void;
 }
@@ -40,7 +59,7 @@ export function LessonDateSelector({ item, transactionDate, onUpdate }: LessonDa
         return {};
       }
     }
-    return item.educationDetails as any;
+    return item.educationDetails as EducationDetails;
   }, [item.educationDetails]);
 
   const startDate = eduDetails.startDate || null;
@@ -57,7 +76,7 @@ export function LessonDateSelector({ item, transactionDate, onUpdate }: LessonDa
   }, [frequency]);
 
   const suspects = useMemo(() => {
-    return getLessonCountSuspects(item, eduDetails);
+    return getLessonCountSuspects(item as ReceiptItem, eduDetails);
   }, [item, eduDetails]);
 
   // Generate preview dates

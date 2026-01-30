@@ -61,9 +61,9 @@ export default function WorkflowEventsPage({
           eventItems.map((item, idx) => (
             <View key={idx} className="bg-crescender-900/40 p-4 rounded-2xl border border-crescender-800 mb-4">
               <Text className="text-white text-lg font-semibold">{item.description}</Text>
-              {item.date && (
+              {(item.createdAt || workflowState.transactionDate) && (
                 <Text className="text-crescender-400 text-sm mt-1">
-                  {new Date(item.date + 'T12:00:00').toLocaleDateString('en-AU', {
+                  {new Date((item.createdAt || workflowState.transactionDate) + 'T12:00:00').toLocaleDateString('en-AU', {
                     day: 'numeric',
                     month: 'long',
                     year: 'numeric',

@@ -3,21 +3,25 @@ import { View, Text } from 'react-native';
 import type { GearDetails } from '@lib/repository';
 import { AutoSizingText } from '@components/common/AutoSizingText';
 
+type FieldFormat = 'mono' | 'default';
+
 interface FieldConfig {
   label: string;
   key: keyof GearDetails | 'serialNumber';
-  format?: 'mono' | 'default';
+  format?: FieldFormat;
 }
 
 interface DetailFieldProps {
   label: string;
   value: string;
-  format?: 'mono' | 'default';
+  format?: FieldFormat;
 }
 
-function DetailField({ label, value, format = 'default' }: DetailFieldProps) {
+function DetailField({ label, value, format }: DetailFieldProps) {
+  const resolvedFormat: FieldFormat = format ?? 'default';
+  const monoClass = resolvedFormat === 'mono' ? 'font-mono' : '';
   // Serial numbers should never wrap
-  const isSingleLine = format === 'mono';
+  const isSingleLine = resolvedFormat === 'mono';
   
   return (
     <View className="mb-3">
@@ -27,10 +31,10 @@ function DetailField({ label, value, format = 'default' }: DetailFieldProps) {
           value={value}
           baseFontSize={16}
           minFontSize={10}
-          className={`text-white ${format === 'mono' ? 'font-mono' : ''}`}
+          className={`text-white ${monoClass}`}
         />
       ) : (
-        <Text className={`text-white text-base ${format === 'mono' ? 'font-mono' : ''}`}>
+        <Text className={`text-white text-base ${monoClass}`}>
           {value}
         </Text>
       )}

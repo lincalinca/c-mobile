@@ -5,13 +5,21 @@ import type { GearDetails } from '@lib/repository';
 import { AutoSizingText } from '@components/common/AutoSizingText';
 
 type IconName = 'external-link' | 'book-open' | 'phone' | 'mail' | 'globe';
+type ResourceKey = keyof Pick<GearDetails, 'officialUrl' | 'officialManual'>;
+type WarrantyContactKey = 'warrantyPhone' | 'warrantyEmail' | 'warrantyWebsite';
 
 interface ResourceLinkConfig {
   label: string;
-  key: keyof GearDetails | 'warrantyPhone' | 'warrantyEmail' | 'warrantyWebsite';
+  key: ResourceKey;
   icon: IconName;
   urlPrefix?: string;
-  isWarrantyContact?: boolean;
+}
+
+interface WarrantyContactConfig {
+  label: string;
+  key: WarrantyContactKey;
+  icon: IconName;
+  urlPrefix?: string;
 }
 
 interface ResourceLinkProps {
@@ -75,10 +83,10 @@ const RESOURCE_LINKS: ResourceLinkConfig[] = [
   { label: 'Official Manual', key: 'officialManual', icon: 'book-open' },
 ];
 
-const WARRANTY_CONTACTS: ResourceLinkConfig[] = [
-  { label: 'Phone', key: 'warrantyPhone', icon: 'phone', urlPrefix: 'tel:', isWarrantyContact: true },
-  { label: 'Email', key: 'warrantyEmail', icon: 'mail', urlPrefix: 'mailto:', isWarrantyContact: true },
-  { label: 'Website', key: 'warrantyWebsite', icon: 'globe', isWarrantyContact: true },
+const WARRANTY_CONTACTS: WarrantyContactConfig[] = [
+  { label: 'Phone', key: 'warrantyPhone', icon: 'phone', urlPrefix: 'tel:' },
+  { label: 'Email', key: 'warrantyEmail', icon: 'mail', urlPrefix: 'mailto:' },
+  { label: 'Website', key: 'warrantyWebsite', icon: 'globe' },
 ];
 
 export function GearItemResourcesView({ gearDetails }: GearItemResourcesViewProps) {
@@ -87,7 +95,7 @@ export function GearItemResourcesView({ gearDetails }: GearItemResourcesViewProp
     Linking.openURL(fullUrl);
   };
 
-  const warrantyData = {
+  const warrantyData: Record<WarrantyContactKey, string | undefined> = {
     warrantyPhone: gearDetails.warrantyContactDetails?.phone,
     warrantyEmail: gearDetails.warrantyContactDetails?.email,
     warrantyWebsite: gearDetails.warrantyContactDetails?.website,

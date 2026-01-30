@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
+import { cloudLog } from '@lib/cloudLogger';
+import type { BannerAdSize as BannerAdSizeType } from 'react-native-google-mobile-ads';
 
 // Lazy import to avoid errors in Expo Go where native module isn't available
 let BannerAd: any;
@@ -47,7 +49,7 @@ interface AdBannerProps {
    * Size of the banner ad
    * @default BannerAdSize.ANCHORED_ADAPTIVE_BANNER
    */
-  size?: BannerAdSize;
+  size?: BannerAdSizeType | string;
 }
 
 /**
@@ -80,10 +82,13 @@ export function AdBanner({
           requestNonPersonalizedAdsOnly: false, // Set to true if you want non-personalized ads only
         }}
         onAdLoaded={() => {
-          console.log('Banner ad loaded');
+          cloudLog.info('ads', 'Banner ad loaded successfully', { adUnitId });
         }}
-        onAdFailedToLoad={(error) => {
-          console.error('Banner ad failed to load:', error);
+        onAdFailedToLoad={(error: unknown) => {
+          cloudLog.error('ads', 'Banner ad failed to load', { 
+            error: error instanceof Error ? error.message : String(error),
+            adUnitId 
+          });
         }}
       />
     </View>

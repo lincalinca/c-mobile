@@ -16,6 +16,7 @@ const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'Ju
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [useIconFilters, setUseIconFilters] = useState(false);
   const [financialYearStartMonth, setFinancialYearStartMonth] = useState(7);

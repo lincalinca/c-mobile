@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { NotificationSettingsRepository } from '@lib/notifications/NotificationRepository';
-import { PermissionManager } from '@lib/notifications/PermissionManager';
+import { ensurePermissionGranted } from '@lib/notifications/PermissionManager';
 import { cancelByCategory } from '@lib/notifications/Scheduler';
 import type { NotificationCategory, NotificationSettings } from '@lib/notifications/types';
 
@@ -45,7 +45,7 @@ export function useNotificationSettings() {
     try {
       if (enabled) {
         // Request permission when enabling
-        const permissionStatus = await PermissionManager.ensurePermissionGranted();
+        const permissionStatus = await ensurePermissionGranted();
         
         if (permissionStatus !== 'granted') {
           // Revert toggle if permission denied
@@ -104,7 +104,7 @@ export function useNotificationSettings() {
     try {
       // If enabling a category and global is off, check if we need permission
       if (enabled && !settings.globalEnabled) {
-        const permissionStatus = await PermissionManager.ensurePermissionGranted();
+        const permissionStatus = await ensurePermissionGranted();
         
         if (permissionStatus !== 'granted') {
           Alert.alert(

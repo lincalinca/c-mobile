@@ -10,6 +10,9 @@ import { notificationSettings, notificationEvents } from '@db/schema';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import type { NotificationCategory, NotificationMetadata, NotificationStatus, NotificationSettings as NotificationSettingsType, NotificationEvent } from './types';
 
+type NotificationSettingsRow = typeof notificationSettings.$inferSelect;
+type NotificationEventRow = typeof notificationEvents.$inferSelect;
+
 // Category default map - ensures new categories get explicit defaults
 const CATEGORY_DEFAULTS: Record<NotificationCategory, boolean> = {
   receipt_ready: true, // Most important - notify when AI analysis completes
@@ -78,7 +81,7 @@ export const NotificationSettingsRepository = {
       return defaults;
     }
     
-    const row = result[0];
+    const row: NotificationSettingsRow = result[0];
     return {
       id: row.id,
       globalEnabled: row.globalEnabled ?? false,
@@ -162,7 +165,7 @@ export const NotificationEventsRepository = {
       return null;
     }
     
-    const row = result[0];
+    const row: NotificationEventRow = result[0];
     return {
       id: row.id,
       category: row.category as NotificationCategory,
@@ -204,7 +207,7 @@ export const NotificationEventsRepository = {
       .where(eq(notificationEvents.category, category))
       .orderBy(desc(notificationEvents.triggerAt));
     
-    return result.map(row => ({
+    return result.map((row: NotificationEventRow) => ({
       id: row.id,
       category: row.category as NotificationCategory,
       key: row.key,
@@ -248,7 +251,7 @@ export const NotificationEventsRepository = {
     
     const result = await query;
     
-    return result.map(row => ({
+    return result.map((row: NotificationEventRow) => ({
       id: row.id,
       category: row.category as NotificationCategory,
       key: row.key,
@@ -279,7 +282,7 @@ export const NotificationEventsRepository = {
     const result = await query;
     
     // Filter by metadata if provided
-    let events = result.map(row => ({
+    let events = result.map((row: NotificationEventRow) => ({
       id: row.id,
       category: row.category as NotificationCategory,
       key: row.key,
@@ -291,7 +294,7 @@ export const NotificationEventsRepository = {
     }));
     
     if (metadataFilter) {
-      events = events.filter(event => {
+      events = events.filter((event: NotificationEvent) => {
         for (const [key, value] of Object.entries(metadataFilter)) {
           if (event.metadata[key] !== value) {
             return false;

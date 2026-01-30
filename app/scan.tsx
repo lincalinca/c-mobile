@@ -440,7 +440,7 @@ export default function ScanScreen() {
           suburb: m.suburb,
           abn: m.abn,
         })),
-        existingStudents: existingPeople.map(s => ({
+        existingStudents: existingPeople.map((s: { name: string; instrument: string | null }) => ({
           name: s.name,
           instrument: s.instrument || null,
         })),

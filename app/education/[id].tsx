@@ -1,7 +1,7 @@
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ReceiptRepository, StudentRepository, type LineItemWithDetails, type Receipt } from '@lib/repository';
+import { ReceiptRepository, StudentRepository, type LineItemWithDetails, type Receipt, type Student } from '@lib/repository';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getEducationSeriesSummary } from '@lib/educationEvents';
@@ -84,11 +84,12 @@ export default function EducationDetailScreen() {
 
         // Find person by student name
         const eduDetails = foundItem.educationDetailsParsed;
-        if (eduDetails?.studentName) {
+        const normalizedStudentName = eduDetails?.studentName?.toLowerCase().trim();
+        if (normalizedStudentName) {
           try {
             const allPeople = await StudentRepository.getAll();
             const matchingPerson = allPeople.find(
-              p => p.name.toLowerCase().trim() === eduDetails.studentName.toLowerCase().trim()
+              (p: Student) => p.name.toLowerCase().trim() === normalizedStudentName
             );
             if (matchingPerson) {
               setPersonId(matchingPerson.id);

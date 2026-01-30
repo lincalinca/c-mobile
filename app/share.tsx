@@ -5,7 +5,7 @@ import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { callSupabaseFunction } from '@lib/supabase';
 import { TransactionRepository } from '@lib/repository';
 import { ProcessingView } from '@components/processing/ProcessingView';
-import * as IntentLauncher from 'expo-intent-launcher';
+import * as Linking from 'expo-linking';
 
 /**
  * Share handler for receiving images from other apps via share intent.
@@ -28,7 +28,7 @@ export default function ShareScreen() {
 
       if (Platform.OS === 'android') {
         // Android: Get the intent that started the app
-        const intent = await IntentLauncher.getInitialURL();
+        const intent = await Linking.getInitialURL();
 
         if (!intent) {
           Alert.alert(

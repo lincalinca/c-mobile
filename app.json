@@ -25,7 +25,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.crescender.mobile.app",
-      "buildNumber": "4",
+      "buildNumber": "1.0.3",
       "displayName": "Crescender",
       "icon": "./assets/app-icon.png",
       "splash": {
@@ -52,7 +52,7 @@
         "backgroundColor": "#2a0b4c"
       },
       "package": "com.crescender.mobile.app",
-      "versionCode": 4,
+      "versionCode": 10003,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",

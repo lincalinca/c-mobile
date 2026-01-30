@@ -5,25 +5,41 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useEffect } from "react";
 import { initDatabase } from "@db/client";
-import { View } from "react-native";
+import { View, Platform } from "react-native";
 import { MusicFlowBackground } from "@components/common/MusicFlowBackground";
 import { ATTRequest } from "@components/ads";
 import { BulkUploadProgress } from "@components/bulk";
 import { initializeChannels } from "@lib/notifications/Channels";
 import { reconcileNotifications, cleanupStaleNotifications } from "@lib/notifications/Reconciler";
 import "@root/global.css";
+import { cloudLog } from "@lib/cloudLogger";
 
 // Initialize Google Mobile Ads SDK
 let mobileAdsInitialized = false;
 async function initializeMobileAds() {
-  if (mobileAdsInitialized) return;
+  if (mobileAdsInitialized) {
+    cloudLog.info('ads', 'AdMob SDK already initialized');
+    return;
+  }
+  
+  cloudLog.info('ads', 'Starting AdMob SDK initialization');
+  
   try {
     const { default: mobileAds } = await import('react-native-google-mobile-ads');
+    cloudLog.info('ads', 'AdMob module imported successfully');
+    
     await mobileAds().initialize();
     mobileAdsInitialized = true;
-    console.log('[Ads] Google Mobile Ads SDK initialized');
-  } catch (e) {
-    console.warn('[Ads] Failed to initialize Google Mobile Ads SDK:', e);
+    
+    cloudLog.info('ads', 'AdMob SDK initialized successfully', {
+      platform: Platform.OS,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (e: any) {
+    cloudLog.error('ads', 'Failed to initialize AdMob SDK', {
+      error: e?.message || String(e),
+      stack: e?.stack,
+    });
   }
 }
 

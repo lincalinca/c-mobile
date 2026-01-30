@@ -193,7 +193,7 @@ async function processItems(
       // Call AI
       const receiptData = await callSupabaseFunction<any>('analyze-receipt', {
         imageBase64: base64,
-        existingMerchants: existingMerchants.map((m) => ({
+        existingMerchants: existingMerchants.map((m: { id: string; name: string; email?: string | null; phone?: string | null; suburb?: string | null; abn?: string | null }) => ({
           id: m.id,
           name: m.name,
           email: m.email,
@@ -201,7 +201,7 @@ async function processItems(
           suburb: m.suburb,
           abn: m.abn,
         })),
-        existingStudents: existingPeople.map((s) => ({
+        existingStudents: existingPeople.map((s: { name: string; instrument: string | null }) => ({
           name: s.name,
           instrument: s.instrument || null,
         })),

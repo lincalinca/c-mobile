@@ -11,6 +11,8 @@ import { processingQueue } from '@db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { sendReceiptReadyNotification } from './notifications/Service';
 
+type ProcessingQueueRow = typeof processingQueue.$inferSelect;
+
 export type ProcessingStatus = 'processing' | 'ready_for_review' | 'error';
 
 export interface QueueItem {
@@ -112,7 +114,7 @@ export const ProcessingQueueRepository = {
 
     if (result.length === 0) return null;
 
-    const row = result[0];
+    const row: ProcessingQueueRow = result[0];
     return {
       id: row.id,
       imageUri: row.imageUri,
@@ -133,7 +135,7 @@ export const ProcessingQueueRepository = {
 
     const result = await db.select().from(processingQueue).orderBy(desc(processingQueue.submittedAt));
 
-    return result.map(row => ({
+    return result.map((row: ProcessingQueueRow) => ({
       id: row.id,
       imageUri: row.imageUri,
       status: row.status as ProcessingStatus,
@@ -157,7 +159,7 @@ export const ProcessingQueueRepository = {
       .where(eq(processingQueue.status, status))
       .orderBy(desc(processingQueue.submittedAt));
 
-    return result.map(row => ({
+    return result.map((row: ProcessingQueueRow) => ({
       id: row.id,
       imageUri: row.imageUri,
       status: row.status as ProcessingStatus,
@@ -203,9 +205,9 @@ export const ProcessingQueueRepository = {
     const cutoffIso = cutoffDate.toISOString();
 
     // Get items to delete
-    const toDelete = await db.select().from(processingQueue);
+    const toDelete: ProcessingQueueRow[] = await db.select().from(processingQueue);
     const oldItems = toDelete.filter(
-      item => item.completedAt && item.completedAt < cutoffIso
+      (item: ProcessingQueueRow) => item.completedAt && item.completedAt < cutoffIso
     );
 
     for (const item of oldItems) {

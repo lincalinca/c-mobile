@@ -12,6 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { TransactionRepository } from '@lib/repository';
+import { ProcessingQueueRepository } from '@lib/processingQueue';
+import { useUploadStore } from '@lib/stores/uploadStore';
 import { useInterstitialAd, usePreloadInterstitialAd } from '@components/ads';
 import { getEducationSeriesSummary } from '@lib/educationEvents';
 import { addEducationSeriesToDeviceCalendar } from '@lib/calendarExport';
@@ -126,12 +128,13 @@ function EmptyItemsState() {
 // ============================================================================
 
 interface ReviewContentProps {
+  queueItemId?: string;
   initialData: ReviewInitialData;
   imageUri: string;
   rawData: string;
 }
 
-export function ReviewContent({ initialData, imageUri, rawData }: ReviewContentProps) {
+export function ReviewContent({ initialData, imageUri, rawData, queueItemId }: ReviewContentProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -256,6 +259,22 @@ export function ReviewContent({ initialData, imageUri, rawData }: ReviewContentP
     setIsSaving(true);
     try {
       await performSave();
+
+      if (queueItemId) {
+        try {
+          await ProcessingQueueRepository.removeItem(queueItemId);
+          console.log('[Review] Removed queue item:', queueItemId);
+        } catch (e) {
+          console.warn('[Review] Failed to remove queue item:', e);
+        }
+
+        const uploadStore = useUploadStore.getState();
+        const uploadItem = uploadStore.items.find(item => item.queueItemId === queueItemId);
+        if (uploadItem) {
+          uploadStore.removeItem(uploadItem.id);
+          console.log('[Review] Removed upload item:', uploadItem.id);
+        }
+      }
 
       setTimeout(() => {
         showInterstitial();

@@ -11,6 +11,8 @@
 
 import type { Receipt, ReceiptItem, LineItemWithDetails } from './repository';
 
+type ReceiptWithItems = Receipt & { items: LineItemWithDetails[] };
+
 export interface EducationChain {
   chainKey: string;
   items: ChainItem[];
@@ -94,7 +96,7 @@ function getEndDate(item: ReceiptItem | LineItemWithDetails): string | null {
 /**
  * Build education chains from all receipts
  */
-export function buildEducationChains(receipts: Receipt[]): EducationChain[] {
+export function buildEducationChains(receipts: ReceiptWithItems[]): EducationChain[] {
   const chainMap = new Map<string, EducationChain>();
   
   // Extract all education items
@@ -155,7 +157,7 @@ export function buildEducationChains(receipts: Receipt[]): EducationChain[] {
  */
 export function findChainForItem(
   itemId: string,
-  receipts: Receipt[]
+  receipts: ReceiptWithItems[]
 ): EducationChain | null {
   const chains = buildEducationChains(receipts);
   

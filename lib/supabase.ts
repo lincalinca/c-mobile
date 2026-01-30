@@ -1,3 +1,5 @@
+import { createClient } from '@supabase/supabase-js';
+
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
@@ -17,6 +19,14 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     '[supabase] Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY. Edge function calls will fail.'
   );
 }
+
+export const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: false,
+      },
+    })
+  : null;
 
 export async function callSupabaseFunction<TResponse = any>(
   name: string,

@@ -1,6 +1,6 @@
 {
   "name": "crescender-mobile",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
@@ -44,6 +44,7 @@
     "expo-updates": "~29.0.16",
     "fast-levenshtein": "^3.0.0",
     "jszip": "^3.10.1",
+    "@supabase/supabase-js": "^2.47.12",
     "nativewind": "^4.2.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -69,6 +70,9 @@
     "@babel/plugin-transform-shorthand-properties": "^7.27.1",
     "@babel/plugin-transform-template-literals": "^7.27.1",
     "@babel/preset-typescript": "^7.28.5",
+    "@types/fast-levenshtein": "^0.0.4",
+    "@types/jest": "^29.5.14",
+    "@types/react-test-renderer": "^19.1.0",
     "@types/react": "~19.1.0",
     "babel-plugin-module-resolver": "^5.0.2",
     "babel-preset-expo": "^54.0.9",

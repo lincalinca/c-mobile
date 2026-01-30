@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Platform, Alert } from 'react-native';
+import { cloudLog } from '@lib/cloudLogger';
 
 // Lazy import to avoid errors in Expo Go where native module might not be available
 let TrackingTransparency: any;
@@ -73,6 +74,10 @@ export function ATTRequest({ onComplete, autoRequest = true }: ATTRequestProps) 
         // If not determined and autoRequest is true, request permission
         if (currentStatus === TrackingTransparency.AdvertisingTrackingStatus.NOT_DETERMINED && autoRequest) {
           const { status: newStatus } = await TrackingTransparency.requestTrackingPermissionsAsync();
+          cloudLog.info('ads', 'ATT permission requested', { 
+            status: newStatus,
+            platform: Platform.OS 
+          });
           setStatus(newStatus);
           onComplete?.(newStatus as any);
         } else {
@@ -147,6 +152,10 @@ export function useATT() {
 
     try {
       const { status: newStatus } = await TrackingTransparency.requestTrackingPermissionsAsync();
+      cloudLog.info('ads', 'ATT permission requested', { 
+        status: newStatus,
+        platform: Platform.OS 
+      });
       setStatus(newStatus);
       return newStatus;
     } catch (error) {
